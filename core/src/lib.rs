@@ -4,6 +4,7 @@
 //! (libsignal, RustCrypto) et expose une API minimale à l'app Flutter.
 //! Conception complète : `docs/SECURITY.md`.
 
+pub mod media;
 pub mod sas;
 
 pub use libsignal_protocol;

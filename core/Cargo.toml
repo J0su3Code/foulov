@@ -10,6 +10,7 @@ publish = false
 crate-type = ["rlib", "staticlib", "cdylib"]
 
 [dependencies]
+aes-gcm = { version = "0.10", features = ["stream"] }
 # Version épinglée : ne mettre à jour qu'après lecture du changelog et passage de tous les tests.
 libsignal-protocol = { git = "https://github.com/signalapp/libsignal", tag = "v0.106.1" }
 rand = "0.9.4"
