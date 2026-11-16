@@ -1,0 +1,132 @@
+# Architecture de sécurité de FouLov
+
+Version 0.1, 16 novembre 2026. Document de conception : rien de ce qui suit n'est encore audité.
+Chaque promesse affichée dans l'app doit pouvoir être reliée à une section de ce document.
+
+## 1. Objectifs
+
+1. Seuls les deux téléphones d'un couple peuvent lire ce que le couple échange : messages, photos, vidéos, souvenirs, données du jardin.
+2. Une fuite complète de nos serveurs (base de données, stockage, sauvegardes, journaux) ne révèle aucun contenu.
+3. Personne ne peut se glisser entre les deux partenaires au moment de l'appairage sans que ça se voie.
+4. Collecter le minimum de métadonnées, et dire exactement lesquelles.
+5. Utiliser uniquement de la cryptographie éprouvée. **On n'invente aucun algorithme ni protocole.**
+
+## 2. Modèle de menace
+
+### Ce dont on protège
+
+| Adversaire | Exemple | Protection |
+|---|---|---|
+| Serveur compromis | Fuite de la base Supabase ou du stockage R2, employé malveillant, réquisition | Chiffrement de bout en bout : le serveur ne détient que des données chiffrées et des clés publiques (§4, §6) |
+| Attaquant réseau | Wi-Fi public, opérateur | TLS partout, en plus du chiffrement de bout en bout |
+| Homme du milieu à l'appairage | Le serveur substitue ses propres clés | Vérification hors ligne : QR code ou 7 symboles comparés à voix haute (§5) |
+| Intrus qui tente de rejoindre un couple | Code d'invitation deviné | Jetons à usage unique, longs, expirant en 24 h, tentatives limitées, couple plafonné à deux membres par la base (§5, §8) |
+| Téléphone volé verrouillé | Perte, vol | Base locale chiffrée, clé protégée par la puce sécurisée du téléphone et libérée seulement après déverrouillage (§7) |
+| Ordinateurs quantiques futurs | « Enregistrer maintenant, déchiffrer plus tard » | Échange de clés hybride classique + ML-KEM-1024, et ratchet post-quantique SPQR (§4) |
+| Services de notification | Google (FCM), Apple (APNs) | Notifications à texte fixe, aucun contenu ni nom (§9) |
+
+### Ce dont on ne peut pas protéger (et qu'on dira clairement)
+
+- **Un téléphone déverrouillé ou infecté** par un logiciel espion : il voit ce que voit l'utilisateur.
+- **Le partenaire lui-même** : il peut photographier son écran avec un autre appareil. Le blocage des captures d'écran fonctionne sur Android, pas parfaitement sur iOS.
+- **La contrainte physique** : quelqu'un qui force l'utilisateur à déverrouiller.
+- **Les métadonnées listées au §10**, qui restent visibles du serveur.
+
+## 3. Briques retenues
+
+| Rôle | Brique | Pourquoi |
+|---|---|---|
+| Protocole de messagerie | [libsignal](https://github.com/signalapp/libsignal) (`libsignal-protocol`, Rust, AGPL-3.0-only), version épinglée | Implémentation de référence de Signal : X3DH/PQXDH, Double Ratchet, SPQR |
+| Post-quantique | ML-KEM-1024 via `libcrux-ml-kem` (inclus dans libsignal) | Implémentation vérifiée formellement |
+| Chiffrement des fichiers | AES-256-GCM en flux par blocs (§6) via les crates RustCrypto (`aes-gcm`, `hkdf`, `sha2`) | Standard, rapide grâce à l'accélération matérielle AES des téléphones |
+| Dérivation depuis la phrase de récupération | Argon2id (`argon2`) | Résiste aux attaques par GPU |
+| Pont Flutter ↔ Rust | `flutter_rust_bridge` | Un seul cœur cryptographique, identique sur Android et iOS |
+| Base locale | SQLite + SQLCipher | Chiffrement de toute la base sur le téléphone |
+| Coffre à clés | Android Keystore (StrongBox si disponible), iOS Keychain + Secure Enclave | La clé ne quitte jamais la puce sécurisée |
+
+Toute la cryptographie vit dans une seule bibliothèque Rust (`core/`). Le code Dart n'implémente aucun algorithme : il appelle le cœur.
+
+## 4. Identité et sessions
+
+- **Une paire de clés d'identité par téléphone** (Curve25519), générée sur l'appareil.
+  Version 1 : un seul téléphone actif par personne. Le multi-appareil viendra plus tard, avec la même rigueur.
+- Le téléphone publie sur le serveur uniquement des **clés publiques** : clé d'identité, pré-clé signée, pré-clés ML-KEM-1024 signées et pré-clés à usage unique.
+- La première session est établie par **PQXDH** (X25519 + ML-KEM-1024). Les messages suivants passent par le **triple ratchet** de libsignal (Double Ratchet + SPQR), qui apporte :
+  - la *confidentialité persistante* : voler les clés d'aujourd'hui ne permet pas de lire les messages d'hier ;
+  - l'*auto-guérison* : après une compromission passagère, les clés suivantes redeviennent sûres.
+- Les clés privées ne sont jamais exportées, sauf dans la sauvegarde chiffrée (§7), et seulement si l'utilisateur l'active.
+
+## 5. Appairage du couple
+
+1. **Inès crée l'espace.** Le serveur crée un couple vide et un **jeton d'invitation** aléatoire de 128 bits, valable une seule fois, pendant 24 h.
+2. **Inès montre un QR code.** Il contient le jeton, l'empreinte de sa clé d'identité et un **secret d'appairage** de 128 bits qui ne passe jamais par le serveur.
+3. **Malik scanne le QR code** (en personne) :
+   - il obtient l'empreinte d'Inès hors du serveur ;
+   - si la clé publiée par le serveur ne correspond pas, l'appairage échoue ;
+   - le secret d'appairage permet ensuite de confirmer la clé de Malik auprès d'Inès.
+   Résultat : **vérification automatique, sans action**.
+4. **À distance**, Malik saisit un code court (le jeton). Les deux écrans affichent alors **7 symboles**, dérivés de `SHA-256(clé_identité_A ‖ clé_identité_B)` (clés triées) et tirés d'une liste de 64 symboles, soit 42 bits. Ils les comparent à voix haute ou en appel vidéo. Tant que ce n'est pas fait, l'app affiche « clés non vérifiées ».
+5. La base refuse un troisième membre (contrainte en base, pas seulement dans l'app).
+6. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible et demande une nouvelle vérification.
+
+## 6. Photos, vidéos et fichiers
+
+1. Pour chaque fichier, le téléphone génère une **clé aléatoire de 256 bits**.
+2. Le fichier est chiffré en **blocs de 64 Kio** avec AES-256-GCM. Chaque bloc a un nonce dérivé de son numéro et un drapeau « dernier bloc » : on ne peut ni réordonner, ni tronquer, ni mélanger des blocs sans que ça se détecte.
+3. **Taille masquée** : le fichier chiffré est complété jusqu'au palier suivant, environ +12 % au maximum, pour ne pas révéler la taille exacte.
+4. Envoi vers le bucket privé R2 `foulovmedia-private`, via une **URL pré-signée** courte (5 min), délivrée par une fonction serveur après vérification que l'utilisateur appartient au couple. Le nom de l'objet est un identifiant aléatoire.
+5. La clé du fichier, son empreinte SHA-256 et ses métadonnées (type, dimensions, légende) **voyagent à l'intérieur du message chiffré**, jamais en clair.
+6. Les miniatures sont des fichiers à part, chiffrés de la même façon.
+7. Le bucket public `foulovmedia` n'est pas utilisé pour les contenus des couples.
+
+## 7. Stockage local, verrouillage et récupération
+
+- **Base locale** : SQLCipher. Sa clé de 256 bits est enveloppée par une clé matérielle du Keystore ou de la Secure Enclave, non exportable.
+- **Verrouillage** : empreinte ou visage à l'ouverture (`local_auth`). La clé matérielle peut exiger cette authentification avant d'être utilisée.
+- **Effacement à distance** du contenu local par l'utilisateur depuis un autre appareil : prévu plus tard.
+- **Sauvegarde chiffrée** (activée par défaut, désactivable) :
+  - à la création du compte, l'app affiche une **phrase de récupération de 24 mots** (256 bits) à noter sur papier ;
+  - clé de sauvegarde = Argon2id(phrase, sel stocké avec la sauvegarde) ;
+  - la sauvegarde (historique, clés des fichiers, état du jardin) est chiffrée avec cette clé puis déposée sur R2 ;
+  - **sans la phrase, personne ne peut la lire, pas même nous**. Phrase perdue et téléphones perdus = données perdues. L'app le dit clairement.
+- **Restauration** sur un nouveau téléphone : nouvelles clés d'identité, restauration de l'historique depuis la sauvegarde, puis nouvelle vérification avec le partenaire (§5.6).
+
+## 8. Serveur (Supabase)
+
+- **Comptes** : Supabase Auth, avec Google, Apple ou code à usage unique par e-mail. Aucun mot de passe.
+- **Règles d'accès (RLS)** activées sur **toutes** les tables, sans exception. Un utilisateur ne lit et n'écrit que :
+  - son propre profil technique ;
+  - les lignes du couple dont il est membre ;
+  - les clés publiques de son partenaire.
+- **Le serveur ne stocke** que : enveloppes chiffrées, clés publiques, appartenance au couple, jetons d'invitation hachés, jetons de notification.
+- **Pas de liste** de couples ou d'utilisateurs accessible aux clients.
+- Les opérations sensibles (rejoindre un couple, URL pré-signée) passent par des **fonctions serveur**, avec limitation des tentatives.
+- Les règles d'accès sont **testées automatiquement** : une suite de tests vérifie qu'un utilisateur A ne peut rien lire du couple B.
+- Les clés secrètes Supabase et R2 ne sont **jamais** dans l'app ni dans le dépôt.
+
+## 9. Notifications
+
+Une fonction serveur envoie une notification au texte fixe (« Nouveau message »), sans contenu, sans nom, sans aperçu. Le contenu est déchiffré seulement quand l'utilisateur ouvre l'app.
+
+## 10. Métadonnées visibles du serveur
+
+C'est la liste exacte affichée dans l'app :
+
+| Visible | Pourquoi |
+|---|---|
+| Votre adresse e-mail (ou identifiant Google/Apple) | Se connecter |
+| Que deux comptes forment un couple | Acheminer les messages |
+| L'heure d'envoi de chaque contenu | Acheminer et ordonner |
+| La taille approximative des contenus chiffrés (§6.3) | Stockage |
+| Les jetons de notification | Réveiller l'app |
+| Les adresses IP, dans les journaux techniques de nos hébergeurs (Supabase, Cloudflare), selon leurs politiques | Fonctionnement du réseau ; nous n'ajoutons aucun journal applicatif contenant des IP |
+
+Jamais : contenu, noms de fichiers, légendes, dates du couple, surnoms, réponses aux questions, état du jardin, carnet d'adresses, numéro de téléphone.
+
+## 11. Ce qu'il reste à faire avant d'affirmer quoi que ce soit publiquement
+
+- [ ] Implémentation du cœur `core/` avec tests unitaires et vecteurs de test.
+- [ ] Tests automatisés des règles d'accès Supabase.
+- [ ] Revue de code externe de `core/` et des règles serveur.
+- [ ] **Audit de sécurité indépendant** avant toute comparaison publique avec d'autres messageries.
+- [ ] Programme de signalement de vulnérabilités (adresse dédiée, délai de réponse publié).
