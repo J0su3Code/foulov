@@ -1,17 +1,35 @@
-# foulov
+# App FouLove (Flutter)
 
-FouLove — l'espace privé et chiffré de bout en bout pour deux.
+## Lancer
 
-## Getting Started
+```bash
+flutter run --dart-define-from-file=dart_defines.local.json
+```
 
-This project is a starting point for a Flutter application.
+`dart_defines.local.json` (hors git) suit le modèle `dart_defines.example.json`. Il ne contient que des identifiants
+publics : URL et clé publiable Supabase, clients OAuth Google. Aucun secret n'est jamais embarqué dans l'app.
 
-A few resources to get you started if this is your first Flutter project:
+## Fichiers Firebase (hors git)
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Firebase sert uniquement à fournir les clients OAuth Google et, plus tard, les notifications (pas de firebase_auth).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+firebase --project foulove-app apps:sdkconfig ANDROID <app-id-android> -o android/app/google-services.json
+firebase --project foulove-app apps:sdkconfig IOS <app-id-ios> -o ios/Runner/GoogleService-Info.plist
+```
+
+Chaque machine qui compile l'app doit enregistrer l'empreinte SHA de sa clé de signature :
+`firebase --project foulove-app apps:android:sha:create <app-id-android> <sha1>`.
+
+## Connexion
+
+- Google : `google_sign_in` → jeton d'identité → `supabase.auth.signInWithIdToken` (voir `lib/features/auth/auth_service.dart`).
+- Code par e-mail : 8 chiffres, valable 10 minutes.
+- La session est rangée dans le Keystore Android ou le Keychain iOS (`lib/core/secure_session_storage.dart`).
+
+## Tests
+
+```bash
+flutter test                                   # tests unitaires
+flutter test integration_test -d <appareil>    # cœur Rust sur un vrai téléphone ou un émulateur
+```

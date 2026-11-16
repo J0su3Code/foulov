@@ -38,6 +38,9 @@ dependencies:
   foulov_bridge:
     path: rust_builder
   flutter_rust_bridge: 2.13.0
+  google_sign_in: ^7.2.0
+  supabase_flutter: ^2.18.3
+  flutter_secure_storage: ^11.2.0
 
 dev_dependencies:
   flutter_test:
