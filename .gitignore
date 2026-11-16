@@ -30,3 +30,6 @@ design/_photos_raw/
 
 # Builds générés hors de app/
 /build/
+
+# Rust
+core/target/

@@ -1,0 +1,20 @@
+[package]
+name = "foulov_core"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "Cœur cryptographique de FouLov : sessions Signal (PQXDH + triple ratchet), vérification par symboles, chiffrement des fichiers."
+publish = false
+
+[lib]
+crate-type = ["rlib", "staticlib", "cdylib"]
+
+[dependencies]
+# Version épinglée : ne mettre à jour qu'après lecture du changelog et passage de tous les tests.
+libsignal-protocol = { git = "https://github.com/signalapp/libsignal", tag = "v0.106.1" }
+rand = "0.9.4"
+sha2 = "0.11"
+thiserror = "2"
+
+[dev-dependencies]
+futures-util = "0.3"
