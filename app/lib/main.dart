@@ -20,7 +20,7 @@ class FouLovApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FouLov',
+      title: 'FouLove',
       debugShowCheckedModeBanner: false,
       theme: FouLovTheme.jour,
       darkTheme: FouLovTheme.nuit,

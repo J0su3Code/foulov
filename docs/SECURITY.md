@@ -1,4 +1,4 @@
-# Architecture de sécurité de FouLov
+# Architecture de sécurité de FouLove
 
 Version 0.1, 16 novembre 2026. Document de conception : rien de ce qui suit n'est encore audité.
 Chaque promesse affichée dans l'app doit pouvoir être reliée à une section de ce document.
@@ -58,16 +58,22 @@ Toute la cryptographie vit dans une seule bibliothèque Rust (`core/`). Le code 
 
 ## 5. Appairage du couple
 
-1. **Inès crée l'espace.** Le serveur crée un couple vide et un **jeton d'invitation** aléatoire de 128 bits, valable une seule fois, pendant 24 h.
-2. **Inès montre un QR code.** Il contient le jeton, l'empreinte de sa clé d'identité et un **secret d'appairage** de 128 bits qui ne passe jamais par le serveur.
-3. **Malik scanne le QR code** (en personne) :
-   - il obtient l'empreinte d'Inès hors du serveur ;
-   - si la clé publiée par le serveur ne correspond pas, l'appairage échoue ;
+1. **Inès crée l'espace.** Le serveur crée un couple et un **code d'invitation** de 10 caractères en alphabet Crockford base32, par exemple `K7Q4M-9XHPT`.
+   - L'alphabet exclut I, L, O et U ; à la saisie, I et L sont lus comme 1, et O comme 0.
+   - Le code vaut 50 bits, s'utilise une seule fois et expire après 24 h.
+   - Seul son hachage SHA-256 est stocké sur le serveur.
+2. **En personne : QR code.** Le QR code d'Inès contient le code, l'empreinte de sa clé d'identité et un **secret d'appairage** de 128 bits qui ne passe jamais par le serveur. Malik le scanne :
+   - son téléphone compare l'empreinte à la clé publiée par le serveur ; si elles diffèrent, l'appairage échoue ;
    - le secret d'appairage permet ensuite de confirmer la clé de Malik auprès d'Inès.
-   Résultat : **vérification automatique, sans action**.
-4. **À distance**, Malik saisit un code court (le jeton). Les deux écrans affichent alors **7 symboles**, dérivés de `SHA-256(clé_identité_A ‖ clé_identité_B)` (clés triées) et tirés d'une liste de 64 symboles, soit 42 bits. Ils les comparent à voix haute ou en appel vidéo. Tant que ce n'est pas fait, l'app affiche « clés non vérifiées ».
-5. La base refuse un troisième membre (contrainte en base, pas seulement dans l'app).
-6. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible et demande une nouvelle vérification.
+   La vérification est **automatique**.
+3. **À distance : le code.** Inès dicte ou envoie le code, et Malik le tape. Les deux écrans affichent ensuite **7 symboles** :
+   - ils sont dérivés de `SHA-256("FouLov-SAS-v1" ‖ longueurs ‖ clé_identité_A ‖ clé_identité_B)`, avec les clés triées, puis tirés d'une liste de 64 symboles (42 bits) ;
+   - le couple les compare à voix haute ou en appel vidéo ;
+   - tant que ce n'est pas fait, l'app affiche « clés non vérifiées ».
+4. **Plus tard, lien d'invitation** (quand le domaine sera actif) : `https://foulove.org/rejoindre#K7Q4M9XHPT`. Le code est placé après le `#`, une partie du lien qui n'est jamais envoyée à un serveur web. Si le lien passe par une autre messagerie, celle-ci voit le code. Mais le code permet seulement de rejoindre, une seule fois, et la vérification par symboles détecte toute substitution de clé.
+5. **Protection contre les essais au hasard** : 10 tentatives par heure et par compte. Un code invalide ne déclenche pas d'erreur, pour que la tentative soit bien comptée. Avec 50 bits, même un très grand nombre de comptes ne suffit pas pour tomber sur un code actif.
+6. **Plafond de deux membres** : la base refuse un troisième membre, par une contrainte en base et pas seulement dans l'app.
+7. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible et demande une nouvelle vérification.
 
 ## 6. Photos, vidéos et fichiers
 

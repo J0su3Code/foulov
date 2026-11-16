@@ -1,6 +1,6 @@
 # foulov
 
-FouLov — l'espace privé et chiffré de bout en bout pour deux.
+FouLove — l'espace privé et chiffré de bout en bout pour deux.
 
 ## Getting Started
 
