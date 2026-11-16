@@ -33,3 +33,6 @@ design/_photos_raw/
 
 # Rust
 core/target/
+
+# Configuration locale de l app (identifiants publics, mais propres à chaque déploiement)
+app/dart_defines.local.json

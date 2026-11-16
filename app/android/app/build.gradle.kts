@@ -1,5 +1,7 @@
 plugins {
     id("com.android.application")
+    // Lit google-services.json (identifiant OAuth « Web » pour la connexion Google). Fichier hors git : voir app/README.md.
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
