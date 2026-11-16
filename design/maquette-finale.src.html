@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maquette FouLov retenue</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap">
+<style>
+/* Layout: page de décision. En-tête + interrupteur Jour/Nuit, carrousel de 6 Pixel 8, puis comparaison sécurité FouLov / WhatsApp. */
+:root{
+  --bg:#F3F5F0; --fg:#14231C; --muted:#5B6A62; --line:#DDE3D8; --card:#FFFFFF; --accent:#3E6B4E;
+  --f:"Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#0F0C13; --fg:#F1EDF4; --muted:#A49BAE; --line:#282230; --card:#18141D; --accent:#FF9E7A; color-scheme:dark }
+}
+:root[data-theme="dark"]{ --bg:#0F0C13; --fg:#F1EDF4; --muted:#A49BAE; --line:#282230; --card:#18141D; --accent:#FF9E7A; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--f); font-size:15px; line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:0 72px}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--bg)}
+img{max-width:100%; display:block}
+.wrap{max-width:1500px; margin:0 auto}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:8px}
+
+header.top{padding-block:48px 8px; display:grid; gap:12px; max-width:820px}
+.kick{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:500}
+h1{font-weight:700; font-size:clamp(32px, 5.5vw, 56px); line-height:1.04; letter-spacing:-.02em; margin:0; text-wrap:balance}
+header.top p{margin:0; color:var(--muted); max-width:66ch}
+.toggle{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:var(--card); border:1px solid var(--line); margin-top:10px; width:max-content}
+.toggle button{font:500 14px var(--f); border:0; border-radius:999px; padding:9px 18px; background:transparent; color:var(--fg); cursor:pointer; display:flex; gap:8px; align-items:center}
+.toggle button[aria-pressed="true"]{background:var(--fg); color:var(--bg)}
+.toggle i{width:10px; height:10px; border-radius:50%; display:inline-block}
+
+.phones{display:flex; gap:28px; overflow-x:auto; scroll-snap-type:x mandatory; padding-block:36px 24px; scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+.phones > figure{flex:none; width:300px; scroll-snap-align:start; margin:0; display:grid; gap:12px; justify-items:center; align-content:start}
+figcaption{text-align:center; max-width:290px; display:grid; gap:2px}
+figcaption b{font-size:14px; font-weight:500}
+figcaption span{color:var(--muted); font-size:13px}
+.replay{font:500 13px var(--f); color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 14px; cursor:pointer; display:flex; gap:6px; align-items:center}
+
+/* ---------- Thèmes de l'app (Jour = Jardin, Nuit = Nocturne) ---------- */
+#stage{
+  --a-bg:#EEF1E8; --a-sf:#FFFFFF; --a-sf2:#F6F8F3; --a-line:#DCE3D6; --a-tx:#10291F; --a-mut:#5D7266; --a-pri:#10291F; --a-on-pri:#EEF1E8;
+  --a-me:#10291F; --a-on-me:#EEF1E8; --a-th:#FFFFFF; --a-on-th:#10291F; --a-acc:#F29BB8; --a-acc-sf:#FBE3EA; --a-acc-tx:#7A2847; --a-ok:#2E8F6E;
+  --a-sky1:#D9EBDD; --a-sky2:#EEF1E8; --a-water:#DCEBF3; --a-water-tx:#2F6E8E; --a-sb:#10291F; --a-gb:rgba(16,41,31,.7); --a-shadow:rgba(16,41,31,.18);
+}
+#stage.night{
+  --a-bg:#0A0710; --a-sf:#1A1322; --a-sf2:#140F1A; --a-line:#2A2033; --a-tx:#F3EEF6; --a-mut:#9A8FA8; --a-pri:#FF9E7A; --a-on-pri:#2A0B16;
+  --a-me:#FF8F86; --a-on-me:#2A0B16; --a-th:#21182A; --a-on-th:#F3EEF6; --a-acc:#FF7895; --a-acc-sf:#2A1626; --a-acc-tx:#FFB8C6; --a-ok:#7FE0C2;
+  --a-sky1:#120C1A; --a-sky2:#0A0710; --a-water:#15233A; --a-water-tx:#8EC8F0; --a-sb:#F3EEF6; --a-gb:rgba(255,255,255,.8); --a-shadow:rgba(0,0,0,.5);
+}
+#stage.night .me-grad{background:linear-gradient(135deg,#FFB08A,#FF7895)}
+
+.phone{width:300px; max-width:100%; aspect-ratio:300/650; border-radius:46px; padding:8px; position:relative;
+  background:linear-gradient(150deg,#3A3A40,#121214 40%,#0A0A0B); box-shadow:inset 0 0 0 1.5px #4A4A52, 0 40px 70px -34px rgba(20,10,40,.6), 0 12px 24px -16px rgba(0,0,0,.4)}
+.phone::before{content:""; position:absolute; right:-3px; top:128px; width:3px; height:56px; border-radius:0 3px 3px 0; background:#2A2A2F}
+.scr{height:100%; border-radius:38px; overflow:hidden; position:relative; display:flex; flex-direction:column; isolation:isolate; font:400 13px/1.4 "Roboto", system-ui, sans-serif;
+  background:var(--a-bg); color:var(--a-tx); transition:background-color .5s, color .5s}
+.punch{position:absolute; top:10px; left:50%; width:11px; height:11px; margin-left:-5.5px; border-radius:50%; background:#050506; box-shadow:0 0 0 1.5px #1C1C20; z-index:60}
+.sb{display:flex; justify-content:space-between; align-items:center; padding:9px 22px 4px; font:500 12px "Roboto", sans-serif; color:var(--a-sb); flex:none; position:relative; z-index:40}
+.sb.lt{color:#F3EEF6}
+.sb .bt{display:flex; gap:5px; align-items:center}
+.sb svg{width:14px; height:14px; fill:currentColor}
+.sb .bat{width:9px; height:15px; border-radius:2.5px; border:1.5px solid currentColor; position:relative}
+.sb .bat::after{content:""; position:absolute; inset:4px 1px 1px; background:currentColor; border-radius:1px}
+.gb{position:absolute; bottom:7px; left:50%; width:96px; height:4px; margin-left:-48px; border-radius:4px; background:var(--a-gb); z-index:45}
+.ic{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none}
+.ic.s{width:15px; height:15px} .ic.xs{width:12px; height:12px}
+.row{display:flex; align-items:center; gap:10px}
+.grow{flex:1; min-width:0}
+.mut{color:var(--a-mut)}
+.h1{font:700 26px/1.1 "Roboto", sans-serif; letter-spacing:-.01em; margin:0}
+.h2{font:500 20px/1.15 "Roboto", sans-serif; margin:0}
+.num{font:700 30px/1 "Roboto", sans-serif; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.card{background:var(--a-sf); border-radius:20px; box-shadow:0 0 0 1px var(--a-line)}
+.btn{display:flex; justify-content:center; align-items:center; gap:10px; padding:14px; border-radius:999px; font-weight:500; font-size:14px}
+.btn.pri{background:var(--a-pri); color:var(--a-on-pri)}
+.btn.sf{background:var(--a-sf); color:var(--a-tx); box-shadow:0 0 0 1px var(--a-line)}
+.btn.ln{color:var(--a-tx); box-shadow:0 0 0 1.5px var(--a-tx)}
+.av{border-radius:50%; object-fit:cover; flex:none}
+.chip{font-size:11px; font-weight:500; padding:6px 11px; border-radius:999px; white-space:nowrap; background:var(--a-sf); box-shadow:0 0 0 1px var(--a-line)}
+.chip.on{background:var(--a-pri); color:var(--a-on-pri); box-shadow:none}
+.tabs{display:flex; justify-content:space-around; padding:8px 6px 24px; font-size:11px; font-weight:500; color:var(--a-mut); background:var(--a-bg); border-top:1px solid var(--a-line); flex:none}
+.tabs div{display:grid; justify-items:center; gap:3px}
+.tabs .pill{padding:3px 18px; border-radius:999px}
+.tabs .on{color:var(--a-tx)}
+.tabs .on .pill{background:var(--a-acc-sf)}
+.msgs{display:flex; flex-direction:column; gap:6px; flex:1; min-height:0; justify-content:flex-end; padding:0 12px 6px}
+.b{max-width:80%; padding:8px 12px; border-radius:20px; font-size:14px; position:relative}
+.b.me{align-self:flex-end; border-bottom-right-radius:6px; background:var(--a-me); color:var(--a-on-me)}
+.b.th{align-self:flex-start; border-bottom-left-radius:6px; background:var(--a-th); color:var(--a-on-th); box-shadow:0 0 0 1px var(--a-line)}
+.b .t{display:block; font-size:10px; opacity:.65; text-align:right}
+.b.ph{padding:4px}
+.b.ph img{border-radius:16px; width:176px; height:132px; object-fit:cover}
+.typing{display:flex; gap:4px; padding:12px 14px}
+.typing i{width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.35; animation:dot 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{30%{opacity:1; transform:translateY(-3px)}}
+canvas.fx{position:absolute; inset:0; width:100%; height:100%; z-index:1}
+.ov{position:absolute; inset:0; z-index:5; pointer-events:none}
+.rv{opacity:0; transform:translateY(12px); transition:opacity .8s ease, transform .9s cubic-bezier(.2,.8,.2,1)}
+.rv.on{opacity:1; transform:none}
+.sheet{position:absolute; left:0; right:0; bottom:0; z-index:6; background:var(--a-bg); border-radius:30px 30px 0 0; padding:24px 22px 30px; display:grid; gap:12px; transform:translateY(105%); transition:transform 1s cubic-bezier(.2,.85,.2,1), background-color .5s}
+.sheet.on{transform:none}
+.wm span{display:inline-block; opacity:0; transform:translateY(16px); filter:blur(5px); transition:opacity .7s ease, transform .8s cubic-bezier(.2,.8,.2,1), filter .7s; transition-delay:calc(var(--i) * 70ms)}
+.wm.on span{opacity:1; transform:none; filter:none}
+.grid3{display:grid; grid-template-columns:repeat(3, 1fr); gap:5px}
+.grid3 img{width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px}
+.grid3 .big{grid-column:span 2; grid-row:span 2}
+.grid3 .big img{height:100%; aspect-ratio:auto}
+.opt{display:flex; align-items:center; gap:10px; padding:11px 12px; border-top:1px solid var(--a-line)}
+.opt:first-child{border-top:0}
+.radio{width:18px; height:18px; border-radius:50%; box-shadow:inset 0 0 0 2px var(--a-mut); flex:none}
+.radio.on{box-shadow:inset 0 0 0 2px var(--a-pri), inset 0 0 0 5px var(--a-sf), inset 0 0 0 9px var(--a-pri)}
+.sw{width:26px; height:26px; border-radius:50%; flex:none}
+.sw.on{box-shadow:0 0 0 2px var(--a-bg), 0 0 0 4px var(--a-tx)}
+.soon{font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:2px 6px; border-radius:6px; background:var(--a-acc-sf); color:var(--a-acc-tx)}
+
+/* ---------- Sections ---------- */
+section.blk{padding-block:56px 0; display:grid; gap:18px; border-top:1px solid var(--line); margin-top:40px}
+section.blk h2{font-weight:700; font-size:clamp(26px, 4vw, 38px); line-height:1.1; letter-spacing:-.015em; margin:0; text-wrap:balance}
+section.blk > p{margin:0; color:var(--muted); max-width:70ch}
+.why{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px}
+@media (max-width:860px){ .why{grid-template-columns:minmax(0,1fr)} }
+.why div{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px}
+.why b{display:block; margin-bottom:4px; font-weight:500}
+.why p{margin:0; color:var(--muted); font-size:14px}
+.tbl{overflow-x:auto; border:1px solid var(--line); border-radius:16px; background:var(--card)}
+table{border-collapse:collapse; width:100%; min-width:720px; font-size:14px}
+th, td{text-align:left; vertical-align:top; padding:12px 16px; border-top:1px solid var(--line)}
+thead th{border-top:0; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:500}
+td:first-child{font-weight:500; width:22%}
+.v{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap}
+.v.eq{background:color-mix(in srgb, var(--muted) 18%, transparent); color:var(--fg)}
+.v.up{background:color-mix(in srgb, #2E8F6E 20%, transparent); color:var(--fg)}
+.v.dn{background:color-mix(in srgb, #D0574F 22%, transparent); color:var(--fg)}
+.note{font-size:13px; color:var(--muted)}
+
+@media (prefers-reduced-motion: reduce){ *, *::before, *::after{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sig" viewBox="0 0 24 24"><path d="M3 20h3v-4H3zM8 20h3v-8H8zM13 20h3V8h-3zM18 20h3V4h-3z"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 21l3.6-4.4a5.6 5.6 0 0 0-7.2 0zM5.2 13.2a10.6 10.6 0 0 1 13.6 0l-1.9 2.3a7.6 7.6 0 0 0-9.8 0zM1.8 9.1a16 16 0 0 1 20.4 0l-1.9 2.3a13 13 0 0 0-16.6 0z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="i-finger" viewBox="0 0 24 24"><path d="M12 11v4M8.5 7.5A5 5 0 0 1 17 11v2.5M7 11a5 5 0 0 1 .4-2M7 14c0 2.5 1 4.5 2.5 6M12 20.5c-1.2-1.5-2-3.3-2-5.5v-4a2 2 0 0 1 4 0v4.5M16.5 17.5c-.3 1.2-.8 2.3-1.4 3.2M5 5.5A9 9 0 0 1 19 5.5"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></symbol>
+  <symbol id="i-flower" viewBox="0 0 24 24"><circle cx="12" cy="9" r="2.5"/><path d="M12 6.5c0-2 1-3.5 2.5-3.5S16 5 14.5 7M14.3 10.2c1.8.6 3.2 1.8 2.8 3.2s-2.4 1.2-3.4-.4M9.7 10.2c-1.8.6-3.2 1.8-2.8 3.2s2.4 1.2 3.4-.4M12 11.5V21M12 17c-2 0-3.5-1-4-2.5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></symbol>
+  <symbol id="g-google" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.150 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.980 6.19C6.51 42.62 14.62 48 24 48z"/></symbol>
+  <symbol id="g-apple" viewBox="0 0 22 24"><path d="M16.37 1.43c0 1.14-.42 2.2-1.25 3.04-.86.86-1.9 1.36-3.03 1.27-.02-1.1.45-2.21 1.25-3.02.84-.86 2.060-1.4 3.03-1.29zM20.5 17.2c-.55 1.27-.82 1.84-1.53 2.96-.99 1.56-2.39 3.5-4.12 3.52-1.54.01-1.93-1-4.02-.99-2.08.01-2.52 1.01-4.06.99-1.73-.02-3.05-1.77-4.04-3.33C-.04 16.13-.33 11.04 1.4 8.38 2.63 6.49 4.57 5.38 6.4 5.38c1.86 0 3.03 1.02 4.57 1.02 1.49 0 2.4-1.02 4.55-1.02 1.63 0 3.35.89 4.58 2.42-4.02 2.2-3.37 7.94.4 9.4z"/></symbol>
+</svg>
+
+<div class="wrap">
+<header class="top">
+  <div class="kick">FouLov · direction retenue · 16 novembre 2026</div>
+  <h1>Jardin le jour, Nocturne la nuit.</h1>
+  <p>Mon choix : le concept du jardin vivant, avec deux thèmes. Le jour reprend les verts et le rose du Jardin, la nuit reprend la palette Nocturne. Toute l'interface est en police système (Roboto sur Android, San Francisco sur iPhone), comme WhatsApp, Signal ou Telegram. Bascule les six écrans d'un thème à l'autre :</p>
+  <div class="toggle" role="group" aria-label="Thème de l'app">
+    <button type="button" id="bt-day" aria-pressed="true"><i style="background:#EEF1E8;box-shadow:inset 0 0 0 1px #3E6B4E"></i>Jour</button>
+    <button type="button" id="bt-night" aria-pressed="false"><i style="background:#FF9E7A"></i>Nuit</button>
+  </div>
+</header>
+
+<div id="stage" class="day">
+  <div class="phones">
+    <!-- 1 · Intro -->
+    <figure>
+      <div class="phone"><div class="scr" id="intro" data-intro="1">
+        <div class="punch"></div>
+        <canvas class="fx"></canvas>
+        <div class="sb lt"><span>7:12</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="ov">
+          <div style="position:absolute;left:0;right:0;top:76%;text-align:center;color:#F3EEF6">
+            <div class="wm" data-at="2" data-until="4" style="font:700 40px/1 Roboto, sans-serif;letter-spacing:-.02em"><span style="--i:0">F</span><span style="--i:1">o</span><span style="--i:2">u</span><span style="--i:3">L</span><span style="--i:4">o</span><span style="--i:5">v</span></div>
+            <div class="rv" data-at="3" data-until="4" style="margin-top:10px;opacity:.75">Votre amour pousse ici.</div>
+          </div>
+        </div>
+        <div class="sheet" data-at="4">
+          <div class="h1">Plantez la<br>première graine.</div>
+          <div class="mut" style="font-size:14px">Un espace privé pour vous deux, qui grandit avec chaque jour passé ensemble.</div>
+          <div class="btn pri" style="margin-top:4px">Commencer</div>
+          <div class="btn" style="padding:8px">J'ai un code d'invitation</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <button class="replay" data-replay="intro" type="button"><svg class="ic s"><use href="#i-replay"/></svg>Rejouer l'intro</button>
+      <figcaption><b>Intro animée</b><span>La graine, les deux tiges, la fleur. La nuit, des lucioles en plus.</span></figcaption>
+    </figure>
+
+    <!-- 2 · Connexion -->
+    <figure>
+      <div class="phone"><div class="scr">
+        <div class="punch"></div>
+        <div class="sb"><span>7:14</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:12px;padding:20px 20px 34px">
+          <canvas class="sprout" style="width:96px;height:96px" aria-hidden="true"></canvas>
+          <div class="h1" style="font-size:30px">Content de<br>te revoir.</div>
+          <div class="mut" style="font-size:14px">Ton jardin avec Malik t'attend. 3 nouvelles pousses depuis hier.</div>
+          <div style="margin-top:auto;display:grid;gap:10px">
+            <div class="btn sf"><svg width="18" height="18"><use href="#g-google"/></svg>Continuer avec Google</div>
+            <div class="btn pri"><svg width="16" height="17" style="fill:currentColor"><use href="#g-apple"/></svg>Continuer avec Apple</div>
+            <div class="btn ln"><svg class="ic s"><use href="#i-mail"/></svg>Recevoir un code par e-mail</div>
+            <div class="mut" style="font-size:11px;text-align:center;display:flex;gap:6px;justify-content:center"><svg class="ic xs"><use href="#i-finger"/></svg>Ensuite, ton empreinte suffit.</div>
+          </div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Connexion</b><span>Google, Apple ou code par e-mail. Jamais de mot de passe.</span></figcaption>
+    </figure>
+
+    <!-- 3 · Jardin -->
+    <figure>
+      <div class="phone"><div class="scr">
+        <div class="punch"></div>
+        <div class="sb"><span>8:03</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:6px 14px 10px">
+          <div class="row"><div class="grow"><div class="mut" style="font-size:12px">Inès &amp; Malik</div><div class="h2" style="font-weight:700;font-size:22px">Votre jardin</div></div><div class="row" style="gap:0"><img class="av" src="IMG(s_1027)" alt="" width="32" height="32" style="box-shadow:0 0 0 2px var(--a-bg)"><img class="av" src="IMG(s_883)" alt="" width="32" height="32" style="box-shadow:0 0 0 2px var(--a-bg);margin-left:-10px"></div></div>
+          <div style="position:relative;border-radius:24px;overflow:hidden;height:226px;flex:none;background:linear-gradient(180deg,var(--a-sky1),var(--a-sky2));box-shadow:0 0 0 1px var(--a-line)">
+            <canvas class="garden" style="position:absolute;inset:0;width:100%;height:100%" aria-label="Jardin de 44 plantes, dont 3 fleurs d'anniversaire"></canvas>
+            <div style="position:absolute;left:12px;top:10px"><div class="num">1 345</div><div style="font-size:11px;font-weight:500">jours ensemble</div></div>
+            <span class="chip" style="position:absolute;right:10px;top:12px">44 plantes · 3 fleurs</span>
+          </div>
+          <div class="card row" style="padding:12px">
+            <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--a-water);color:var(--a-water-tx);flex:none"><svg class="ic"><use href="#i-drop"/></svg></span>
+            <div class="grow"><div style="font-weight:500">Arrosé ce matin</div><div class="mut" style="font-size:12px">Vous vous êtes écrit à 7:40.</div></div>
+          </div>
+          <div class="card row" style="padding:12px">
+            <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--a-acc-sf);color:var(--a-acc-tx);flex:none"><svg class="ic"><use href="#i-flower"/></svg></span>
+            <div class="grow"><div style="font-weight:500">Prochaine fleur : 12 mars</div><div class="mut" style="font-size:12px">Vos 4 ans · dans 116 jours</div></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="on"><span class="pill"><svg class="ic"><use href="#i-flower"/></svg></span>Jardin</div>
+          <div><span class="pill"><svg class="ic"><use href="#i-chat"/></svg></span>Messages</div>
+          <div><span class="pill"><svg class="ic"><use href="#i-image"/></svg></span>Saisons</div>
+          <div><span class="pill"><svg class="ic"><use href="#i-cal"/></svg></span>Dates</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Le jardin</b><span>Généré à partir de votre histoire. La nuit, les fleurs brillent.</span></figcaption>
+    </figure>
+
+    <!-- 4 · Conversation -->
+    <figure>
+      <div class="phone"><div class="scr">
+        <div class="punch"></div>
+        <div class="sb"><span>18:22</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="row" style="padding:6px 14px 10px;border-bottom:1px solid var(--a-line)">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <img class="av" src="IMG(s_883)" alt="" width="36" height="36">
+          <div class="grow"><div style="font-weight:500;font-size:16px">Malik</div><div style="font-size:12px;color:var(--a-ok)">en ligne</div></div>
+          <svg class="ic"><use href="#i-dots"/></svg>
+        </div>
+        <div class="msgs" style="padding-top:8px">
+          <div style="align-self:center;font-size:11px;padding:4px 10px;border-radius:8px;background:var(--a-sf2);color:var(--a-mut);display:flex;gap:5px;align-items:center;text-align:center"><svg class="ic xs"><use href="#i-lock"/></svg>Chiffré de bout en bout · clés vérifiées ensemble</div>
+          <div class="b th ph"><img src="IMG(s_696)" alt="Des tulipes orange en fleur"><div style="padding:6px 8px 3px">Elles ont fleuri sur le balcon !!</div></div>
+          <div class="b me me-grad">Noooon, enfin ! Après trois mois à leur parler 🥹<span class="t">18:19 · Lu</span></div>
+          <div class="b th">C'est toi qui leur as parlé le plus, je crois</div>
+          <div style="align-self:stretch;margin:2px 0;border-radius:18px;padding:10px 12px;background:var(--a-acc-sf);color:var(--a-acc-tx);display:flex;gap:10px;align-items:center">
+            <span style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--a-acc);color:#FFFFFF;flex:none"><svg class="ic s"><use href="#i-flower"/></svg></span>
+            <div style="font-size:12px"><b>Malik a planté une fleur</b><br>« Le jour où les tulipes ont fleuri »</div>
+          </div>
+          <div class="b th typing"><i></i><i></i><i></i></div>
+        </div>
+        <div class="row" style="padding:6px 10px 26px;gap:8px">
+          <div class="grow row" style="background:var(--a-sf);box-shadow:0 0 0 1px var(--a-line);border-radius:24px;padding:10px 12px;color:var(--a-mut);gap:8px"><svg class="ic"><use href="#i-plus"/></svg><span class="grow">Message</span><svg class="ic"><use href="#i-image"/></svg></div>
+          <span style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--a-pri);color:var(--a-on-pri)"><svg class="ic"><use href="#i-mic"/></svg></span>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Conversation</b><span>Disposition familière de messagerie, en Roboto. Un beau moment peut devenir une fleur.</span></figcaption>
+    </figure>
+
+    <!-- 5 · Saisons -->
+    <figure>
+      <div class="phone"><div class="scr">
+        <div class="punch"></div>
+        <div class="sb"><span>12:40</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:6px 14px 0;overflow:hidden">
+          <div class="h2" style="font-weight:700;font-size:22px">Saisons</div>
+          <div class="row" style="gap:6px"><span class="chip on">Tout</span><span class="chip">Photos</span><span class="chip">Vidéos</span><span class="chip">Voyages</span></div>
+          <div class="row" style="align-items:baseline"><span class="grow" style="font-weight:500">Printemps 2026</span><span class="mut" style="font-size:11px">86 photos</span></div>
+          <div class="grid3"><div class="big"><img src="IMG(s_82)" alt="Fleurs de cerisier"></div><img src="IMG(s_976)" alt="Tulipes en sous-bois"><img src="IMG(s_102)" alt="Framboises sur une nappe"></div>
+          <div class="row" style="align-items:baseline;margin-top:2px"><span class="grow" style="font-weight:500">Été 2025 · Lisbonne</span><span class="mut" style="font-size:11px">48 photos</span></div>
+          <div class="grid3"><img src="IMG(s_419)" alt="Trams de Lisbonne"><img src="IMG(s_397)" alt="Maisons colorées à flanc de falaise"><img src="IMG(s_788)" alt="Coucher de soleil sur la plage"></div>
+          <div class="row" style="align-items:baseline;margin-top:2px"><span class="grow" style="font-weight:500">Hiver 2024</span><span class="mut" style="font-size:11px">31 photos</span></div>
+          <div class="grid3"><img src="IMG(s_755)" alt="Une tasse entre des pulls en laine"><img src="IMG(s_1025)" alt="Un carlin dans une couverture"><img src="IMG(s_407)" alt="Un cierge magique"></div>
+        </div>
+        <div class="tabs">
+          <div><span class="pill"><svg class="ic"><use href="#i-flower"/></svg></span>Jardin</div>
+          <div><span class="pill"><svg class="ic"><use href="#i-chat"/></svg></span>Messages</div>
+          <div class="on"><span class="pill"><svg class="ic"><use href="#i-image"/></svg></span>Saisons</div>
+          <div><span class="pill"><svg class="ic"><use href="#i-cal"/></svg></span>Dates</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Saisons</b><span>Photos et vidéos chiffrées, rangées par saison.</span></figcaption>
+    </figure>
+
+    <!-- 6 · Personnalisation -->
+    <figure>
+      <div class="phone"><div class="scr">
+        <div class="punch"></div>
+        <div class="sb"><span>21:30</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:12px;padding:6px 14px 30px">
+          <div class="row"><svg class="ic"><use href="#i-back"/></svg><div class="h2 grow">Apparence</div></div>
+          <div class="mut" style="font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-top:4px">Thème</div>
+          <div class="card">
+            <div class="opt"><svg class="ic s"><use href="#i-sun"/></svg><span class="grow">Jour · Jardin</span><span class="radio" data-r="day"></span></div>
+            <div class="opt"><svg class="ic s"><use href="#i-moon"/></svg><span class="grow">Nuit · Nocturne</span><span class="radio" data-r="night"></span></div>
+            <div class="opt"><svg class="ic s"><use href="#i-clock"/></svg><span class="grow">Suivre le téléphone</span><span class="radio"></span></div>
+          </div>
+          <div class="row mut" style="font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-top:4px"><span class="grow">Police</span><span class="soon">Plus tard</span></div>
+          <div class="card">
+            <div class="opt"><span style="font:500 16px Roboto, sans-serif;width:22px">Aa</span><span class="grow">Système <span class="mut">(recommandée)</span></span><span class="radio on"></span></div>
+            <div class="opt"><span style="font:700 16px ui-rounded, 'Arial Rounded MT Bold', Roboto, sans-serif;width:22px">Aa</span><span class="grow">Arrondie</span><span class="radio"></span></div>
+            <div class="opt"><span style="font:italic 400 17px Georgia, serif;width:22px">Aa</span><span class="grow">Élégante</span><span class="radio"></span></div>
+          </div>
+          <div class="row mut" style="font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-top:4px"><span class="grow">Couleur de vos bulles</span><span class="soon">Plus tard</span></div>
+          <div class="row" style="gap:12px;padding:0 4px">
+            <span class="sw on" style="background:var(--a-me)"></span><span class="sw" style="background:#F29BB8"></span><span class="sw" style="background:#7FB3D5"></span><span class="sw" style="background:#F2C94C"></span><span class="sw" style="background:#9B8AE6"></span>
+          </div>
+          <div class="mut" style="margin-top:auto;font-size:11px;text-align:center">Le thème et la police sont propres à chaque téléphone. Malik garde les siens.</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Apparence</b><span>Le couple pourra changer thème, police et couleurs. Première version : système.</span></figcaption>
+    </figure>
+  </div>
+</div>
+
+<section class="blk">
+  <h2>Pourquoi le Jardin</h2>
+  <div class="why">
+    <div><b>Il n'existe nulle part ailleurs</b><p>Les apps de couple se ressemblent toutes : un chat, un compteur, des photos. Un jardin qui pousse avec votre histoire, c'est une raison de choisir FouLov plutôt qu'une autre.</p></div>
+    <div><b>Il donne envie de revenir sans culpabiliser</b><p>Le jardin est arrosé quand vous vous parlez, mais il ne meurt jamais. Pas de série à ne pas casser, pas de pression.</p></div>
+    <div><b>Il raconte la sécurité sans jargon</b><p>Votre jardin est clos : seuls vous deux y entrez. C'est le message central de l'app, dit avec une image que tout le monde comprend.</p></div>
+  </div>
+</section>
+
+<section class="blk" id="whatsapp">
+  <h2>FouLov peut-il être plus sûr que WhatsApp ?</h2>
+  <p>Sur le contenu des messages, WhatsApp est déjà très solide : il utilise le protocole Signal depuis 2016. On ne fera pas « mieux » en inventant notre propre chiffrement. On fera au moins aussi bien en reprenant la même famille de protocole. En revanche, on peut faire nettement mieux sur tout ce qui entoure les messages.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Point</th><th>WhatsApp aujourd'hui</th><th>FouLov prévu</th><th>Bilan</th></tr></thead>
+      <tbody>
+        <tr><td>Chiffrement des messages</td><td>Protocole Signal, de bout en bout.</td><td>Même famille de protocole (échange de clés + double ratchet), avec une bibliothèque éprouvée.</td><td><span class="v eq">Égalité</span></td></tr>
+        <tr><td>Résistance quantique</td><td>Je n'ai pas d'information fiable sur un déploiement chez WhatsApp. Signal l'a ajoutée en 2023.</td><td>Échange de clés hybride classique + post-quantique (ML-KEM) dès la première version.</td><td><span class="v up">Mieux, a priori</span></td></tr>
+        <tr><td>Identité</td><td>Numéro de téléphone obligatoire.</td><td>Aucun numéro. Un compte Google, Apple ou une adresse e-mail.</td><td><span class="v up">Mieux</span></td></tr>
+        <tr><td>Carnet d'adresses</td><td>Propose d'importer tes contacts pour trouver tes amis.</td><td>Jamais demandé : il n'y a qu'une seule personne à trouver.</td><td><span class="v up">Mieux</span></td></tr>
+        <tr><td>Métadonnées</td><td>Collectées (qui parle à qui, quand, appareil) et utilisables par Meta selon sa politique.</td><td>Le strict minimum : deux comptes liés, l'heure d'envoi et la taille des fichiers. Rien n'est revendu ni partagé.</td><td><span class="v up">Mieux</span></td></tr>
+        <tr><td>Sauvegardes</td><td>Chiffrement de bout en bout disponible, mais à activer soi-même.</td><td>Toujours chiffrées de bout en bout, sans option pour le désactiver.</td><td><span class="v up">Mieux</span></td></tr>
+        <tr><td>Notifications</td><td>Contenu protégé, mais le service de notification sait qu'un message arrive.</td><td>Pareil, avec un texte fixe (« Nouveau message ») : le contenu ne transite jamais par Google ou Apple.</td><td><span class="v eq">Égalité</span></td></tr>
+        <tr><td>Transparence</td><td>Code fermé.</td><td>À décider : publier le code de l'app permettrait à n'importe qui de vérifier nos promesses.</td><td><span class="v up">Mieux, si on publie</span></td></tr>
+        <tr><td>Maturité</td><td>Des années d'usage par des milliards de personnes, une grosse équipe sécurité.</td><td>Tout neuf. Il faudra un audit indépendant avant de dire publiquement « plus sûr que WhatsApp ».</td><td><span class="v dn">Moins bien, pour l'instant</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Ce comparatif repose sur ce que je sais de WhatsApp à ce jour. Avant toute communication publique, chaque ligne devra être revérifiée sur les sources officielles.</p>
+</section>
+</div>
+
+<script>
+(() => {
+  const frz = /^#t(\d+)(n?)$/.exec(location.hash);
+  const reduce = !!frz || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const stage = document.getElementById('stage');
+  const night = () => stage.classList.contains('night');
+  const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const eio = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const eout = t => 1 - Math.pow(1 - t, 3);
+  const eback = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+  const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const PAL = {
+    day:   { bg1:'#0C2219', bg2:'#16392A', mound:'62,107,78', stemA:'#7DB888', stemB:'#B2D69A', leafA:'#5E9A6C', leafB:'#8FC27F', p1:'#F29BB8', p2:'#F6B3C9', p3:'#F9CCDA', core:'#F2C94C', glow:'242,155,184', fly:'242,201,76', flies:.6,
+             hills:['#C8E0C9','#A9D0AE','#86BC8E'], stems:['#7FAE87','#5E9A6C','#3E6B4E'], leaves:['#8FC27F','#6FAA78','#4E8A5E'], buds:['#A9D48E','#86BC7A','#6FAA78'], gflies:0 },
+    night: { bg1:'#0A0710', bg2:'#1A1022', mound:'90,60,110', stemA:'#5FA79A', stemB:'#8CCBB5', leafA:'#3F7F74', leafB:'#6FB3A2', p1:'#FF9E7A', p2:'#FF7895', p3:'#FFD2C2', core:'#F6E6CF', glow:'255,140,120', fly:'246,230,207', flies:1,
+             hills:['#1C1528','#231A31','#2C213B'], stems:['#3F6F68','#4E8A7E','#5FA79A'], leaves:['#3F7F74','#4E9384','#6FB3A2'], buds:['#4E9384','#5FA79A','#6FB3A2'], gflies:1 },
+  };
+  const pal = () => PAL[night() ? 'night' : 'day'];
+
+  function fit(canvas) {
+    const r = canvas.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
+    const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+    if (canvas.width !== w * d || canvas.height !== h * d) { canvas.width = w * d; canvas.height = h * d; }
+    const ctx = canvas.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0);
+    return { ctx, w, h };
+  }
+  function petal(ctx, x, y, ang, len, wid, col) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(wid, -len * .3, wid * .8, -len, 0, -len); ctx.bezierCurveTo(-wid * .8, -len, -wid, -len * .3, 0, 0); ctx.fill(); ctx.restore();
+  }
+  function leaf(ctx, x, y, ang, s, col) {
+    if (s <= 0) return; ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(9, -9, 22, 0); ctx.quadraticCurveTo(9, 7, 0, 0); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(19, 0); ctx.stroke(); ctx.restore();
+  }
+  function flower(ctx, x, y, s, rot, big, P, glow) {
+    if (s <= 0) return; const n = big ? 6 : 5;
+    if (glow) { const g = ctx.createRadialGradient(x, y, 0, x, y, (big ? 30 : 12) * s); g.addColorStop(0, `rgba(${P.glow},.55)`); g.addColorStop(1, `rgba(${P.glow},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, (big ? 30 : 12) * s, 0, Math.PI * 2); ctx.fill(); }
+    for (let i = 0; i < n; i++) petal(ctx, x, y, rot + i / n * Math.PI * 2, (big ? 19 : 8) * s, (big ? 10 : 4.5) * s, i % 2 ? P.p1 : P.p2);
+    for (let i = 0; i < n; i++) petal(ctx, x, y, rot + (i + .5) / n * Math.PI * 2, (big ? 11 : 5) * s, (big ? 6 : 3) * s, P.p3);
+    ctx.fillStyle = P.core; ctx.beginPath(); ctx.arc(x, y, (big ? 5 : 2.3) * s, 0, Math.PI * 2); ctx.fill();
+  }
+  function flies(ctx, t, w, h, n, a0, P, seed) {
+    const r = rng(seed);
+    for (let i = 0; i < n; i++) {
+      const bx = r() * w, by = r() * h * .8, ph = r() * 6;
+      const x = bx + Math.sin(t * .0006 + ph) * 14, y = by + Math.cos(t * .0005 + ph) * 10, a = a0 * (.35 + .35 * Math.sin(t * .003 + ph));
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 7); g.addColorStop(0, `rgba(${P.fly},${a})`); g.addColorStop(1, `rgba(${P.fly},0)`);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawIntro(ctx, t, w, h) {
+    const P = pal();
+    const bg = ctx.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, P.bg1); bg.addColorStop(1, P.bg2); ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+    const up = eio(clamp((t - 6800) / 1200));
+    const g = h * .70, H = h * .34, cx = w / 2;
+    ctx.save(); ctx.translate(0, -h * .13 * up); ctx.translate(cx, g); ctx.scale(1 - .12 * up, 1 - .12 * up); ctx.translate(-cx, -g);
+    flies(ctx, t, w, h, night() ? 24 : 14, sstep(3800, 5200, t) * P.flies, P, 11);
+    const sg = ctx.createRadialGradient(cx, g + 10, 0, cx, g + 10, 90); sg.addColorStop(0, `rgba(${P.mound},.55)`); sg.addColorStop(1, `rgba(${P.mound},0)`);
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(cx, g + 10, 90, 18, 0, 0, Math.PI * 2); ctx.fill();
+    if (t < 1000) { const e = clamp(t / 900), y = lerp(-20, g - 4, e * e) - (t > 900 ? Math.sin((t - 900) / 100 * Math.PI) * 4 : 0); ctx.fillStyle = P.core; ctx.beginPath(); ctx.ellipse(cx, y, 4, 5.5, 0, 0, Math.PI * 2); ctx.fill(); }
+    const sMax = eout(clamp((t - 950) / 2700)), sway = Math.sin(t * .0012) * 2.5;
+    const pt = (s, ph) => ({ x: cx + Math.sin(s * Math.PI * 2.3 + ph) * 15 * (1 - .4 * s) * Math.min(1, s * 5) + sway * s, y: g - s * H });
+    const stems = [{ ph: 0, col: P.stemA }, { ph: Math.PI, col: P.stemB }];
+    for (const sm of stems) { let prev = pt(0, sm.ph); for (let s = .015; s <= sMax; s += .015) { const p = pt(s, sm.ph); ctx.strokeStyle = sm.col; ctx.lineCap = 'round'; ctx.lineWidth = 4.6 * (1 - s * .55); ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(p.x, p.y); ctx.stroke(); prev = p; } }
+    for (const [s, k, side] of [[.18, 0, -1], [.3, 1, 1], [.44, 0, 1], [.56, 1, -1], [.7, 0, -1], [.8, 1, 1]]) {
+      const gr = clamp((sMax - s) / .14); if (gr <= 0) continue; const p = pt(s, stems[k].ph);
+      leaf(ctx, p.x, p.y, side > 0 ? -.55 + Math.sin(t * .0015 + s * 9) * .06 : Math.PI + .55, eback(gr) * (1 - s * .35), k ? P.leafB : P.leafA);
+    }
+    const top = pt(1, 0), tp = { x: (top.x + pt(1, Math.PI).x) / 2, y: top.y - 4 }, bt = clamp((t - 3600) / 1200);
+    if (bt > 0) {
+      const halo = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, 74); halo.addColorStop(0, `rgba(${P.glow},${(night() ? .45 : .32) * bt})`); halo.addColorStop(1, `rgba(${P.glow},0)`);
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(tp.x, tp.y, 74, 0, Math.PI * 2); ctx.fill();
+      flower(ctx, tp.x, tp.y, eback(bt) * 1.35, bt * .8 + t * .00008, true, P, false);
+    }
+    if (t > 4900) { const rr = rng(5); for (let i = 0; i < 5; i++) { const st = 4900 + i * 900 + rr() * 300, dt = t - st; if (dt < 0) continue; const y = tp.y + dt * .045, x = tp.x + (rr() - .5) * 30 + Math.sin(dt * .002 + i) * 18, a = 1 - clamp(dt / 4200); if (a <= 0) continue; ctx.globalAlpha = a; petal(ctx, x, y, dt * .0015 + i, 7, 4, P.p2); ctx.globalAlpha = 1; } }
+    ctx.restore();
+  }
+
+  function drawGarden(ctx, t, w, h) {
+    const P = pal(); ctx.clearRect(0, 0, w, h);
+    if (P.gflies) {
+      const r0 = rng(3); for (let i = 0; i < 30; i++) { ctx.fillStyle = `rgba(246,230,207,${.25 + .35 * r0()})`; ctx.fillRect(r0() * w, r0() * h * .45, 1.2, 1.2); }
+      const m = ctx.createRadialGradient(w * .8, h * .22, 0, w * .8, h * .22, 26); m.addColorStop(0, 'rgba(246,230,207,.95)'); m.addColorStop(.45, 'rgba(246,230,207,.9)'); m.addColorStop(.5, 'rgba(246,230,207,.15)'); m.addColorStop(1, 'rgba(246,230,207,0)');
+      ctx.fillStyle = m; ctx.beginPath(); ctx.arc(w * .8, h * .22, 26, 0, Math.PI * 2); ctx.fill();
+    }
+    const hill = (yb, amp, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(0, yb); for (let x = 0; x <= w; x += 8) ctx.lineTo(x, yb - Math.sin(x / w * Math.PI) * amp); ctx.lineTo(w, h); ctx.fill(); };
+    const r = rng(42), plants = [];
+    for (let i = 0; i < 44; i++) { const row = i < 16 ? 0 : i < 32 ? 1 : 2; plants.push({ x: 10 + r() * (w - 20), row, hgt: [38, 52, 64][row] * (.7 + r() * .5), ph: r() * 6, fl: [5, 21, 37].includes(i) ? 2 : r() < .18 ? 1 : 0, lean: (r() - .5) * .3 }); }
+    plants.sort((a, b) => a.row - b.row);
+    let drawn = -1;
+    for (const p of plants) {
+      while (drawn < p.row) { drawn++; hill(h * [.74, .84, .95][drawn], [18, 14, 10][drawn], P.hills[drawn]); }
+      const base = h * [.74, .84, .95][p.row] - Math.sin(p.x / w * Math.PI) * [18, 14, 10][p.row] + 3;
+      const sw = Math.sin(t * .0011 + p.ph) * 4 * (p.hgt / 60), tx = p.x + p.lean * p.hgt + sw, ty = base - p.hgt;
+      ctx.strokeStyle = P.stems[p.row]; ctx.lineWidth = [1.6, 2, 2.6][p.row]; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x, base); ctx.quadraticCurveTo(p.x + sw * .3, base - p.hgt * .5, tx, ty); ctx.stroke();
+      const sc = [.6, .8, 1][p.row];
+      leaf(ctx, lerp(p.x, tx, .4), lerp(base, ty, .4), -.6, .55 * sc, P.leaves[p.row]);
+      leaf(ctx, lerp(p.x, tx, .62), lerp(base, ty, .62), Math.PI + .6, .45 * sc, P.buds[p.row]);
+      if (p.fl === 2) flower(ctx, tx, ty, .95 * sc + .05 * Math.sin(t * .002 + p.ph), t * .0001, true, P, !!P.gflies);
+      else if (p.fl === 1) flower(ctx, tx, ty, .9 * sc, p.ph, false, P, !!P.gflies);
+      else { ctx.fillStyle = P.buds[p.row]; ctx.beginPath(); ctx.ellipse(tx, ty, 2.5 * sc, 4 * sc, 0, 0, Math.PI * 2); ctx.fill(); }
+    }
+    if (P.gflies) flies(ctx, t, w, h, 12, 1, P, 21);
+  }
+
+  function drawSprout(ctx, t, w, h) {
+    const P = pal(); ctx.clearRect(0, 0, w, h);
+    const g = ctx.createRadialGradient(w / 2, h * .6, 0, w / 2, h * .6, w * .5); g.addColorStop(0, night() ? 'rgba(255,140,120,.22)' : '#DCEAD8'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    const sw = Math.sin(t * .0016) * 3, bx = w / 2, by = h * .86;
+    ctx.strokeStyle = P.stems[2]; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + 2, by - 30, bx + sw, by - 52); ctx.stroke();
+    leaf(ctx, bx + sw * .6, by - 34, -.7 + Math.sin(t * .002) * .08, 1.25, P.leaves[1]);
+    leaf(ctx, bx + sw * .5, by - 26, Math.PI + .7 - Math.sin(t * .002) * .08, 1.05, P.leaves[2]);
+    flower(ctx, bx + sw, by - 54, .62 + .04 * Math.sin(t * .003), t * .0002, true, P, night());
+    ctx.fillStyle = night() ? '#231A31' : '#C8DCC4'; ctx.beginPath(); ctx.ellipse(bx, by + 2, 26, 5, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  const DUR = 13500, STEPS = [[0, 0], [3600, 1], [4400, 2], [5200, 3], [7000, 4]];
+  const items = [];
+  const intro = document.getElementById('intro');
+  items.push({ el: intro, canvas: intro.querySelector('canvas'), intro: true, start: performance.now(), step: -1, lastT: 0, layers: [...intro.querySelectorAll('[data-at]')] });
+  document.querySelectorAll('canvas.garden').forEach(c => items.push({ el: c, canvas: c, ambient: drawGarden }));
+  document.querySelectorAll('canvas.sprout').forEach(c => items.push({ el: c, canvas: c, ambient: drawSprout }));
+
+  function setStep(it, s) {
+    if (s === it.step) return; it.step = s;
+    for (const l of it.layers) { const at = +l.dataset.at, until = l.dataset.until !== undefined ? +l.dataset.until : 99; l.classList.toggle('on', s >= at && s < until); }
+  }
+  function render(it, now) {
+    const { ctx, w, h } = fit(it.canvas);
+    if (it.ambient) { it.ambient(ctx, reduce ? 0 : now, w, h); return; }
+    const t = frz ? +frz[1] : reduce ? 9500 : (now - it.start) % DUR;
+    if (t < it.lastT) setStep(it, -1); it.lastT = t;
+    let s = 0; for (const [at, st] of STEPS) if (t >= at) s = st; setStep(it, s);
+    drawIntro(ctx, t, w, h);
+  }
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    const it = items.find(i => i.el === e.target); if (!it) return; it.visible = e.isIntersecting;
+    if (it.visible && it.intro && !it.started && !reduce) { it.started = true; it.start = performance.now(); it.lastT = 0; setStep(it, -1); }
+  }), { rootMargin: '80px' });
+  items.forEach(it => io.observe(it.el));
+  const all = now => items.forEach(it => render(it, now));
+  if (reduce) { requestAnimationFrame(() => all(0)); addEventListener('resize', () => all(0)); }
+  else { const loop = now => { for (const it of items) if (it.visible) render(it, now); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+
+  document.querySelector('[data-replay]').addEventListener('click', () => { const it = items[0]; it.start = performance.now(); it.lastT = 0; setStep(it, -1); });
+
+  // Interrupteur Jour / Nuit (+ radio de l'écran Apparence)
+  const bd = document.getElementById('bt-day'), bn = document.getElementById('bt-night');
+  function setTheme(n) {
+    stage.classList.toggle('night', n); stage.classList.toggle('day', !n);
+    bd.setAttribute('aria-pressed', String(!n)); bn.setAttribute('aria-pressed', String(n));
+    document.querySelectorAll('.radio[data-r]').forEach(r => r.classList.toggle('on', (r.dataset.r === 'night') === n));
+    if (reduce) all(0);
+    try { localStorage.setItem('foulov-theme', n ? 'night' : 'day'); } catch (e) {}
+  }
+  bd.addEventListener('click', () => setTheme(false)); bn.addEventListener('click', () => setTheme(true));
+  let saved = null; try { saved = localStorage.getItem('foulov-theme'); } catch (e) {}
+  setTheme(frz ? frz[2] === 'n' : saved === 'night');
+})();
+</script>
+</body>
+</html>

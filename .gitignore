@@ -1,0 +1,32 @@
+# Secrets : jamais dans git
+.env
+.env.*
+!.env.example
+Secret Keys/
+*.pem
+*.p12
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+
+# OS / éditeurs
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Animation : outils locaux, éléments téléchargés (voir animation/fetch_assets.py) et rendus intermédiaires
+animation/.venv/
+animation/assets/
+animation/render/
+animation/textures/
+*.blend1
+
+# Maquettes : sources photo (Unsplash) et fichiers générés
+design/_photos/
+design/_photos_raw/
+
+# Builds générés hors de app/
+/build/

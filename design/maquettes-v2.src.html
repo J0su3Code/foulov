@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maquettes FouLov v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400&family=Young+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: dossier de présentation. En-tête, nav collante, 3 directions empilées (fiche + 5 téléphones Pixel animés), puis parcours de connexion. */
+:root{
+  --bg:#F4F3F6; --fg:#1A1820; --muted:#615C6A; --line:#E0DCE5; --card:#FFFFFF; --accent:#6B4FD8;
+  --f-ui:"Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-title:"Instrument Serif", Georgia, serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#111014; --fg:#EEEBF2; --muted:#A39DAC; --line:#28252E; --card:#19181D; --accent:#B7A6FF; color-scheme:dark }
+}
+:root[data-theme="dark"]{ --bg:#111014; --fg:#EEEBF2; --muted:#A39DAC; --line:#28252E; --card:#19181D; --accent:#B7A6FF; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--f-ui); font-size:15px; line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:0 72px}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--bg)}
+img{max-width:100%; display:block}
+.wrap{max-width:1680px; margin:0 auto}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:8px}
+
+.intro{padding-block:52px 30px; display:grid; gap:14px; max-width:780px}
+.kick{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.intro h1{font-family:var(--f-title); font-weight:400; font-size:clamp(40px, 7vw, 76px); line-height:.98; letter-spacing:-.01em; margin:0; text-wrap:balance}
+.intro h1 em{font-style:italic}
+.intro p{margin:0; color:var(--muted); max-width:64ch}
+
+nav.jump{position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--bg); border-bottom:1px solid var(--line); display:flex; gap:8px; flex-wrap:wrap; padding-block:12px}
+nav.jump a{text-decoration:none; color:inherit; padding:7px 14px; border-radius:999px; border:1px solid var(--line); font-weight:600; font-size:14px; background:var(--card); display:flex; align-items:center; gap:8px}
+nav.jump a:hover{border-color:var(--fg)}
+nav.jump i{width:12px; height:12px; border-radius:50%; display:inline-block}
+
+section.dir{padding-block:64px 8px; border-bottom:1px solid var(--line); scroll-margin-top:70px}
+.dhead{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:36px; align-items:start}
+@media (max-width:920px){ .dhead{grid-template-columns:minmax(0,1fr)} }
+.dlabel{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:0 0 8px}
+.dname{margin:0; line-height:.95; font-size:clamp(52px, 9vw, 104px); font-weight:400; text-wrap:balance}
+.dthesis{font-size:19px; margin:16px 0 0; max-width:50ch; font-weight:500}
+.dtext{color:var(--muted); margin:10px 0 0; max-width:64ch}
+.facts{display:grid; gap:18px; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:20px}
+.facts h4{margin:0 0 8px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.sw{display:flex; flex-wrap:wrap; gap:10px}
+.sw div{display:grid; gap:4px; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+.sw span{width:46px; height:46px; border-radius:12px; border:1px solid var(--line)}
+.typo{display:grid; gap:0}
+.typo small{color:var(--muted); font-size:12px}
+.logo-row{display:flex; align-items:center; gap:14px}
+.logo-row .lg{width:64px; height:64px; flex:none; border-radius:16px}
+.logo-row p{margin:0; font-size:13px; color:var(--muted)}
+.feats{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px}
+.feats span{font-size:13px; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:var(--card)}
+
+.phones{display:flex; gap:28px; overflow-x:auto; scroll-snap-type:x mandatory; padding-block:44px 28px; margin-bottom:20px; scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+.phones > figure{flex:none; width:300px; scroll-snap-align:start}
+.swipe{color:var(--muted); font-size:13px; margin:28px 0 -24px; display:flex; gap:6px; align-items:center}
+figure{margin:0; display:grid; gap:12px; justify-items:center; align-content:start}
+figcaption{text-align:center; max-width:290px; display:grid; gap:2px}
+figcaption b{font-size:14px}
+figcaption span{color:var(--muted); font-size:13px}
+.replay{justify-self:center; font:600 13px var(--f-ui); color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 14px; cursor:pointer; display:flex; gap:6px; align-items:center}
+.replay:hover{border-color:var(--fg)}
+
+/* ---------- Pixel 8 ---------- */
+.phone{width:300px; max-width:100%; aspect-ratio:300/650; border-radius:46px; padding:8px; position:relative;
+  background:linear-gradient(150deg,#3A3A40,#121214 40%,#0A0A0B); box-shadow:inset 0 0 0 1.5px #4A4A52, 0 40px 70px -34px rgba(20,10,40,.6), 0 12px 24px -16px rgba(0,0,0,.4)}
+.phone::before{content:""; position:absolute; right:-3px; top:128px; width:3px; height:56px; border-radius:0 3px 3px 0; background:#2A2A2F}
+.phone::after{content:""; position:absolute; right:-3px; top:200px; width:3px; height:30px; border-radius:0 3px 3px 0; background:#2A2A2F}
+.scr{height:100%; border-radius:38px; overflow:hidden; position:relative; display:flex; flex-direction:column; isolation:isolate; font-size:13px; line-height:1.4; --sbc:#111; --gbc:rgba(0,0,0,.75)}
+.scr.dk{--sbc:#F5F2F8; --gbc:rgba(255,255,255,.85)}
+.punch{position:absolute; top:10px; left:50%; width:11px; height:11px; margin-left:-5.5px; border-radius:50%; background:#050506; box-shadow:0 0 0 1.5px #1C1C20; z-index:60}
+.sb{display:flex; justify-content:space-between; align-items:center; padding:9px 22px 4px; font:600 12px "Geist", system-ui, sans-serif; color:var(--sbc); flex:none; position:relative; z-index:40; font-variant-numeric:tabular-nums}
+.sb .bt{display:flex; gap:5px; align-items:center}
+.sb svg{width:14px; height:14px; fill:currentColor}
+.sb .bat{width:9px; height:15px; border-radius:2.5px; border:1.5px solid currentColor; position:relative}
+.sb .bat::after{content:""; position:absolute; inset:4px 1px 1px; background:currentColor; border-radius:1px}
+.gb{position:absolute; bottom:7px; left:50%; width:96px; height:4px; margin-left:-48px; border-radius:4px; background:var(--gbc); z-index:45}
+.ic{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none}
+.ic.s{width:15px; height:15px}
+.ic.xs{width:12px; height:12px}
+.ic.l{width:26px; height:26px}
+.row{display:flex; align-items:center; gap:10px}
+.grow{flex:1; min-width:0}
+.msgs{display:flex; flex-direction:column; gap:6px; flex:1; min-height:0; justify-content:flex-end; padding:0 12px 6px}
+.b{max-width:80%; padding:8px 12px; border-radius:20px; font-size:13px; position:relative}
+.b.me{align-self:flex-end; border-bottom-right-radius:7px}
+.b.th{align-self:flex-start; border-bottom-left-radius:7px}
+.b .t{display:block; font-size:10px; opacity:.6; margin-top:1px; text-align:right}
+.b.ph{padding:4px}
+.b.ph img{border-radius:16px; width:176px; height:132px; object-fit:cover}
+.react{position:absolute; bottom:-11px; right:8px; font-size:11px; border-radius:10px; padding:1px 5px}
+.wave{display:flex; align-items:center; gap:2px; height:24px}
+.wave i{display:block; width:3px; border-radius:2px; background:currentColor}
+.av{border-radius:50%; object-fit:cover; flex:none}
+.typing{display:flex; gap:4px; padding:12px 14px}
+.typing i{width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.35; animation:dot 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{30%{opacity:1; transform:translateY(-3px)}}
+canvas.fx{position:absolute; inset:0; width:100%; height:100%; z-index:1}
+.ov{position:absolute; inset:0; z-index:5; pointer-events:none}
+.rv{opacity:0; transform:translateY(12px); transition:opacity .8s ease, transform .9s cubic-bezier(.2,.8,.2,1)}
+.rv.on{opacity:1; transform:none}
+.rv.d1{transition-delay:.12s} .rv.d2{transition-delay:.24s} .rv.d3{transition-delay:.36s} .rv.d4{transition-delay:.48s}
+.wm span{display:inline-block; opacity:0; transform:translateY(18px) scale(.96); filter:blur(6px); transition:opacity .7s ease, transform .8s cubic-bezier(.2,.8,.2,1), filter .7s ease; transition-delay:calc(var(--i) * 70ms)}
+.wm.on span{opacity:1; transform:none; filter:none}
+.btn{display:flex; justify-content:center; align-items:center; gap:10px; padding:14px; border-radius:999px; font-weight:600; font-size:14px}
+
+/* ===================== A · NACRE ===================== */
+.dA .dname{font-family:"Instrument Serif", Georgia, serif; font-style:italic}
+.wA{background:#F2F0F5; color:#17161B; font-family:"Geist", system-ui, sans-serif}
+.irid{position:absolute; inset:-25%; z-index:0; pointer-events:none;
+  background:radial-gradient(34% 26% at 22% 20%, #F9C9DC, transparent 70%), radial-gradient(30% 26% at 82% 30%, #C6E9F2, transparent 70%), radial-gradient(36% 30% at 28% 78%, #D9CCFA, transparent 70%), radial-gradient(28% 24% at 84% 82%, #FBE8C0, transparent 70%);
+  animation:drift 22s ease-in-out infinite alternate}
+.irid.soft{opacity:.65}
+@keyframes drift{to{transform:translate(6%, -5%) rotate(14deg)}}
+.wA .serif{font-family:"Instrument Serif", Georgia, serif; font-weight:400}
+.wA .mut{color:#6E6A78}
+.gA{background:rgba(255,255,255,.55); -webkit-backdrop-filter:blur(18px) saturate(1.7); backdrop-filter:blur(18px) saturate(1.7); border:1px solid rgba(255,255,255,.85); box-shadow:inset 0 1px 0 rgba(255,255,255,.95), 0 12px 30px -20px rgba(70,40,110,.45)}
+.wA .btn.ink{background:#17161B; color:#FFFFFF}
+.wA .btn.gl{color:#17161B}
+.pearl{border-radius:50%; position:relative; overflow:hidden;
+  background:radial-gradient(circle at 34% 30%, #FFFFFF 0 8%, transparent 26%), radial-gradient(circle at 50% 50%, transparent 55%, rgba(120,90,170,.18) 75%, rgba(80,60,130,.28)), conic-gradient(from 200deg, #F9C9DC, #FBE8C0, #C6E9F2, #D9CCFA, #F9C9DC);
+  box-shadow:0 16px 30px -14px rgba(90,60,140,.45)}
+.pearl::after{content:""; position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 0deg, rgba(255,255,255,0), rgba(255,255,255,.45), rgba(255,255,255,0) 30%); animation:sheen 6s linear infinite; mix-blend-mode:soft-light}
+@keyframes sheen{to{transform:rotate(360deg)}}
+.wA .b.me{background:#17161B; color:#FFFFFF}
+.wA .b.th{background:rgba(255,255,255,.7); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.9)}
+.wA .tabs{position:absolute; left:14px; right:14px; bottom:20px; z-index:30; border-radius:26px; display:flex; justify-content:space-around; padding:9px 4px; font-size:10px; font-weight:600; color:#77737F}
+.wA .tabs div{display:grid; justify-items:center; gap:2px; padding:4px 10px; border-radius:16px}
+.wA .tabs .on{color:#17161B; background:rgba(255,255,255,.85)}
+.wA .lock{font-size:10px; font-weight:600; display:flex; align-items:center; gap:4px; padding:4px 8px; border-radius:999px}
+.wA .iwave i{background:linear-gradient(180deg,#E79BBC,#9AD3E4)}
+.blurline{height:10px; border-radius:6px; background:linear-gradient(90deg, rgba(23,22,27,.18), rgba(23,22,27,.08)); filter:blur(2.5px)}
+
+/* ===================== B · NOCTURNE ===================== */
+.dB .dname{font-family:"Unbounded", sans-serif; font-weight:600; letter-spacing:-.03em}
+.wB{background:#0A0710; color:#F3EEF6; font-family:"Manrope", system-ui, sans-serif}
+.wB .h{font-family:"Unbounded", sans-serif; font-weight:600; letter-spacing:-.01em; margin:0}
+.wB .mut{color:#9A8FA8}
+.gB{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px)}
+.wB .btn.hot{background:linear-gradient(120deg,#FFB08A,#FF6F94); color:#2A0B16; font-weight:700}
+.wB .btn.out{border:1px solid rgba(246,230,207,.28); color:#F6E6CF}
+.wB .b.me{background:linear-gradient(135deg,#FFB08A,#FF7895); color:#2A0B16}
+.wB .b.th{background:#21182A; color:#F3EEF6}
+.otp{display:grid; grid-template-columns:repeat(6, 1fr); gap:7px}
+.otp div{height:50px; border-radius:14px; background:#1A1322; border:1px solid #2E2338; display:grid; place-items:center; font:600 22px "Unbounded", sans-serif; position:relative}
+.otp div span{opacity:0; transform:scale(.6); animation:otpin 7s infinite}
+.otp div.cur{border-color:#FF9E7A; box-shadow:0 0 0 3px rgba(255,158,122,.18)}
+@keyframes otpin{0%{opacity:0; transform:scale(.6)} 4%,88%{opacity:1; transform:none} 95%,100%{opacity:0}}
+.kp{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; padding:8px 8px 22px; background:#130E19; border-top:1px solid #231A2C}
+.kp div{height:40px; border-radius:12px; display:grid; place-items:center; font:500 19px "Manrope", sans-serif; background:#1D1625; color:#F3EEF6}
+.kp div small{display:block; font-size:8px; letter-spacing:.12em; color:#8E839C; margin-top:-4px}
+.kp div.k{display:flex; flex-direction:column; justify-content:center; align-items:center; line-height:1.15}
+.kp div.fn{background:transparent}
+.beat{width:150px; height:150px; border-radius:50%; position:relative; display:grid; place-items:center; margin:0 auto}
+.beat .core{width:118px; height:118px; border-radius:50%; display:grid; place-items:center; color:#2A0B16; background:radial-gradient(circle at 38% 32%, #FFD9C7, #FF9E7A 45%, #FF5C8A); box-shadow:0 0 50px 6px rgba(255,120,130,.45); animation:thump 1.6s ease-in-out infinite; position:relative; z-index:2}
+.beat i{position:absolute; inset:16px; border-radius:50%; border:1.5px solid rgba(255,158,122,.6); animation:ripple 3.2s ease-out infinite}
+.beat i:nth-child(2){animation-delay:1.06s} .beat i:nth-child(3){animation-delay:2.13s}
+@keyframes thump{0%,40%,100%{transform:scale(1)} 12%{transform:scale(1.07)} 24%{transform:scale(.98)} 30%{transform:scale(1.04)}}
+@keyframes ripple{0%{transform:scale(.9); opacity:.9} 100%{transform:scale(1.6); opacity:0}}
+.wB .tabs{margin:0 12px 22px; border-radius:24px; display:flex; justify-content:space-around; padding:9px 4px; font-size:10px; font-weight:600; color:#7E7390; position:relative; z-index:3}
+.wB .tabs div{display:grid; justify-items:center; gap:2px}
+.wB .tabs .on{color:#FFB295}
+.bars{display:flex; gap:4px; padding:0 12px}
+.bars i{flex:1; height:2.5px; border-radius:2px; background:rgba(255,255,255,.35); display:block; overflow:hidden; position:relative}
+.bars i.done{background:#FFFFFF}
+.bars i.now::after{content:""; position:absolute; inset:0; background:#FFFFFF; transform-origin:left; animation:prog 6s linear infinite}
+@keyframes prog{from{transform:scaleX(0)} to{transform:scaleX(1)}}
+
+/* ===================== C · JARDIN ===================== */
+.dC .dname{font-family:"Young Serif", Georgia, serif}
+.wC{background:#EEF1E8; color:#10291F; font-family:"Plus Jakarta Sans", system-ui, sans-serif}
+.wC .serif{font-family:"Young Serif", Georgia, serif; font-weight:400}
+.wC .mut{color:#5D7266}
+.wC .btn.for{background:#10291F; color:#EEF1E8}
+.wC .btn.wh{background:#FFFFFF; color:#10291F; box-shadow:0 0 0 1px #DCE3D6}
+.wC .btn.ln{color:#10291F; box-shadow:0 0 0 1.5px #10291F}
+.wC .card{background:#FFFFFF; border-radius:22px; box-shadow:0 0 0 1px #E1E7DB}
+.wC .b.me{background:#10291F; color:#EEF1E8}
+.wC .b.th{background:#FFFFFF; color:#10291F; box-shadow:0 0 0 1px #E1E7DB}
+.wC .tabs{display:flex; justify-content:space-around; padding:10px 6px 24px; font-size:10px; font-weight:600; color:#8A9A90; background:#EEF1E8; border-top:1px solid #DDE4D7; flex:none}
+.wC .tabs div{display:grid; justify-items:center; gap:2px}
+.wC .tabs .on{color:#10291F}
+.wC .tabs .on .ic{fill:#F29BB8; stroke:#10291F}
+.sheet{position:absolute; left:0; right:0; bottom:0; z-index:6; background:#EEF1E8; border-radius:30px 30px 0 0; padding:24px 22px 30px; display:grid; gap:12px; transform:translateY(105%); transition:transform 1s cubic-bezier(.2,.85,.2,1)}
+.sheet.on{transform:none}
+.chip{font-size:11px; font-weight:600; padding:6px 11px; border-radius:999px; white-space:nowrap}
+.wC .grid3{display:grid; grid-template-columns:repeat(3, 1fr); gap:5px}
+.wC .grid3 img{width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px}
+.wC .grid3 .big{grid-column:span 2; grid-row:span 2}
+.wC .grid3 .big img{height:100%; aspect-ratio:auto}
+
+/* ---------- Parcours de connexion ---------- */
+.flow{padding-block:64px 0; display:grid; gap:22px}
+.flow h2, .prom h2{font-family:var(--f-title); font-weight:400; font-size:clamp(32px, 5vw, 52px); margin:0; line-height:1; text-wrap:balance}
+.flow > p, .prom > p{margin:0; color:var(--muted); max-width:68ch}
+.steps{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; counter-reset:st}
+@media (max-width:980px){ .steps{grid-template-columns:repeat(2, minmax(0,1fr))} }
+@media (max-width:560px){ .steps{grid-template-columns:minmax(0,1fr)} }
+.steps div{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; display:grid; gap:6px; align-content:start}
+.steps div::before{counter-increment:st; content:counter(st); width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:13px; background:var(--fg); color:var(--bg)}
+.steps b{font-size:15px}
+.steps p{margin:0; color:var(--muted); font-size:14px}
+.steps small{color:var(--muted); font-size:12px; border-top:1px solid var(--line); padding-top:8px; margin-top:4px}
+.prom{padding-block:56px 0; display:grid; gap:20px}
+.pgrid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px}
+@media (max-width:760px){ .pgrid{grid-template-columns:minmax(0,1fr)} }
+.pgrid div{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px}
+.pgrid b{display:block; margin-bottom:4px}
+.pgrid p{margin:0; color:var(--muted); font-size:14px}
+.credit{color:var(--muted); font-size:12px; margin-top:28px}
+
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *, *::before, *::after{animation:none!important; transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sig" viewBox="0 0 24 24"><path d="M3 20h3v-4H3zM8 20h3v-8H8zM13 20h3V8h-3zM18 20h3V4h-3z"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 21l3.6-4.4a5.6 5.6 0 0 0-7.2 0zM5.2 13.2a10.6 10.6 0 0 1 13.6 0l-1.9 2.3a7.6 7.6 0 0 0-9.8 0zM1.8 9.1a16 16 0 0 1 20.4 0l-1.9 2.3a13 13 0 0 0-16.6 0z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-7z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="i-finger" viewBox="0 0 24 24"><path d="M12 11v4M8.5 7.5A5 5 0 0 1 17 11v2.5M7 11a5 5 0 0 1 .4-2M7 14c0 2.5 1 4.5 2.5 6M12 20.5c-1.2-1.5-2-3.3-2-5.5v-4a2 2 0 0 1 4 0v4.5M16.5 17.5c-.3 1.2-.8 2.3-1.4 3.2M5 5.5A9 9 0 0 1 19 5.5"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24"><path d="M12 21v-9M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 14c0-3.5 2.5-5.5 6.5-5.5 0 3.5-2.5 5.5-6.5 5.5z"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></symbol>
+  <symbol id="i-flower" viewBox="0 0 24 24"><circle cx="12" cy="9" r="2.5"/><path d="M12 6.5c0-2 1-3.5 2.5-3.5S16 5 14.5 7M14.3 10.2c1.8.6 3.2 1.8 2.8 3.2s-2.4 1.2-3.4-.4M9.7 10.2c-1.8.6-3.2 1.8-2.8 3.2s2.4 1.2 3.4-.4M12 11.5V21M12 17c-2 0-3.5-1-4-2.5"/></symbol>
+  <symbol id="g-google" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></symbol>
+  <symbol id="g-apple" viewBox="0 0 22 24"><path d="M16.37 1.43c0 1.14-.42 2.2-1.25 3.04-.86.86-1.9 1.36-3.03 1.27-.02-1.1.45-2.21 1.25-3.02.84-.86 2.06-1.4 3.03-1.29zM20.5 17.2c-.55 1.27-.82 1.84-1.53 2.96-.99 1.56-2.39 3.5-4.12 3.52-1.54.01-1.93-1-4.02-.99-2.08.01-2.52 1.01-4.06.99-1.73-.02-3.05-1.77-4.04-3.33C-.04 16.13-.33 11.04 1.4 8.38 2.63 6.49 4.57 5.38 6.4 5.38c1.86 0 3.03 1.02 4.57 1.02 1.49 0 2.4-1.02 4.55-1.02 1.63 0 3.35.89 4.58 2.42-4.02 2.2-3.37 7.94.4 9.4z"/></symbol>
+</svg>
+
+<div class="wrap">
+
+<header class="intro">
+  <div class="kick">FouLov · maquettes · second tour · 16 novembre 2026</div>
+  <h1>Trois nouveaux mondes, <em>rien que pour deux.</em></h1>
+  <p>Pas de sceau, pas de lettres anciennes, pas de duo orange et bleu. Chaque direction a son intro animée (elle se rejoue toute seule, ou avec le bouton sous le téléphone), un écran de connexion repensé et trois écrans de l'app, sur un Pixel 8 et avec de vraies photos. Le couple d'exemple : Inès et Malik, ensemble depuis le 12 mars 2023.</p>
+</header>
+
+<nav class="jump" aria-label="Directions">
+  <a href="#nacre"><i style="background:conic-gradient(#F9C9DC,#FBE8C0,#C6E9F2,#D9CCFA,#F9C9DC)"></i>A · Nacre</a>
+  <a href="#nocturne"><i style="background:radial-gradient(circle at 40% 35%,#FFD9C7,#FF9E7A 45%,#FF5C8A)"></i>B · Nocturne</a>
+  <a href="#jardin"><i style="background:#3E6B4E;box-shadow:inset 0 0 0 3px #F29BB8"></i>C · Jardin</a>
+  <a href="#connexion"><i style="background:var(--fg)"></i>Connexion</a>
+</nav>
+
+<!-- ===================================================== A · NACRE -->
+<section class="dir dA" id="nacre">
+  <div class="dhead">
+    <div>
+      <p class="dlabel">Direction A</p>
+      <h2 class="dname">Nacre</h2>
+      <p class="dthesis">La nacre est ce que l'huître fabrique pour protéger sa perle.</p>
+      <p class="dtext">C'est exactement le rôle du chiffrement : une couche douce et irisée autour de ce que vous avez de plus précieux. Interface claire en verre liquide, reflets nacrés qui bougent lentement, encre noire pour les actions. Dans l'intro, deux gouttes se cherchent, se touchent et fusionnent en une seule perle.</p>
+      <div class="feats"><span>Question du jour à deux</span><span>Réponses cachées jusqu'à ce que vous ayez répondu tous les deux</span><span>Humeur partagée</span><span>Verre liquide</span></div>
+    </div>
+    <div class="facts">
+      <div><h4>Couleurs</h4>
+        <div class="sw">
+          <div><span style="background:#F2F0F5"></span>Perle<br>#F2F0F5</div>
+          <div><span style="background:#F9C9DC"></span>Rosée<br>#F9C9DC</div>
+          <div><span style="background:#C6E9F2"></span>Lagon<br>#C6E9F2</div>
+          <div><span style="background:#D9CCFA"></span>Lilas<br>#D9CCFA</div>
+          <div><span style="background:#17161B"></span>Encre<br>#17161B</div>
+        </div>
+      </div>
+      <div><h4>Typographie</h4>
+        <div class="typo"><span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:34px;line-height:1.1">Instrument Serif</span><small>Logo, titres, chiffres clés</small></div>
+        <div class="typo" style="margin-top:6px"><span style="font-family:'Geist',sans-serif;font-size:19px;font-weight:600">Geist</span><small>Interface</small></div>
+      </div>
+      <div><h4>Piste de logo</h4>
+        <div class="logo-row"><div class="lg pearl" style="border-radius:50%"></div><p>Une perle irisée, sans lettre. Deux gouttes fondues en une : l'icône raconte l'intro.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="swipe">5 écrans · fais défiler sur le côté si tous ne tiennent pas à l'écran →</p>
+  <div class="phones">
+    <!-- A1 · Intro -->
+    <figure>
+      <div class="phone"><div class="scr wA" id="introA" data-intro="nacre">
+        <div class="punch"></div>
+        <div class="irid soft"></div>
+        <canvas class="fx"></canvas>
+        <div class="sb"><span>9:41</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="ov">
+          <div style="position:absolute;left:0;right:0;top:57%;text-align:center">
+            <div class="wm serif" data-at="2" data-until="4" style="font-style:italic;font-size:50px;line-height:1"><span style="--i:0">F</span><span style="--i:1">o</span><span style="--i:2">u</span><span style="--i:3">L</span><span style="--i:4">o</span><span style="--i:5">v</span></div>
+            <div class="rv mut" data-at="3" data-until="4" style="margin-top:10px;font-size:14px">Rien que vous deux.</div>
+          </div>
+          <div class="rv" data-at="4" style="position:absolute;left:0;right:0;top:27%;text-align:center"><span class="serif" style="font-style:italic;font-size:22px">FouLov</span></div>
+          <div style="position:absolute;left:22px;right:22px;bottom:32px;display:grid;gap:12px">
+            <div class="rv serif" data-at="4" style="font-size:33px;line-height:1.02">Un endroit<br><em>rien qu'à vous deux.</em></div>
+            <div class="rv d1 mut" data-at="4">Messages, photos, souvenirs. Chiffrés sur vos téléphones, illisibles pour tous les autres.</div>
+            <div class="rv d2 btn ink" data-at="4" style="margin-top:6px">Créer notre espace</div>
+            <div class="rv d3 btn gl gA" data-at="4">J'ai reçu une invitation</div>
+          </div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <button class="replay" data-replay="introA" type="button"><svg class="ic s"><use href="#i-replay"/></svg>Rejouer l'intro</button>
+      <figcaption><b>Intro animée</b><span>Deux gouttes nacrées se rejoignent et forment une perle, puis l'accueil apparaît.</span></figcaption>
+    </figure>
+
+    <!-- A2 · Connexion -->
+    <figure>
+      <div class="phone"><div class="scr wA">
+        <div class="punch"></div>
+        <div class="irid"></div>
+        <div class="sb"><span>9:42</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;padding:26px 20px 34px;gap:12px">
+          <div class="pearl" style="width:74px;height:74px"></div>
+          <div class="serif" style="font-size:38px;line-height:1;margin-top:8px">Bon retour<br><em>parmi vous.</em></div>
+          <div class="mut">Connecte-toi pour retrouver Malik.</div>
+          <div style="margin-top:auto;display:grid;gap:10px">
+            <div class="btn gA" style="color:#17161B"><svg width="18" height="18"><use href="#g-google"/></svg>Continuer avec Google</div>
+            <div class="btn ink"><svg width="16" height="17" style="fill:#FFFFFF"><use href="#g-apple"/></svg>Continuer avec Apple</div>
+            <div class="row mut" style="font-size:11px;margin:4px 6px"><span class="grow" style="height:1px;background:rgba(23,22,27,.12)"></span>ou par e-mail<span class="grow" style="height:1px;background:rgba(23,22,27,.12)"></span></div>
+            <div class="gA" style="border-radius:18px;padding:12px 16px;display:flex;align-items:center;gap:10px"><svg class="ic s" style="color:#6E6A78"><use href="#i-mail"/></svg><span class="grow">ines.m@proton.me</span><span style="width:30px;height:30px;border-radius:50%;background:#17161B;color:#FFF;display:grid;place-items:center"><svg class="ic xs"><use href="#i-send"/></svg></span></div>
+            <div class="mut" style="font-size:11px;text-align:center">Pas de mot de passe : on t'envoie un code à usage unique.</div>
+          </div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Connexion</b><span>Google, Apple ou un code par e-mail. Aucun mot de passe à retenir.</span></figcaption>
+    </figure>
+
+    <!-- A3 · Accueil -->
+    <figure>
+      <div class="phone"><div class="scr wA">
+        <div class="punch"></div>
+        <div class="irid soft"></div>
+        <div class="sb"><span>19:08</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:10px;padding:8px 14px 0">
+          <div class="row" style="padding:0 4px">
+            <div class="grow"><div class="mut" style="font-size:12px">Lundi 16 novembre</div><div class="serif" style="font-size:24px;line-height:1.1">Bonsoir, Inès</div></div>
+            <div class="row" style="gap:0"><img class="av" src="IMG(s_1027)" alt="" width="34" height="34" style="border:2px solid #F2F0F5"><img class="av" src="IMG(s_883)" alt="" width="34" height="34" style="border:2px solid #F2F0F5;margin-left:-10px"></div>
+          </div>
+          <div style="position:relative;border-radius:26px;overflow:hidden;height:172px;flex:none">
+            <img src="IMG(w_129)" alt="Inès et Malik sur un banc face à la mer" style="width:100%;height:100%;object-fit:cover;object-position:70% 50%">
+            <div class="gA" style="position:absolute;left:10px;right:10px;bottom:10px;border-radius:18px;padding:9px 12px;display:flex;align-items:end;gap:8px">
+              <div class="grow"><div class="serif" style="font-size:20px;line-height:1">Inès &amp; Malik</div><div style="font-size:11px;color:#45414D">Ensemble depuis le 12 mars 2023</div></div>
+              <div style="text-align:right"><div class="serif" style="font-size:26px;line-height:1;font-variant-numeric:tabular-nums">1 345</div><div style="font-size:10px;color:#45414D">jours</div></div>
+            </div>
+          </div>
+          <div class="gA" style="border-radius:22px;padding:12px 14px;display:grid;gap:7px">
+            <div class="row" style="font-size:11px;font-weight:600;color:#6E6A78"><svg class="ic s"><use href="#i-q"/></svg><span class="grow">Question du jour · n° 212</span><span class="lock" style="background:#17161B;color:#FFF">À toi</span></div>
+            <div class="serif" style="font-size:19px;line-height:1.15">Quel détail de notre premier rendez-vous tu n'as jamais oublié ?</div>
+            <div class="row" style="gap:8px"><img class="av" src="IMG(s_883)" alt="" width="20" height="20"><div class="grow blurline"></div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="gA" style="border-radius:20px;padding:11px 12px"><div style="font-size:24px">🥰</div><div style="font-weight:600;margin-top:2px">Malik se sent amoureux</div><div class="mut" style="font-size:11px">il y a 12 min</div></div>
+            <div class="gA" style="border-radius:20px;padding:11px 12px"><div class="serif" style="font-size:26px;line-height:1">J-16</div><div style="font-weight:600;margin-top:4px">Anniversaire de Malik</div><div class="mut" style="font-size:11px">mercredi 2 décembre</div></div>
+          </div>
+        </div>
+        <div class="tabs gA">
+          <div class="on"><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-image"/></svg>Souvenirs</div>
+          <div><svg class="ic"><use href="#i-cal"/></svg>Dates</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Accueil « Nous »</b><span>Votre photo, le compteur, la question du jour et l'humeur de l'autre.</span></figcaption>
+    </figure>
+
+    <!-- A4 · Conversation -->
+    <figure>
+      <div class="phone"><div class="scr wA">
+        <div class="punch"></div>
+        <div class="irid soft"></div>
+        <div class="sb"><span>21:12</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="gA row" style="position:relative;z-index:3;margin:4px 10px 6px;border-radius:22px;padding:8px 10px">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <img class="av" src="IMG(s_883)" alt="" width="34" height="34">
+          <div class="grow"><div style="font-weight:600;font-size:14px">Malik</div><div style="font-size:11px;color:#2E8F6E">en ligne</div></div>
+          <span class="lock" style="background:rgba(23,22,27,.06)"><svg class="ic xs"><use href="#i-lock"/></svg>Chiffré</span>
+        </div>
+        <div class="msgs" style="position:relative;z-index:2">
+          <div style="align-self:center;font-size:10px;color:#6E6A78;font-weight:600;padding:2px 0 4px">Aujourd'hui</div>
+          <div class="b th">Regarde ce que j'ai retrouvé dans ma galerie</div>
+          <div class="b th ph"><img src="IMG(s_419)" alt="Deux trams jaunes à Lisbonne"></div>
+          <div class="b me" style="margin-bottom:10px">Lisbonne !! Le tram 28, tu avais perdu ton chapeau 😂<span class="t">21:09 · Lu</span><span class="react gA">❤️ 1</span></div>
+          <div class="b th">Je l'ai toujours, ce chapeau. Il attend notre retour là-bas.</div>
+          <div class="b me row iwave" style="gap:8px;padding:9px 12px">
+            <svg class="ic s" style="fill:#FFF;stroke:#FFF"><use href="#i-play"/></svg>
+            <div class="wave"><i style="height:6px"></i><i style="height:13px"></i><i style="height:20px"></i><i style="height:11px"></i><i style="height:17px"></i><i style="height:8px"></i><i style="height:22px"></i><i style="height:14px"></i><i style="height:7px"></i><i style="height:15px"></i><i style="height:10px"></i><i style="height:5px"></i><i style="height:12px"></i></div>
+            <span style="font-size:11px;opacity:.7">0:21</span>
+          </div>
+          <div class="b th typing" style="color:#17161B"><i></i><i></i><i></i></div>
+        </div>
+        <div class="row" style="position:relative;z-index:3;padding:6px 12px 26px;gap:8px">
+          <span class="gA" style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center"><svg class="ic"><use href="#i-plus"/></svg></span>
+          <div class="gA grow" style="border-radius:22px;padding:11px 14px;color:#8B8794">Message</div>
+          <span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#17161B;color:#FFF"><svg class="ic s"><use href="#i-mic"/></svg></span>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Conversation</b><span>Bulles en verre, vocal irisé, accusé de lecture discret.</span></figcaption>
+    </figure>
+
+    <!-- A5 · Question du jour -->
+    <figure>
+      <div class="phone"><div class="scr wA">
+        <div class="punch"></div>
+        <div class="irid"></div>
+        <div class="sb"><span>22:30</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:12px;padding:10px 16px 34px">
+          <div class="row"><svg class="ic"><use href="#i-x"/></svg><span class="grow" style="text-align:center;font-weight:600">Question n° 212</span><svg class="ic"><use href="#i-dots"/></svg></div>
+          <div class="serif" style="font-size:31px;line-height:1.05;margin-top:6px">Quel détail de notre premier rendez-vous tu n'as <em>jamais oublié</em> ?</div>
+          <div class="gA" style="border-radius:22px;padding:13px 14px;display:grid;gap:6px">
+            <div class="row" style="gap:8px"><img class="av" src="IMG(s_883)" alt="" width="26" height="26"><b class="grow">Malik</b><span class="mut" style="font-size:11px">ce matin</span></div>
+            <div style="font-size:14px">Tu riais tellement fort que tout le café s'est retourné. Et toi, tu as continué.</div>
+          </div>
+          <div style="border-radius:22px;padding:13px 14px;display:grid;gap:6px;background:#17161B;color:#FFFFFF">
+            <div class="row" style="gap:8px"><img class="av" src="IMG(s_1027)" alt="" width="26" height="26"><b class="grow">Toi</b><span style="font-size:11px;opacity:.6">à l'instant</span></div>
+            <div style="font-size:14px">Ton écharpe jaune. En plein mois de juin.</div>
+          </div>
+          <div class="row" style="justify-content:center;gap:8px">
+            <span class="gA" style="border-radius:999px;padding:6px 12px;font-size:16px">❤️</span><span class="gA" style="border-radius:999px;padding:6px 12px;font-size:16px">😂</span><span class="gA" style="border-radius:999px;padding:6px 12px;font-size:16px">🥹</span>
+          </div>
+          <div class="mut" style="margin-top:auto;font-size:11px;text-align:center;display:flex;gap:6px;justify-content:center;align-items:center"><svg class="ic xs"><use href="#i-lock"/></svg>Chaque réponse reste cachée tant que l'autre n'a pas répondu.</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Question du jour</b><span>Un petit rituel quotidien : les deux réponses se dévoilent ensemble.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================== B · NOCTURNE -->
+<section class="dir dB" id="nocturne">
+  <div class="dhead">
+    <div>
+      <p class="dlabel">Direction B · évolution de « Lueur »</p>
+      <h2 class="dname">Nocturne</h2>
+      <p class="dthesis">Votre bulle, même à 2 h du matin.</p>
+      <p class="dtext">La direction que tu as aimée, poussée plus loin. Noir prune profond, lumière pêche et braise. Dans l'intro, deux étincelles tournent l'une autour de l'autre, se rapprochent, entrent en collision et laissent une orbite. Nouveauté : le <b>battement</b>. Tu maintiens ton doigt et le téléphone de Malik vibre au rythme d'un cœur, sans un mot.</p>
+      <div class="feats"><span>Battement à distance</span><span>Messages éphémères</span><span>Photo en vue unique</span><span>Stories 24 h</span><span>Coffre à second code</span></div>
+    </div>
+    <div class="facts">
+      <div><h4>Couleurs</h4>
+        <div class="sw">
+          <div><span style="background:#0A0710"></span>Nuit<br>#0A0710</div>
+          <div><span style="background:#21182A"></span>Velours<br>#21182A</div>
+          <div><span style="background:#FF9E7A"></span>Lueur<br>#FF9E7A</div>
+          <div><span style="background:#FF5C8A"></span>Braise<br>#FF5C8A</div>
+          <div><span style="background:#F6E6CF"></span>Champagne<br>#F6E6CF</div>
+        </div>
+      </div>
+      <div><h4>Typographie</h4>
+        <div class="typo"><span style="font-family:'Unbounded',sans-serif;font-weight:600;font-size:27px;line-height:1.2">Unbounded</span><small>Logo et titres</small></div>
+        <div class="typo" style="margin-top:6px"><span style="font-family:'Manrope',sans-serif;font-size:19px;font-weight:600">Manrope</span><small>Interface</small></div>
+      </div>
+      <div><h4>Piste de logo</h4>
+        <div class="logo-row"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0A0710"/><circle cx="32" cy="32" r="17" fill="none" stroke="#F6E6CF" stroke-opacity=".35" stroke-dasharray="1.5 3"/><circle cx="32" cy="32" r="7" fill="#FF9E7A"/><circle cx="32" cy="32" r="12" fill="#FF9E7A" opacity=".18"/><circle cx="46" cy="22" r="3" fill="#F6E6CF"/></svg><p>Un noyau de lumière et son orbite. La trace de la collision de l'intro.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="swipe">5 écrans · fais défiler sur le côté si tous ne tiennent pas à l'écran →</p>
+  <div class="phones">
+    <!-- B1 · Intro -->
+    <figure>
+      <div class="phone"><div class="scr wB dk" id="introB" data-intro="nocturne">
+        <div class="punch"></div>
+        <canvas class="fx"></canvas>
+        <div class="sb"><span>23:47</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="ov">
+          <div style="position:absolute;left:0;right:0;top:61%;text-align:center">
+            <div class="wm h" data-at="2" data-until="4" style="font-size:36px;letter-spacing:-.02em"><span style="--i:0">F</span><span style="--i:1">o</span><span style="--i:2">u</span><span style="--i:3">L</span><span style="--i:4">o</span><span style="--i:5">v</span></div>
+            <div class="rv mut" data-at="3" data-until="4" style="margin-top:10px">Votre bulle, même la nuit.</div>
+          </div>
+          <div style="position:absolute;left:22px;right:22px;bottom:32px;display:grid;gap:12px">
+            <div class="rv h" data-at="4" style="font-size:30px;line-height:1.05">Une bulle<br>pour deux.</div>
+            <div class="rv d1 mut" data-at="4">Chaque message est chiffré sur ton téléphone et ne s'ouvre que sur celui de l'autre.</div>
+            <div class="rv d2 btn hot" data-at="4" style="margin-top:6px">Créer notre bulle</div>
+            <div class="rv d3 btn out" data-at="4">Rejoindre avec un code</div>
+          </div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <button class="replay" data-replay="introB" type="button"><svg class="ic s"><use href="#i-replay"/></svg>Rejouer l'intro</button>
+      <figcaption><b>Intro animée</b><span>Deux étincelles en spirale, une collision, puis une orbite qui reste.</span></figcaption>
+    </figure>
+
+    <!-- B2 · Connexion (code) -->
+    <figure>
+      <div class="phone"><div class="scr wB dk">
+        <div class="punch"></div>
+        <div style="position:absolute;inset:0;background:radial-gradient(70% 40% at 50% 10%, rgba(255,140,120,.28), transparent 70%)"></div>
+        <div class="sb"><span>23:49</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="position:relative;flex:1;display:flex;flex-direction:column;gap:12px;padding:14px 18px 14px">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <h3 class="h" style="font-size:24px;line-height:1.1;margin-top:10px">Vérifie<br>tes e-mails</h3>
+          <div class="mut">On a envoyé un code à 6 chiffres à <b style="color:#F3EEF6">ines.m@proton.me</b></div>
+          <div class="otp" style="margin-top:8px">
+            <div><span style="animation-delay:0s">4</span></div>
+            <div><span style="animation-delay:.35s">8</span></div>
+            <div><span style="animation-delay:.7s">2</span></div>
+            <div><span style="animation-delay:1.05s">0</span></div>
+            <div><span style="animation-delay:1.4s">7</span></div>
+            <div class="cur"><span style="animation-delay:1.75s">5</span></div>
+          </div>
+          <div class="mut" style="font-size:12px">Renvoyer le code dans 0:42</div>
+          <div class="gB" style="margin-top:auto;border-radius:16px;padding:10px 12px;display:flex;gap:8px;font-size:11px;color:#C9BFD6"><svg class="ic s" style="color:#7FE0C2"><use href="#i-finger"/></svg><span>Ensuite, ton empreinte suffira pour ouvrir FouLov sur ce téléphone.</span></div>
+        </div>
+        <div class="kp">
+          <div class="k">1<small>&nbsp;</small></div><div class="k">2<small>ABC</small></div><div class="k">3<small>DEF</small></div>
+          <div class="k">4<small>GHI</small></div><div class="k">5<small>JKL</small></div><div class="k">6<small>MNO</small></div>
+          <div class="k">7<small>PQRS</small></div><div class="k">8<small>TUV</small></div><div class="k">9<small>WXYZ</small></div>
+          <div class="fn"></div><div class="k">0</div><div class="fn"><svg class="ic"><use href="#i-back"/></svg></div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Connexion par code</b><span>Code à usage unique, clavier natif. Plus jamais de mot de passe oublié.</span></figcaption>
+    </figure>
+
+    <!-- B3 · Accueil + battement -->
+    <figure>
+      <div class="phone"><div class="scr wB dk">
+        <div class="punch"></div>
+        <img src="IMG(t_901)" alt="" style="position:absolute;inset:0;width:100%;height:58%;object-fit:cover;z-index:0;opacity:.55">
+        <div style="position:absolute;inset:0;z-index:0;background:linear-gradient(180deg, rgba(10,7,16,.2), rgba(10,7,16,.55) 30%, #0A0710 58%)"></div>
+        <div class="sb"><span>23:58</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:12px;padding:10px 16px 6px">
+          <div class="row"><div class="grow"><div class="mut" style="font-size:12px">1 345 jours sur la même orbite</div><h3 class="h" style="font-size:21px">Bonne nuit, Inès</h3></div><img class="av" src="IMG(s_883)" alt="" width="36" height="36" style="box-shadow:0 0 0 2px #0A0710, 0 0 0 3.5px #7FE0C2"></div>
+          <div style="margin-top:12px"><div class="beat"><i></i><i></i><i></i><div class="core"><svg class="ic l" style="fill:#2A0B16;stroke:none"><use href="#i-heart"/></svg></div></div></div>
+          <div style="text-align:center;display:grid;gap:2px"><b style="font-size:14px">Maintiens pour envoyer ton battement</b><span class="mut" style="font-size:12px">Malik t'en a envoyé un à 23:12</span></div>
+          <div class="gB row" style="border-radius:18px;padding:11px 12px;margin-top:auto">
+            <span style="width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:rgba(127,224,194,.12);color:#7FE0C2"><svg class="ic s"><use href="#i-lock"/></svg></span>
+            <div class="grow"><b>Coffre</b><div class="mut" style="font-size:11px">12 photos · protégé par un second code</div></div><svg class="ic s mut"><use href="#i-back" transform="rotate(180 12 12)"/></svg>
+          </div>
+          <div class="gB row" style="border-radius:18px;padding:11px 12px">
+            <span style="width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:rgba(255,158,122,.12);color:#FFB295"><svg class="ic s"><use href="#i-cal"/></svg></span>
+            <div class="grow"><b>Vendredi 20 novembre</b><div class="mut" style="font-size:11px">Dîner au Comptoir · dans 4 jours</div></div>
+          </div>
+        </div>
+        <div class="tabs gB">
+          <div class="on"><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-image"/></svg>Moments</div>
+          <div><svg class="ic"><use href="#i-lock"/></svg>Coffre</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Accueil + battement</b><span>Le cœur bat vraiment. Un appui long, et l'autre le sent vibrer.</span></figcaption>
+    </figure>
+
+    <!-- B4 · Conversation -->
+    <figure>
+      <div class="phone"><div class="scr wB dk">
+        <div class="punch"></div>
+        <div class="sb"><span>00:04</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="row" style="padding:6px 14px 10px;border-bottom:1px solid #1C1524">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <img class="av" src="IMG(s_883)" alt="" width="34" height="34">
+          <div class="grow"><div style="font-weight:700;font-size:14px">Malik</div><div style="font-size:11px;color:#7FE0C2">en ligne</div></div>
+          <svg class="ic" style="color:#FFB295"><use href="#i-clock"/></svg>
+        </div>
+        <div class="msgs" style="padding-top:8px">
+          <div style="align-self:center;font-size:11px;color:#FFB295;background:rgba(255,158,122,.1);border:1px solid rgba(255,158,122,.25);border-radius:999px;padding:4px 10px;display:flex;gap:6px;align-items:center"><svg class="ic xs"><use href="#i-clock"/></svg>Éphémère · s'efface après 1 h</div>
+          <div class="b th ph"><img src="IMG(s_195)" alt="Une rue la nuit sous des guirlandes lumineuses"><div style="padding:6px 8px 3px">On était là il y a un an jour pour jour</div></div>
+          <div class="b me">Je m'en souviens. Tu avais froid et tu refusais de l'avouer 🙄<span class="t">23:58</span></div>
+          <div style="align-self:center;display:flex;gap:8px;align-items:center;font-size:11px;color:#FFB295;padding:4px 0"><span style="width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#FF9E7A,#FF5C8A);color:#2A0B16"><svg class="ic xs" style="fill:#2A0B16;stroke:none"><use href="#i-heart"/></svg></span>Malik t'a envoyé un battement</div>
+          <div class="b th row" style="gap:10px;padding:10px 12px">
+            <span style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(255,158,122,.15);color:#FFB295;flex:none"><svg class="ic s"><use href="#i-eye"/></svg></span>
+            <div><b>Photo</b><div class="mut" style="font-size:11px">Vue unique · capture d'écran bloquée</div></div>
+          </div>
+          <div class="b me">Je l'ouvre demain matin, avec toi 😏<span class="t">00:03 · Lu</span></div>
+        </div>
+        <div class="row" style="padding:6px 12px 26px;gap:8px">
+          <svg class="ic" style="color:#9A8FA8"><use href="#i-plus"/></svg>
+          <div class="grow" style="background:#1A1322;border:1px solid #2A2033;border-radius:22px;padding:11px 14px;color:#7E7390">Écrire…</div>
+          <span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#FFB08A,#FF6F94);color:#2A0B16"><svg class="ic s"><use href="#i-send"/></svg></span>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Conversation de nuit</b><span>Mode éphémère, photo en vue unique, battement reçu dans le fil.</span></figcaption>
+    </figure>
+
+    <!-- B5 · Story -->
+    <figure>
+      <div class="phone"><div class="scr wB dk">
+        <div class="punch"></div>
+        <img src="IMG(t_1004)" alt="Un couple s'embrasse sous la neige, la nuit" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0">
+        <div style="position:absolute;inset:0;z-index:0;background:linear-gradient(180deg, rgba(0,0,0,.45), transparent 22%, transparent 60%, rgba(0,0,0,.7))"></div>
+        <div class="sb"><span>00:12</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="bars" style="position:relative;z-index:2;margin-top:4px"><i class="done"></i><i class="now"></i><i></i></div>
+        <div class="row" style="position:relative;z-index:2;padding:10px 12px">
+          <img class="av" src="IMG(s_883)" alt="" width="30" height="30">
+          <div class="grow"><b style="font-size:13px">Malik</b> <span style="font-size:11px;opacity:.75">il y a 2 h</span></div>
+          <svg class="ic"><use href="#i-x"/></svg>
+        </div>
+        <div style="flex:1"></div>
+        <div style="position:relative;z-index:2;padding:0 22px 18px;text-align:center">
+          <div class="h" style="font-size:19px;line-height:1.25;text-shadow:0 2px 14px rgba(0,0,0,.5)">Première neige.<br>Tu me manques.</div>
+          <div style="font-size:11px;opacity:.75;margin-top:6px">Visible 24 h, puis effacée</div>
+        </div>
+        <div class="row" style="position:relative;z-index:2;padding:4px 12px 26px;gap:10px">
+          <div class="grow" style="border:1px solid rgba(255,255,255,.35);border-radius:22px;padding:11px 14px;color:#E6E0EE;background:rgba(10,7,16,.25);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)">Répondre à Malik…</div>
+          <svg class="ic" style="width:26px;height:26px"><use href="#i-heart"/></svg>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Moment</b><span>Story plein écran, visible uniquement par l'autre.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================== C · JARDIN -->
+<section class="dir dC" id="jardin">
+  <div class="dhead">
+    <div>
+      <p class="dlabel">Direction C</p>
+      <h2 class="dname">Jardin</h2>
+      <p class="dthesis">Votre amour pousse ici, un jour après l'autre.</p>
+      <p class="dtext">L'app devient un jardin vivant. Chaque mois passé ensemble fait pousser une plante, chaque anniversaire fait éclore une fleur, et un jour où vous vous écrivez, le jardin est arrosé. Dans l'intro, une graine tombe, deux tiges s'enlacent en poussant et une fleur s'ouvre. C'est la direction la plus originale : je n'ai vu aucune app de couple faire ça.</p>
+      <div class="feats"><span>Jardin généré à partir de votre histoire</span><span>Saisons au lieu d'albums</span><span>Fleur ajoutée depuis le chat</span><span>Arrosage quotidien, sans pression</span></div>
+    </div>
+    <div class="facts">
+      <div><h4>Couleurs</h4>
+        <div class="sw">
+          <div><span style="background:#10291F"></span>Sapin<br>#10291F</div>
+          <div><span style="background:#3E6B4E"></span>Mousse<br>#3E6B4E</div>
+          <div><span style="background:#EEF1E8"></span>Brume<br>#EEF1E8</div>
+          <div><span style="background:#F29BB8"></span>Pétale<br>#F29BB8</div>
+          <div><span style="background:#F2C94C"></span>Pollen<br>#F2C94C</div>
+        </div>
+      </div>
+      <div><h4>Typographie</h4>
+        <div class="typo"><span style="font-family:'Young Serif',serif;font-size:30px;line-height:1.2">Young Serif</span><small>Logo, titres, compteurs</small></div>
+        <div class="typo" style="margin-top:6px"><span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:19px;font-weight:600">Plus Jakarta Sans</span><small>Interface</small></div>
+      </div>
+      <div><h4>Piste de logo</h4>
+        <div class="logo-row"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#10291F"/><path d="M32 54c-6-8 6-14 0-22s6-12 0-20" fill="none" stroke="#86BC7A" stroke-width="3" stroke-linecap="round"/><path d="M32 54c6-8-6-14 0-22s-6-12 0-20" fill="none" stroke="#5E9A6C" stroke-width="3" stroke-linecap="round"/><g fill="#F29BB8"><circle cx="32" cy="7" r="0"/></g><circle cx="26" cy="12" r="5" fill="#F29BB8"/><circle cx="38" cy="12" r="5" fill="#F29BB8"/><circle cx="32" cy="7" r="5" fill="#F7B8CC"/><circle cx="32" cy="11" r="3" fill="#F2C94C"/></svg><p>Deux tiges enlacées et une fleur. Un logo qui pourra « fleurir » pour les grandes dates.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="swipe">5 écrans · fais défiler sur le côté si tous ne tiennent pas à l'écran →</p>
+  <div class="phones">
+    <!-- C1 · Intro -->
+    <figure>
+      <div class="phone"><div class="scr wC dk" id="introC" data-intro="jardin" style="background:#10291F">
+        <div class="punch"></div>
+        <canvas class="fx"></canvas>
+        <div class="sb"><span>7:12</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="ov">
+          <div style="position:absolute;left:0;right:0;top:76%;text-align:center;color:#EEF1E8">
+            <div class="wm serif" data-at="2" data-until="4" style="font-size:44px;line-height:1"><span style="--i:0">F</span><span style="--i:1">o</span><span style="--i:2">u</span><span style="--i:3">L</span><span style="--i:4">o</span><span style="--i:5">v</span></div>
+            <div class="rv" data-at="3" data-until="4" style="margin-top:10px;color:#A9C2B1">Votre amour pousse ici.</div>
+          </div>
+        </div>
+        <div class="sheet" data-at="4">
+          <div class="serif" style="font-size:30px;line-height:1.05">Plantez la<br>première graine.</div>
+          <div class="mut">Un espace privé pour vous deux, qui grandit avec chaque jour passé ensemble.</div>
+          <div class="btn for" style="margin-top:4px">Commencer</div>
+          <div class="btn" style="color:#10291F;padding:8px">J'ai un code d'invitation</div>
+        </div>
+        <div class="gb" style="z-index:50"></div>
+      </div></div>
+      <button class="replay" data-replay="introC" type="button"><svg class="ic s"><use href="#i-replay"/></svg>Rejouer l'intro</button>
+      <figcaption><b>Intro animée</b><span>Une graine tombe, deux tiges s'enlacent, une fleur s'ouvre, puis le panneau d'accueil monte.</span></figcaption>
+    </figure>
+
+    <!-- C2 · Connexion -->
+    <figure>
+      <div class="phone"><div class="scr wC">
+        <div class="punch"></div>
+        <div class="sb"><span>7:14</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:12px;padding:20px 20px 34px">
+          <canvas class="sprout" width="120" height="120" style="width:96px;height:96px" aria-hidden="true"></canvas>
+          <div class="serif" style="font-size:34px;line-height:1.05">Content de<br>te revoir.</div>
+          <div class="mut">Ton jardin avec Malik t'attend. 3 nouvelles pousses depuis hier.</div>
+          <div style="margin-top:auto;display:grid;gap:10px">
+            <div class="btn wh"><svg width="18" height="18"><use href="#g-google"/></svg>Continuer avec Google</div>
+            <div class="btn for"><svg width="16" height="17" style="fill:#EEF1E8"><use href="#g-apple"/></svg>Continuer avec Apple</div>
+            <div class="btn ln"><svg class="ic s"><use href="#i-mail"/></svg>Recevoir un code par e-mail</div>
+            <div class="mut" style="font-size:11px;text-align:center;display:flex;gap:6px;justify-content:center"><svg class="ic xs"><use href="#i-finger"/></svg>Ensuite, ton empreinte suffit.</div>
+          </div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Connexion</b><span>Trois façons d'entrer, toutes sans mot de passe.</span></figcaption>
+    </figure>
+
+    <!-- C3 · Le jardin -->
+    <figure>
+      <div class="phone"><div class="scr wC">
+        <div class="punch"></div>
+        <div class="sb"><span>8:03</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:6px 14px 10px">
+          <div class="row"><div class="grow"><div class="mut" style="font-size:12px">Inès &amp; Malik</div><div class="serif" style="font-size:24px;line-height:1.1">Votre jardin</div></div><div class="row" style="gap:0"><img class="av" src="IMG(s_1027)" alt="" width="32" height="32" style="border:2px solid #EEF1E8"><img class="av" src="IMG(s_883)" alt="" width="32" height="32" style="border:2px solid #EEF1E8;margin-left:-10px"></div></div>
+          <div style="position:relative;border-radius:24px;overflow:hidden;height:222px;flex:none;background:linear-gradient(180deg,#D9EBDD,#EEF1E8)">
+            <canvas class="garden" style="position:absolute;inset:0;width:100%;height:100%" aria-label="Jardin de 44 plantes, dont 3 fleurs d'anniversaire"></canvas>
+            <div style="position:absolute;left:12px;top:10px"><div class="serif" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums">1 345</div><div style="font-size:11px;font-weight:600">jours ensemble</div></div>
+            <span class="chip" style="position:absolute;right:10px;top:12px;background:rgba(255,255,255,.8)">44 plantes · 3 fleurs</span>
+          </div>
+          <div class="card row" style="padding:12px">
+            <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#DCEBF3;color:#2F6E8E;flex:none"><svg class="ic"><use href="#i-drop"/></svg></span>
+            <div class="grow"><b>Arrosé ce matin</b><div class="mut" style="font-size:11px">Vous vous êtes écrit à 7:40. Le jardin a eu son eau.</div></div>
+          </div>
+          <div class="card row" style="padding:12px">
+            <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#FBE3EA;color:#C4517A;flex:none"><svg class="ic"><use href="#i-flower"/></svg></span>
+            <div class="grow"><b>Prochaine fleur : le 12 mars</b><div class="mut" style="font-size:11px">Vos 4 ans · dans 116 jours</div></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="on"><svg class="ic"><use href="#i-flower"/></svg>Jardin</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-image"/></svg>Saisons</div>
+          <div><svg class="ic"><use href="#i-cal"/></svg>Dates</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Le jardin</b><span>Généré à partir de votre histoire. Les plantes bougent doucement au vent.</span></figcaption>
+    </figure>
+
+    <!-- C4 · Conversation -->
+    <figure>
+      <div class="phone"><div class="scr wC">
+        <div class="punch"></div>
+        <div class="sb"><span>18:22</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div class="row" style="padding:6px 14px 10px">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <img class="av" src="IMG(s_883)" alt="" width="34" height="34">
+          <div class="grow"><div style="font-weight:700;font-size:14px">Malik</div><div class="mut" style="font-size:11px;display:flex;gap:4px;align-items:center"><svg class="ic xs"><use href="#i-lock"/></svg>Chiffré de bout en bout</div></div>
+          <svg class="ic"><use href="#i-dots"/></svg>
+        </div>
+        <div class="msgs">
+          <div class="b th ph"><img src="IMG(s_696)" alt="Des tulipes orange en fleur"><div style="padding:6px 8px 3px">Elles ont fleuri sur le balcon !!</div></div>
+          <div class="b me">Noooon, enfin ! Après trois mois à leur parler 🥹<span class="t">18:19 · Lu</span></div>
+          <div class="b th">C'est toi qui leur as parlé le plus, je crois</div>
+          <div style="align-self:stretch;margin:4px 0;border-radius:18px;padding:10px 12px;background:#FBE3EA;color:#7A2847;display:flex;gap:10px;align-items:center">
+            <span style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#F29BB8;color:#FFFFFF;flex:none"><svg class="ic s"><use href="#i-flower"/></svg></span>
+            <div style="font-size:12px"><b>Malik a planté une fleur</b><br>« Le jour où les tulipes ont fleuri » est maintenant dans votre jardin.</div>
+          </div>
+          <div class="b me">Je viens de la voir. Elle est trop belle 🌷</div>
+        </div>
+        <div class="row" style="padding:6px 12px 26px;gap:8px">
+          <span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#FFFFFF;box-shadow:0 0 0 1px #DCE3D6"><svg class="ic"><use href="#i-plus"/></svg></span>
+          <div class="grow" style="background:#FFFFFF;box-shadow:0 0 0 1px #DCE3D6;border-radius:22px;padding:11px 14px;color:#8A9A90">Message</div>
+          <span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#10291F;color:#EEF1E8"><svg class="ic s"><use href="#i-mic"/></svg></span>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Conversation</b><span>Un beau moment peut devenir une fleur du jardin, en un geste.</span></figcaption>
+    </figure>
+
+    <!-- C5 · Saisons -->
+    <figure>
+      <div class="phone"><div class="scr wC">
+        <div class="punch"></div>
+        <div class="sb"><span>12:40</span><span class="bt"><svg><use href="#i-wifi"/></svg><svg><use href="#i-sig"/></svg><i class="bat"></i></span></div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:6px 14px 0;overflow:hidden">
+          <div class="serif" style="font-size:26px;line-height:1.1">Saisons</div>
+          <div class="row" style="gap:6px"><span class="chip" style="background:#10291F;color:#EEF1E8">Tout</span><span class="chip" style="background:#FFFFFF;box-shadow:0 0 0 1px #DCE3D6">Photos</span><span class="chip" style="background:#FFFFFF;box-shadow:0 0 0 1px #DCE3D6">Vidéos</span><span class="chip" style="background:#FFFFFF;box-shadow:0 0 0 1px #DCE3D6">Voyages</span></div>
+          <div class="row" style="align-items:baseline"><b class="grow">Printemps 2026</b><span class="mut" style="font-size:11px">86 photos</span></div>
+          <div class="grid3">
+            <div class="big"><img src="IMG(s_82)" alt="Fleurs de cerisier"></div>
+            <img src="IMG(s_976)" alt="Tulipes en sous-bois">
+            <img src="IMG(s_102)" alt="Framboises sur une nappe">
+          </div>
+          <div class="row" style="align-items:baseline;margin-top:2px"><b class="grow">Été 2025 · Lisbonne</b><span class="mut" style="font-size:11px">48 photos</span></div>
+          <div class="grid3">
+            <img src="IMG(s_419)" alt="Trams de Lisbonne">
+            <img src="IMG(s_397)" alt="Maisons colorées à flanc de falaise">
+            <img src="IMG(s_788)" alt="Coucher de soleil sur la plage">
+          </div>
+          <div class="row" style="align-items:baseline;margin-top:2px"><b class="grow">Hiver 2024</b><span class="mut" style="font-size:11px">31 photos</span></div>
+          <div class="grid3">
+            <img src="IMG(s_755)" alt="Une tasse entre des pulls en laine">
+            <img src="IMG(s_1025)" alt="Un carlin dans une couverture">
+            <img src="IMG(s_407)" alt="Un cierge magique">
+          </div>
+        </div>
+        <div class="tabs">
+          <div><svg class="ic"><use href="#i-flower"/></svg>Jardin</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div class="on"><svg class="ic" style="fill:none"><use href="#i-image"/></svg>Saisons</div>
+          <div><svg class="ic"><use href="#i-cal"/></svg>Dates</div>
+        </div>
+        <div class="gb"></div>
+      </div></div>
+      <figcaption><b>Saisons</b><span>Les souvenirs rangés par saison, comme un jardin qui change.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================== CONNEXION -->
+<section class="flow" id="connexion">
+  <h2>La connexion, repensée de bout en bout</h2>
+  <p>Je propose de séparer deux choses que l'ancienne version mélangeait. D'abord le <b>compte</b>, qui sert à te retrouver. Ensuite les <b>clés</b>, qui servent à chiffrer et ne quittent jamais le téléphone. Résultat : plus de mot de passe couple à retenir, et une sécurité plus forte que l'ancien système.</p>
+  <div class="steps">
+    <div><b>Se connecter, une fois</b><p>Google, Apple ou un code à 6 chiffres envoyé par e-mail. Aucun mot de passe.</p><small>Supabase Auth gère ces trois méthodes nativement.</small></div>
+    <div><b>Créer ses clés</b><p>Le téléphone génère sa propre paire de clés. La partie secrète est rangée dans la puce sécurisée du téléphone.</p><small>Android Keystore, ou Secure Enclave sur iPhone.</small></div>
+    <div><b>Se lier à l'autre</b><p>On scanne le QR code de l'autre, puis on compare 7 symboles à voix haute. Personne ne peut se glisser entre vous sans que ça se voie.</p><small>Échange de clés authentifié, sur le modèle de Signal.</small></div>
+    <div><b>Ouvrir l'app, chaque jour</b><p>L'empreinte ou le visage suffisent. Une phrase de récupération, notée sur papier, permet de retrouver vos échanges sur un nouveau téléphone.</p><small>Sans cette phrase et sans vos téléphones, personne ne peut rien récupérer, pas même nous.</small></div>
+  </div>
+</section>
+
+<section class="prom">
+  <h2>Ce que l'app dira, mot pour mot</h2>
+  <div class="pgrid">
+    <div><b>Chiffré avant de partir</b><p>Vos messages, photos, vidéos et souvenirs sont chiffrés sur votre téléphone, puis déchiffrés uniquement sur celui de votre partenaire.</p></div>
+    <div><b>Illisible pour nous</b><p>Nos serveurs ne stockent que des données chiffrées. FouLov n'a pas vos clés.</p></div>
+    <div><b>Ce que nos serveurs voient quand même</b><p>Que vos deux comptes sont liés, l'heure d'envoi d'un contenu et la taille des fichiers.</p></div>
+    <div><b>Les limites, dites franchement</b><p>Le blocage des captures d'écran fonctionne sur Android, mais personne ne peut empêcher une photo de l'écran prise avec un autre appareil.</p></div>
+  </div>
+  <p class="credit">Photos : Unsplash, via Picsum (licence libre). Elles servent uniquement à illustrer les maquettes.</p>
+</section>
+
+</div>
+
+<script>
+(() => {
+  const frz = /^#t(\d+)$/.exec(location.hash);
+  const reduce = !!frz || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const eio = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const eout = t => 1 - Math.pow(1 - t, 3);
+  const eback = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+  const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+
+  function fit(canvas) {
+    const r = canvas.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
+    const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+    if (canvas.width !== w * d || canvas.height !== h * d) { canvas.width = w * d; canvas.height = h * d; }
+    const ctx = canvas.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0);
+    return { ctx, w, h };
+  }
+
+  /* ---------- A · Nacre : métaballes irisées ---------- */
+  const buf = document.createElement('canvas'); const bctx = buf.getContext('2d');
+  function drawNacre(ctx, t, w, h, now) {
+    ctx.clearRect(0, 0, w, h);
+    const S = 3, bw = Math.ceil(w / S), bh = Math.ceil(h / S);
+    if (buf.width !== bw || buf.height !== bh) { buf.width = bw; buf.height = bh; }
+    let c = { x: w * .5, y: h * .42 }, sc = 1;
+    const up = eio(clamp((t - 6200) / 1300));
+    c.y = lerp(h * .42, h * .19, up); sc = lerp(1, .58, up);
+    let p1, p2; const r1 = 46 * sc, r2 = 40 * sc;
+    if (t < 3000) {
+      const e = eio(clamp(t / 3000));
+      p1 = { x: lerp(-70, c.x - 9, e), y: lerp(h * .16, c.y, e) + Math.sin(e * Math.PI) * h * .07 };
+      p2 = { x: lerp(w + 70, c.x + 9, e), y: lerp(h * .78, c.y + 4, e) - Math.sin(e * Math.PI) * h * .06 };
+    } else {
+      const k = sc * (1 - up * .5);
+      p1 = { x: c.x - 7 * k * Math.cos(t * .0019), y: c.y + 5 * k * Math.sin(t * .0023) };
+      p2 = { x: c.x + 7 * k * Math.cos(t * .0019), y: c.y - 5 * k * Math.sin(t * .0023) };
+    }
+    const breathe = t > 3000 ? 1 + .025 * Math.sin(t * .003) : 1;
+    const R1 = r1 * breathe, R2 = r2 * breathe;
+    const merge = sstep(2400, 3300, t);
+    // ombre douce
+    if (merge > 0) {
+      const g = ctx.createRadialGradient(c.x, c.y + 78 * sc, 2, c.x, c.y + 78 * sc, 70 * sc);
+      g.addColorStop(0, `rgba(110,80,160,${.22 * merge})`); g.addColorStop(1, 'rgba(110,80,160,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(c.x, c.y + 78 * sc, 70 * sc, 16 * sc, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    const img = bctx.createImageData(bw, bh), d = img.data, tau = Math.PI * 2, tm = now * .00009;
+    for (let y = 0; y < bh; y++) {
+      const py = y * S + S / 2;
+      for (let x = 0; x < bw; x++) {
+        const px = x * S + S / 2;
+        const dx1 = px - p1.x, dy1 = py - p1.y, dx2 = px - p2.x, dy2 = py - p2.y;
+        const w1 = R1 * R1 / (dx1 * dx1 + dy1 * dy1 + 1), w2 = R2 * R2 / (dx2 * dx2 + dy2 * dy2 + 1), f = w1 + w2;
+        if (f < .8) continue;
+        const ws = w1 + w2, cx = (p1.x * w1 + p2.x * w2) / ws, cy = (p1.y * w1 + p2.y * w2) / ws;
+        const R = (R1 * w1 + R2 * w2) / ws * (1 + .38 * merge);
+        const nx = (px - cx) / R, ny = (py - cy) / R;
+        const tt = .55 + .32 * nx + .24 * ny + tm + (Math.min(f, 2.2) - 1) * .03;
+        let r = .87 + .13 * Math.cos(tau * tt), g = .85 + .13 * Math.cos(tau * (tt + .33)), b = .91 + .09 * Math.cos(tau * (tt + .67));
+        const shade = 1 - .16 * clamp(ny + .25);
+        r *= shade; g *= shade; b *= shade;
+        const hd = Math.hypot(nx + .36, ny + .42), spec = Math.pow(clamp(1 - hd / .34), 2);
+        r += (1 - r) * spec; g += (1 - g) * spec; b += (1 - b) * spec;
+        const rim = 1 - sstep(1, 1.5, f); r -= rim * .06; g -= rim * .08; b -= rim * .01;
+        const a = sstep(.9, 1.06, f), i = (y * bw + x) * 4;
+        d[i] = r * 255; d[i + 1] = g * 255; d[i + 2] = b * 255; d[i + 3] = a * 255;
+      }
+    }
+    bctx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(buf, 0, 0, bw * S, bh * S);
+  }
+
+  /* ---------- B · Nocturne : étincelles, collision, orbite ---------- */
+  const nState = new WeakMap();
+  function drawNocturne(ctx, t, w, h, now, el) {
+    let st = nState.get(el);
+    if (!st || t < st.last) { st = { parts: null, last: 0 }; nState.set(el, st); ctx.fillStyle = '#0A0710'; ctx.fillRect(0, 0, w, h); }
+    st.last = t;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(10,7,16,0.16)'; ctx.fillRect(0, 0, w, h);
+    const up = eio(clamp((t - 6600) / 1300));
+    const c = { x: w * .5, y: lerp(h * .40, h * .27, up) }, sc = lerp(1, .82, up);
+    const spark = (x, y, col, rad) => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, '#FFFFFF'); g.addColorStop(.18, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
+    };
+    ctx.globalCompositeOperation = 'lighter';
+    const T0 = 3300;
+    if (t < T0) {
+      const e = t / T0, ang = .5 + e * e * 10.5, R = (1 - Math.pow(e, 1.6)) * Math.min(w, h) * .46;
+      const ox = Math.cos(ang) * R, oy = Math.sin(ang) * R * .8;
+      spark(c.x + ox, c.y + oy, 'rgba(255,158,122,.9)', 16);
+      spark(c.x - ox, c.y - oy, 'rgba(246,230,207,.85)', 13);
+    } else {
+      if (!st.parts) {
+        const r = rng(7); st.parts = [];
+        for (let i = 0; i < 150; i++) {
+          const a = r() * Math.PI * 2, v = .04 + r() * .2;
+          st.parts.push({ a, v, s: 1 + r() * 2.2, col: ['255,158,122', '255,92,138', '246,230,207'][i % 3], life: 1200 + r() * 1400 });
+        }
+      }
+      const dt = t - T0;
+      const flash = 1 - clamp(dt / 900);
+      if (flash > 0) {
+        const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, 40 + dt * .18);
+        g.addColorStop(0, `rgba(255,220,200,${.85 * flash})`); g.addColorStop(.4, `rgba(255,120,130,${.45 * flash})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      }
+      for (const p of st.parts) {
+        const lt = dt / p.life; if (lt > 1) continue;
+        const dist = (1 - Math.exp(-dt * .0028)) * p.v * 520;
+        const x = c.x + Math.cos(p.a) * dist, y = c.y + Math.sin(p.a) * dist * .9 + dt * dt * .000006;
+        ctx.fillStyle = `rgba(${p.col},${(1 - lt) * .9})`; ctx.beginPath(); ctx.arc(x, y, p.s * (1 - lt * .6), 0, Math.PI * 2); ctx.fill();
+      }
+      // noyau
+      const ca = sstep(200, 1200, dt), br = 1 + .06 * Math.sin(t * .003);
+      const g2 = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, 46 * sc * br);
+      g2.addColorStop(0, `rgba(255,226,210,${.9 * ca})`); g2.addColorStop(.35, `rgba(255,158,122,${.55 * ca})`); g2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(c.x, c.y, 46 * sc * br, 0, Math.PI * 2); ctx.fill();
+      // orbite
+      const oa = sstep(500, 1800, dt), N = 72, RR = 74 * sc;
+      for (let i = 0; i < N; i++) {
+        const a = i / N * Math.PI * 2 + t * .00035, wob = Math.sin(a * 3 + t * .002) * 2;
+        ctx.fillStyle = `rgba(246,230,207,${.28 * oa})`; ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * (RR + wob), c.y + Math.sin(a) * (RR + wob), 1.1, 0, Math.PI * 2); ctx.fill();
+      }
+      const sa = t * .0011;
+      spark(c.x + Math.cos(sa) * RR, c.y + Math.sin(sa) * RR, `rgba(246,230,207,${.9 * oa})`, 9 * oa + .01);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  /* ---------- C · Jardin : graine, tiges enlacées, fleur ---------- */
+  function petal(ctx, x, y, ang, len, wid, col) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(wid, -len * .3, wid * .8, -len, 0, -len); ctx.bezierCurveTo(-wid * .8, -len, -wid, -len * .3, 0, 0); ctx.fill(); ctx.restore();
+  }
+  function leaf(ctx, x, y, ang, s, col) {
+    if (s <= 0) return;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(9, -9, 22, 0); ctx.quadraticCurveTo(9, 7, 0, 0); ctx.fill();
+    ctx.strokeStyle = 'rgba(16,41,31,.25)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(19, 0); ctx.stroke(); ctx.restore();
+  }
+  function flower(ctx, x, y, s, rot, big) {
+    if (s <= 0) return;
+    const n = big ? 6 : 5;
+    for (let i = 0; i < n; i++) petal(ctx, x, y, rot + i / n * Math.PI * 2, (big ? 19 : 8) * s, (big ? 10 : 4.5) * s, i % 2 ? '#F29BB8' : '#F6B3C9');
+    for (let i = 0; i < n; i++) petal(ctx, x, y, rot + (i + .5) / n * Math.PI * 2, (big ? 11 : 5) * s, (big ? 6 : 3) * s, '#F9CCDA');
+    ctx.fillStyle = '#F2C94C'; ctx.beginPath(); ctx.arc(x, y, (big ? 5 : 2.3) * s, 0, Math.PI * 2); ctx.fill();
+  }
+  function drawJardin(ctx, t, w, h) {
+    const bg = ctx.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#0C2219'); bg.addColorStop(1, '#16392A');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+    const up = eio(clamp((t - 6800) / 1200));
+    ctx.save();
+    const g = h * .70, H = h * .34, cx = w / 2;
+    ctx.translate(0, -h * .13 * up); ctx.translate(cx, g); ctx.scale(1 - .12 * up, 1 - .12 * up); ctx.translate(-cx, -g);
+    // lucioles
+    const fa = sstep(3800, 5200, t), r = rng(11);
+    for (let i = 0; i < 16; i++) {
+      const bx = r() * w, by = r() * h * .8, ph = r() * 6;
+      const x = bx + Math.sin(t * .0006 + ph) * 14, y = by + Math.cos(t * .0005 + ph) * 10, a = fa * (.35 + .35 * Math.sin(t * .003 + ph));
+      const gg = ctx.createRadialGradient(x, y, 0, x, y, 7); gg.addColorStop(0, `rgba(242,201,76,${a})`); gg.addColorStop(1, 'rgba(242,201,76,0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+    }
+    // sol
+    const sg = ctx.createRadialGradient(cx, g + 10, 0, cx, g + 10, 90); sg.addColorStop(0, 'rgba(62,107,78,.55)'); sg.addColorStop(1, 'rgba(62,107,78,0)');
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(cx, g + 10, 90, 18, 0, 0, Math.PI * 2); ctx.fill();
+    // graine
+    if (t < 1000) {
+      const e = clamp(t / 900), y = lerp(-20, g - 4, e * e) - (t > 900 ? Math.sin((t - 900) / 100 * Math.PI) * 4 : 0);
+      ctx.fillStyle = '#F2C94C'; ctx.beginPath(); ctx.ellipse(cx, y, 4, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    // tiges
+    const sMax = eout(clamp((t - 950) / 2700)), sway = Math.sin(t * .0012) * 2.5;
+    const pt = (s, ph) => ({ x: cx + Math.sin(s * Math.PI * 2.3 + ph) * 15 * (1 - .4 * s) * Math.min(1, s * 5) + sway * s, y: g - s * H });
+    const stems = [{ ph: 0, col: '#7DB888' }, { ph: Math.PI, col: '#B2D69A' }];
+    for (const sm of stems) {
+      let prev = pt(0, sm.ph);
+      for (let s = .015; s <= sMax; s += .015) {
+        const p = pt(s, sm.ph); ctx.strokeStyle = sm.col; ctx.lineCap = 'round'; ctx.lineWidth = 4.6 * (1 - s * .55);
+        ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(p.x, p.y); ctx.stroke(); prev = p;
+      }
+    }
+    const leaves = [[.18, 0, -1], [.3, 1, 1], [.44, 0, 1], [.56, 1, -1], [.7, 0, -1], [.8, 1, 1]];
+    for (const [s, k, side] of leaves) {
+      const gr = clamp((sMax - s) / .14); if (gr <= 0) continue;
+      const p = pt(s, stems[k].ph);
+      leaf(ctx, p.x, p.y, side > 0 ? -.55 + Math.sin(t * .0015 + s * 9) * .06 : Math.PI + .55, eback(gr) * (1 - s * .35), k ? '#8FC27F' : '#5E9A6C');
+    }
+    // fleur
+    const top = pt(1, 0), tp = { x: (pt(1, 0).x + pt(1, Math.PI).x) / 2, y: top.y - 4 };
+    const bt = clamp((t - 3600) / 1200);
+    if (bt > 0) {
+      const halo = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, 70); halo.addColorStop(0, `rgba(242,155,184,${.32 * bt})`); halo.addColorStop(1, 'rgba(242,155,184,0)');
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(tp.x, tp.y, 70, 0, Math.PI * 2); ctx.fill();
+      flower(ctx, tp.x, tp.y, eback(bt) * 1.35, bt * .8 + t * .00008, true);
+    }
+    // pétales qui tombent
+    if (t > 4900) {
+      const rr = rng(5);
+      for (let i = 0; i < 5; i++) {
+        const st = 4900 + i * 900 + rr() * 300, dt = t - st; if (dt < 0) continue;
+        const y = tp.y + dt * .045, x = tp.x + (rr() - .5) * 30 + Math.sin(dt * .002 + i) * 18, a = 1 - clamp(dt / 4200);
+        if (a <= 0) continue;
+        ctx.globalAlpha = a; petal(ctx, x, y, dt * .0015 + i, 7, 4, '#F6B3C9'); ctx.globalAlpha = 1;
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ---------- Jardin d'accueil : 44 plantes, 3 fleurs ---------- */
+  function drawGarden(ctx, t, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    const hill = (yb, amp, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(0, yb); for (let x = 0; x <= w; x += 8) ctx.lineTo(x, yb - Math.sin(x / w * Math.PI) * amp); ctx.lineTo(w, h); ctx.fill(); };
+    hill(h * .74, 18, '#C8E0C9');
+    const r = rng(42), plants = [];
+    for (let i = 0; i < 44; i++) {
+      const row = i < 16 ? 0 : i < 32 ? 1 : 2;
+      plants.push({ x: 10 + r() * (w - 20), row, hgt: [38, 52, 64][row] * (.7 + r() * .5), ph: r() * 6, fl: [5, 21, 37].includes(i) ? 2 : r() < .18 ? 1 : 0, lean: (r() - .5) * .3 });
+    }
+    plants.sort((a, b) => a.row - b.row);
+    for (const p of plants) {
+      if (p.row === 1 && !plants._h1) { hill(h * .84, 14, '#A9D0AE'); plants._h1 = 1; }
+      if (p.row === 2 && !plants._h2) { hill(h * .95, 10, '#86BC8E'); plants._h2 = 1; }
+      const base = h * [.74, .84, .95][p.row] - Math.sin(p.x / w * Math.PI) * [18, 14, 10][p.row] + 3;
+      const sw = Math.sin(t * .0011 + p.ph) * 4 * (p.hgt / 60), tx = p.x + p.lean * p.hgt + sw, ty = base - p.hgt;
+      ctx.strokeStyle = ['#7FAE87', '#5E9A6C', '#3E6B4E'][p.row]; ctx.lineWidth = [1.6, 2, 2.6][p.row]; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x, base); ctx.quadraticCurveTo(p.x + sw * .3, base - p.hgt * .5, tx, ty); ctx.stroke();
+      const sc = [.6, .8, 1][p.row];
+      leaf(ctx, lerp(p.x, tx, .4), lerp(base, ty, .4), -.6, .55 * sc, ['#8FC27F', '#6FAA78', '#4E8A5E'][p.row]);
+      leaf(ctx, lerp(p.x, tx, .62), lerp(base, ty, .62), Math.PI + .6, .45 * sc, ['#A9D48E', '#86BC7A', '#5E9A6C'][p.row]);
+      if (p.fl === 2) flower(ctx, tx, ty, .95 * sc + .05 * Math.sin(t * .002 + p.ph), t * .0001, true);
+      else if (p.fl === 1) flower(ctx, tx, ty, .9 * sc, p.ph, false);
+      else { ctx.fillStyle = ['#A9D48E', '#86BC7A', '#6FAA78'][p.row]; ctx.beginPath(); ctx.ellipse(tx, ty, 2.5 * sc, 4 * sc, 0, 0, Math.PI * 2); ctx.fill(); }
+    }
+  }
+  function drawSprout(ctx, t, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    const g = ctx.createRadialGradient(w / 2, h * .6, 0, w / 2, h * .6, w * .5); g.addColorStop(0, '#DCEAD8'); g.addColorStop(1, 'rgba(220,234,216,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    const sw = Math.sin(t * .0016) * 3, bx = w / 2, by = h * .86;
+    ctx.strokeStyle = '#3E6B4E'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + 2, by - 30, bx + sw, by - 52); ctx.stroke();
+    leaf(ctx, bx + sw * .6, by - 34, -.7 + Math.sin(t * .002) * .08, 1.25, '#6FAA78');
+    leaf(ctx, bx + sw * .5, by - 26, Math.PI + .7 - Math.sin(t * .002) * .08, 1.05, '#4E8A5E');
+    flower(ctx, bx + sw, by - 54, .62 + .04 * Math.sin(t * .003), t * .0002, true);
+    ctx.fillStyle = '#C8DCC4'; ctx.beginPath(); ctx.ellipse(bx, by + 2, 26, 5, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* ---------- Orchestration ---------- */
+  const CFG = {
+    nacre: { draw: drawNacre, dur: 12500, steps: [[0, 0], [3000, 1], [3300, 2], [4300, 3], [6400, 4]], still: 9000 },
+    nocturne: { draw: drawNocturne, dur: 13000, steps: [[0, 0], [3300, 1], [3900, 2], [4900, 3], [6800, 4]], still: 9500 },
+    jardin: { draw: drawJardin, dur: 13500, steps: [[0, 0], [3600, 1], [4400, 2], [5200, 3], [7000, 4]], still: 9500 },
+  };
+  const items = [];
+  document.querySelectorAll('[data-intro]').forEach(scr => {
+    const cfg = CFG[scr.dataset.intro];
+    items.push({ el: scr, canvas: scr.querySelector('canvas.fx'), cfg, start: performance.now(), step: -1, visible: false, lastT: 0,
+      layers: [...scr.querySelectorAll('[data-at]')] });
+  });
+  document.querySelectorAll('canvas.garden').forEach(c => items.push({ el: c, canvas: c, ambient: drawGarden, visible: false }));
+  document.querySelectorAll('canvas.sprout').forEach(c => items.push({ el: c, canvas: c, ambient: drawSprout, visible: false }));
+
+  function setStep(it, s) {
+    if (s === it.step) return; it.step = s;
+    for (const l of it.layers) {
+      const at = +l.dataset.at, until = l.dataset.until !== undefined ? +l.dataset.until : 99;
+      l.classList.toggle('on', s >= at && s < until);
+    }
+  }
+  function render(it, now) {
+    const { ctx, w, h } = fit(it.canvas);
+    if (it.ambient) { it.ambient(ctx, reduce ? 0 : now, w, h); return; }
+    let t = frz ? +frz[1] : reduce ? it.cfg.still : (now - it.start) % it.cfg.dur;
+    if (t < it.lastT) setStep(it, -1);
+    it.lastT = t;
+    let s = 0; for (const [at, st] of it.cfg.steps) if (t >= at) s = st;
+    setStep(it, s);
+    it.cfg.draw(ctx, t, w, h, now, it.el);
+  }
+
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    const it = items.find(i => i.el === e.target); if (!it) return;
+    it.visible = e.isIntersecting;
+    if (it.visible && it.cfg && !it.started && !reduce) { it.started = true; it.start = performance.now(); it.lastT = 0; setStep(it, -1); nState.delete(it.el); }
+  }), { rootMargin: '80px' });
+  items.forEach(it => io.observe(it.el));
+
+  if (reduce) {
+    const once = () => items.forEach(it => render(it, 0));
+    requestAnimationFrame(once); addEventListener('resize', once);
+  } else {
+    const loop = now => { for (const it of items) if (it.visible) render(it, now); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    // premier rendu immédiat de tout, pour qu'aucun écran ne soit vide
+    requestAnimationFrame(now => items.forEach(it => render(it, it.cfg ? it.start + 200 : now)));
+  }
+
+  document.querySelectorAll('[data-replay]').forEach(b => b.addEventListener('click', () => {
+    const it = items.find(i => i.el.id === b.dataset.replay); if (!it) return;
+    it.start = performance.now(); it.lastT = 0; setStep(it, -1); nState.delete(it.el);
+  }));
+})();
+</script>
+</body>
+</html>
