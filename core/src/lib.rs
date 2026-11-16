@@ -6,5 +6,6 @@
 
 pub mod media;
 pub mod sas;
+pub mod store;
 
 pub use libsignal_protocol;
