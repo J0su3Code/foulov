@@ -1,0 +1,18 @@
+[package]
+name = "foulov_bridge"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+anyhow = "1.0.104"
+flutter_rust_bridge = "=2.13.0"
+# Toute la cryptographie vit dans le cœur : ce crate ne fait que l'exposer à Dart.
+foulov_core = { path = "../../core" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

@@ -32,42 +32,42 @@ abstract final class FouLovColors {
 
 abstract final class FouLovTheme {
   static ThemeData get jour => _build(
-        ColorScheme(
-          brightness: Brightness.light,
-          primary: FouLovColors.sapin,
-          onPrimary: FouLovColors.brume,
-          secondary: FouLovColors.petale,
-          onSecondary: FouLovColors.sapin,
-          tertiary: FouLovColors.pollen,
-          onTertiary: FouLovColors.sapin,
-          error: const Color(0xFFB3261E),
-          onError: Colors.white,
-          surface: FouLovColors.brume,
-          onSurface: FouLovColors.sapin,
-          onSurfaceVariant: FouLovColors.texteDiscretJour,
-          surfaceContainer: Colors.white,
-          outline: FouLovColors.ligneJour,
-        ),
-      );
+    ColorScheme(
+      brightness: Brightness.light,
+      primary: FouLovColors.sapin,
+      onPrimary: FouLovColors.brume,
+      secondary: FouLovColors.petale,
+      onSecondary: FouLovColors.sapin,
+      tertiary: FouLovColors.pollen,
+      onTertiary: FouLovColors.sapin,
+      error: const Color(0xFFB3261E),
+      onError: Colors.white,
+      surface: FouLovColors.brume,
+      onSurface: FouLovColors.sapin,
+      onSurfaceVariant: FouLovColors.texteDiscretJour,
+      surfaceContainer: Colors.white,
+      outline: FouLovColors.ligneJour,
+    ),
+  );
 
   static ThemeData get nuit => _build(
-        ColorScheme(
-          brightness: Brightness.dark,
-          primary: FouLovColors.lueur,
-          onPrimary: const Color(0xFF2A0B16),
-          secondary: FouLovColors.braise,
-          onSecondary: const Color(0xFF2A0B16),
-          tertiary: FouLovColors.champagne,
-          onTertiary: FouLovColors.nuit,
-          error: const Color(0xFFFFB4AB),
-          onError: const Color(0xFF690005),
-          surface: FouLovColors.nuit,
-          onSurface: FouLovColors.texteNuit,
-          onSurfaceVariant: FouLovColors.texteDiscretNuit,
-          surfaceContainer: FouLovColors.velours,
-          outline: FouLovColors.ligneNuit,
-        ),
-      );
+    ColorScheme(
+      brightness: Brightness.dark,
+      primary: FouLovColors.lueur,
+      onPrimary: const Color(0xFF2A0B16),
+      secondary: FouLovColors.braise,
+      onSecondary: const Color(0xFF2A0B16),
+      tertiary: FouLovColors.champagne,
+      onTertiary: FouLovColors.nuit,
+      error: const Color(0xFFFFB4AB),
+      onError: const Color(0xFF690005),
+      surface: FouLovColors.nuit,
+      onSurface: FouLovColors.texteNuit,
+      onSurfaceVariant: FouLovColors.texteDiscretNuit,
+      surfaceContainer: FouLovColors.velours,
+      outline: FouLovColors.ligneNuit,
+    ),
+  );
 
   static ThemeData _build(ColorScheme scheme) {
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
