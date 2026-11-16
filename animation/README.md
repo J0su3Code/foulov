@@ -1,4 +1,4 @@
-# Intro cinématique FouLov
+# Intro cinématique FouLove
 
 Tout est généré par code : scène, animation, textures des feuilles et des pétales.
 Les seuls éléments externes sont des matières et modèles **CC0** de [Poly Haven](https://polyhaven.com) (sol, herbe, fougères, éclairages HDRI), téléchargés par script.

@@ -1,7 +1,7 @@
 -- Tests des règles d'accès (docs/SECURITY.md §8) : Inès et Malik forment un couple, Zoé est une intruse.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(38);
 
 -- ------------------------------------------------------------ préparation
 insert into auth.users (id, email) values
@@ -24,13 +24,16 @@ create function pg_temp.fake_device(uid uuid) returns void language sql as $$
     1, decode(repeat('08', 1569), 'hex'), decode(repeat('cd', 64), 'hex'));
 $$;
 
+create function pg_temp.create_couple_code_sample() returns text language sql security definer as $$ select public.new_invitation_code() $$;
+
 -- ------------------------------------------------------------ profils créés automatiquement
 select is((select count(*)::int from public.profiles), 3, 'un profil est créé pour chaque inscription');
 
 -- ------------------------------------------------------------ Inès crée le couple
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
 create temp table t_token as select public.create_couple() as token;
-select is(length((select token from t_token)), 22, 'le jeton fait 128 bits en base64url (22 caractères)');
+select matches((select token from t_token), '^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{10}$', 'le code fait 10 caractères Crockford (50 bits)');
+select isnt(pg_temp.create_couple_code_sample(), (select token from t_token), 'deux codes générés sont différents');
 select throws_ok($$ select public.create_couple() $$, 'P0001', 'déjà dans un couple', 'impossible de créer un deuxième couple');
 select is((select count(*)::int from public.couples), 1, 'Inès voit son couple');
 select throws_ok($$ select * from public.invitations $$, '42501', null, 'les invitations ne sont pas lisibles directement');
@@ -49,7 +52,7 @@ select is((select count(*)::int from public.couple_members), 0, 'Zoé ne voit au
 select is((select count(*)::int from public.devices), 0, 'Zoé ne voit aucune clé publique');
 select is((select count(*)::int from public.one_time_prekeys), 0, 'Zoé ne voit aucune pré-clé');
 select results_eq($$ select id from public.profiles $$, $$ values ('33333333-3333-3333-3333-333333333333'::uuid) $$, 'Zoé ne voit que son propre profil');
-select is(public.join_couple('AAAAAAAAAAAAAAAAAAAAAA'), null, 'un jeton deviné est refusé');
+select is(public.join_couple('0000000000'), null, 'un code deviné est refusé');
 select throws_ok($$ select * from public.claim_partner_bundle() $$, 'P0001', 'aucun partenaire', 'sans couple, pas de clés de partenaire');
 select throws_ok($$ select * from public.join_attempts $$, '42501', null, 'les tentatives ne sont pas lisibles');
 select throws_ok($$ select public.handle_new_user() $$, '42501', null, 'les fonctions internes ne sont pas appelables');
@@ -60,7 +63,8 @@ grant select on t_token to authenticated;
 create temp table t_couple as select id from public.couples;
 grant select on t_couple to authenticated;
 select pg_temp.as_user('22222222-2222-2222-2222-222222222222');
-select isnt((select public.join_couple((select token from t_token))), null, 'Malik rejoint avec le jeton');
+select isnt((select public.join_couple(lower(substr((select token from t_token), 1, 5)) || '-' || lower(substr((select token from t_token), 6)))), null,
+  'Malik rejoint en tapant le code en minuscules avec un tiret');
 select is((select count(*)::int from public.couple_members), 2, 'Malik voit les deux membres');
 select is(public.my_partner_id(), '11111111-1111-1111-1111-111111111111'::uuid, 'le partenaire de Malik est Inès');
 select pg_temp.fake_device('22222222-2222-2222-2222-222222222222');
@@ -96,9 +100,10 @@ select throws_ok(
 select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
 -- Zoé a déjà fait 2 tentatives ; 8 de plus atteignent la limite de 10.
 do $$ begin
-  for i in 1..8 loop perform public.join_couple('AAAAAAAAAAAAAAAAAAAAAA'); end loop;
+  for i in 1..8 loop perform public.join_couple('0000000000'); end loop;
 end $$;
-select throws_ok($$ select public.join_couple('AAAAAAAAAAAAAAAAAAAAAA') $$, 'P0001', 'trop de tentatives, réessaie dans une heure', 'au-delà de 10 tentatives par heure, refus');
+select throws_ok($$ select public.join_couple('0000000000') $$, 'P0001', 'trop de tentatives, réessaie dans une heure', 'au-delà de 10 tentatives par heure, refus');
+select throws_ok($$ select public.new_invitation_code() $$, '42501', null, 'la génération de codes n''est pas appelable directement');
 
 -- ------------------------------------------------------------ Inès reçoit puis supprime
 select pg_temp.as_admin();
@@ -113,6 +118,11 @@ select pg_temp.as_admin();
 set local role anon;
 select throws_ok($$ select * from public.couples $$, '42501', null, 'un visiteur non connecté ne lit rien');
 select throws_ok($$ select public.create_couple() $$, '42501', null, 'un visiteur non connecté ne peut rien créer');
+
+-- ------------------------------------------------------------ normalisation
+reset role;
+select is(public.normalize_invitation_code(' k7q4m-9xhpt '), 'K7Q4M9XHPT', 'espaces, tiret et minuscules tolérés');
+select is(public.normalize_invitation_code('ILO'), '110', 'I, L et O sont lus comme 1, 1 et 0');
 
 -- ------------------------------------------------------------ toutes les tables ont RLS
 reset role;
