@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maquettes FouLov</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&family=Caveat:wght@500&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Onest:wght@400;500;600;700&family=Unbounded:wght@400;600;700&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,400&display=swap">
+<style>
+/* Layout: dossier de présentation — en-tête, nav collante, 3 directions empilées, chacune = fiche identité + rangée de 5 téléphones qui passe en colonne sur mobile. */
+:root{
+  --bg:#F5F4F7; --fg:#1B1920; --muted:#615C69; --line:#E1DDE6; --card:#FFFFFF; --accent:#8C1D35;
+  --f-ui:"Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-title:"Bricolage Grotesque", "Onest", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#121116; --fg:#EEEBF2; --muted:#A39DAC; --line:#2A2731; --card:#1A1920; --accent:#EC8BA0; color-scheme:dark }
+}
+:root[data-theme="dark"]{ --bg:#121116; --fg:#EEEBF2; --muted:#A39DAC; --line:#2A2731; --card:#1A1920; --accent:#EC8BA0; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation:none!important;transition:none!important} }
+body{background:var(--bg); color:var(--fg); font-family:var(--f-ui); font-size:15px; line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:0 64px}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--bg)}
+.wrap{max-width:1680px; margin:0 auto}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:6px}
+
+/* ---------- En-tête ---------- */
+.intro{padding-block:48px 28px; display:grid; gap:14px; max-width:760px}
+.intro .kick{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.intro h1{font-family:var(--f-title); font-weight:800; font-size:clamp(34px, 6vw, 60px); line-height:1.02; letter-spacing:-.02em; margin:0; text-wrap:balance}
+.intro p{margin:0; color:var(--muted); max-width:62ch}
+
+nav.jump{position:sticky; top:env(safe-area-inset-top, 0px); z-index:5; background:var(--bg); border-bottom:1px solid var(--line);
+  display:flex; gap:8px; flex-wrap:wrap; padding-block:12px}
+nav.jump a{text-decoration:none; padding:7px 14px; border-radius:999px; border:1px solid var(--line); font-weight:600; font-size:14px; background:var(--card); display:flex; align-items:center; gap:8px}
+nav.jump a:hover{border-color:var(--fg)}
+nav.jump i{width:10px; height:10px; border-radius:50%; display:inline-block}
+
+/* ---------- Fiche direction ---------- */
+section.dir{padding-block:56px 8px; border-bottom:1px solid var(--line); scroll-margin-top:70px}
+.dhead{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:32px; align-items:start}
+@media (max-width:900px){ .dhead{grid-template-columns:minmax(0,1fr)} }
+.dlabel{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:0 0 6px}
+.dname{margin:0; line-height:1; font-size:clamp(44px, 8vw, 84px); text-wrap:balance}
+.dthesis{font-size:18px; margin:14px 0 0; max-width:52ch}
+.dtext{color:var(--muted); margin:10px 0 0; max-width:62ch}
+.facts{display:grid; gap:18px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px}
+.facts h4{margin:0 0 8px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.sw{display:flex; flex-wrap:wrap; gap:10px}
+.sw div{display:grid; gap:4px; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+.sw span{width:46px; height:46px; border-radius:12px; border:1px solid var(--line)}
+.typo{display:grid; gap:2px}
+.typo .big{font-size:30px; line-height:1.1}
+.typo small{color:var(--muted); font-size:12px}
+.logo-row{display:flex; align-items:center; gap:14px}
+.logo-row svg{width:64px; height:64px; flex:none}
+.logo-row p{margin:0; font-size:13px; color:var(--muted)}
+.feel{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; margin-top:24px}
+@media (max-width:700px){ .feel{grid-template-columns:minmax(0,1fr)} }
+.feel div{border-top:2px solid var(--fg); padding-top:10px}
+.feel b{display:block; font-size:12px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px}
+.feel p{margin:0; color:var(--muted); font-size:14px}
+
+.phones{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:40px 24px; justify-items:center; padding-block:40px 40px}
+figure{margin:0; display:grid; gap:12px; justify-items:center}
+figcaption{text-align:center; max-width:280px}
+figcaption b{display:block; font-size:14px}
+figcaption span{color:var(--muted); font-size:13px}
+
+/* ---------- Téléphone (mondes fixes, couleurs explicites par direction) ---------- */
+.phone{width:300px; max-width:100%; aspect-ratio:300/640; border-radius:46px; padding:9px; background:#0A0A0C;
+  box-shadow:0 0 0 1px #2C2C30, 0 30px 60px -28px rgba(20,10,30,.55)}
+.scr{height:100%; border-radius:38px; overflow:hidden; position:relative; display:flex; flex-direction:column; font-size:13px; line-height:1.4}
+.scr::before{content:""; position:absolute; top:11px; left:50%; width:12px; height:12px; margin-left:-6px; border-radius:50%; background:#050506; z-index:4}
+.sb{display:flex; justify-content:space-between; align-items:center; padding:12px 26px 6px; font-size:12px; font-weight:600; flex:none; position:relative; z-index:3}
+.sb .bt{display:flex; gap:5px; align-items:center}
+.sb .bat{width:20px; height:10px; border-radius:3px; border:1.5px solid currentColor; position:relative}
+.sb .bat::after{content:""; position:absolute; inset:1.5px 5px 1.5px 1.5px; background:currentColor; border-radius:1px}
+.ic{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none}
+.ic.s{width:15px; height:15px}
+.ic.l{width:26px; height:26px}
+.body{flex:1; min-height:0; display:flex; flex-direction:column; padding:6px 18px 0; gap:12px; overflow:hidden}
+.tb{display:flex; justify-content:space-around; padding:10px 6px 16px; flex:none; font-size:10px; font-weight:600}
+.tb div{display:grid; justify-items:center; gap:3px}
+.row{display:flex; align-items:center; gap:10px}
+.grow{flex:1; min-width:0}
+.msgs{display:flex; flex-direction:column; gap:7px; flex:1; min-height:0; justify-content:flex-end; padding-bottom:4px}
+.b{max-width:78%; padding:8px 12px; border-radius:18px; font-size:13px; position:relative}
+.b.me{align-self:flex-end}
+.b.th{align-self:flex-start}
+.b .t{display:block; font-size:10px; opacity:.6; margin-top:2px; text-align:right}
+.react{position:absolute; bottom:-10px; left:-6px; font-size:12px; background:inherit; border-radius:10px; padding:0 4px}
+.wave{display:flex; align-items:center; gap:2px; height:22px}
+.wave i{display:block; width:3px; border-radius:2px; background:currentColor; opacity:.8}
+.emo{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px}
+.emo div{display:grid; justify-items:center; gap:2px; padding:8px 2px; border-radius:14px; font-size:10px; font-weight:600}
+.emo div span{font-size:24px; line-height:1}
+.photo{border-radius:14px; position:relative; overflow:hidden}
+
+/* ===== A · CACHET ===== */
+.dA .dname{font-family:"Gloock", Georgia, serif; font-weight:400; color:var(--accent)}
+.sA{background:#F6EDEF; color:#2B1A1F; font-family:"Figtree", system-ui, sans-serif}
+.sA .serif{font-family:"Gloock", Georgia, serif; font-weight:400}
+.sA .mut{color:#7A6469}
+.sA .h{font-family:"Gloock", Georgia, serif; font-size:28px; line-height:1.08; margin:0}
+.sA .eb{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#8C1D35; font-weight:700}
+.seal{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; color:#F3D2D9; font-family:"Gloock", serif; font-size:30px;
+  background:radial-gradient(circle at 35% 30%, #B23250, #8C1D35 55%, #5E0F22);
+  box-shadow:0 0 0 4px #8C1D35, 0 0 0 5px #6A1428, inset 0 -4px 8px rgba(0,0,0,.25), 0 8px 18px -6px rgba(94,15,34,.6)}
+.seal.sm{width:18px; height:18px; font-size:10px; box-shadow:0 0 0 2px #8C1D35}
+.sA .emo div{background:#FFFFFF; border:1px solid #EAD7DC}
+.sA .btn{display:block; text-align:center; padding:13px; border-radius:14px; font-weight:700; font-size:14px}
+.sA .btn.p{background:#8C1D35; color:#FFF2F5}
+.sA .btn.g{color:#8C1D35}
+.sA .b.me{background:#8C1D35; color:#FFF2F5; border-bottom-right-radius:6px}
+.sA .b.th{background:#FFFFFF; color:#2B1A1F; border:1px solid #EAD7DC; border-bottom-left-radius:6px}
+.sA .div{align-self:center; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#7A6469; padding:4px 0}
+.sA .inp{display:flex; align-items:center; gap:8px; padding:8px 14px 18px; flex:none}
+.sA .inp .f{flex:1; background:#FFFFFF; border:1px solid #EAD7DC; border-radius:20px; padding:9px 14px; color:#9A858A}
+.sA .av{width:36px; height:36px; border-radius:50%; background:#E9CDD3; display:grid; place-items:center; font-family:"Gloock", serif; color:#8C1D35; font-size:16px; flex:none}
+.sA .tb{border-top:1px solid #EAD7DC; color:#9A858A}
+.sA .tb .on{color:#8C1D35}
+.env{position:relative; height:148px; border-radius:12px; background:#E9CDD3; overflow:hidden; box-shadow:0 10px 24px -14px rgba(94,15,34,.5)}
+.env::before{content:""; position:absolute; inset:0 0 auto; height:96px; background:#DDB7C0; clip-path:polygon(0 0,100% 0,50% 100%)}
+.env .seal{position:absolute; left:50%; top:66px; margin-left:-30px; width:60px; height:60px; font-size:26px}
+.sA .card{background:#FFFFFF; border:1px solid #EAD7DC; border-radius:14px; padding:10px 12px}
+.sA .list{display:grid; gap:0; background:#FFFFFF; border:1px solid #EAD7DC; border-radius:14px}
+.sA .list > div{padding:10px 12px; border-top:1px solid #F1E3E6}
+.sA .list > div:first-child{border-top:0}
+.sA .ring{width:52px; height:52px; border-radius:50%; padding:3px; background:#8C1D35}
+.sA .ring.off{background:#D9C3C8}
+.sA .ring > div{width:100%; height:100%; border-radius:50%; border:2px solid #F6EDEF}
+.date{width:42px; flex:none; text-align:center; border-radius:10px; background:#FFFFFF; border:1px solid #EAD7DC; padding:4px 0; line-height:1.1}
+.date b{display:block; font-family:"Gloock", serif; font-size:17px; font-weight:400; color:#8C1D35}
+.date small{font-size:9px; letter-spacing:.1em; color:#7A6469; font-weight:700}
+.chip{font-size:11px; font-weight:600; padding:5px 9px; border-radius:999px; white-space:nowrap}
+
+/* ===== B · DUO ===== */
+.dB .dname{font-family:"Bricolage Grotesque", sans-serif; font-weight:800; letter-spacing:-.04em}
+.dB .dname em{font-style:normal; color:#FF5A36}
+.dB .dname strong{color:#3D57FF}
+.sB{background:#FBF9F4; color:#16141B; font-family:"Onest", system-ui, sans-serif}
+.sB .h{font-family:"Bricolage Grotesque", sans-serif; font-weight:800; font-size:34px; line-height:.95; letter-spacing:-.03em; margin:0}
+.sB .mut{color:#6B6773}
+.venn{position:relative; height:150px}
+.venn i{position:absolute; top:6px; width:136px; height:136px; border-radius:50%; mix-blend-mode:multiply}
+.venn i:first-child{left:22px; background:#FF5A36}
+.venn i:last-child{right:22px; background:#2F4BFF}
+.sB .emo div{background:#FFFFFF; box-shadow:0 1px 0 #E8E4DA, 0 0 0 1px #EFEBE2}
+.sB .btn{display:block; text-align:center; padding:15px; border-radius:999px; font-weight:700; font-size:15px}
+.sB .btn.p{background:#16141B; color:#FBF9F4}
+.sB .btn.g{color:#16141B; text-decoration:underline; text-underline-offset:3px}
+.sB .b{font-size:14px; border-radius:22px; padding:9px 14px}
+.sB .b.me{background:#FF5A36; color:#FFFFFF}
+.sB .b.th{background:#2F4BFF; color:#FFFFFF}
+.duo-dot{position:relative; width:34px; height:24px; flex:none}
+.duo-dot i{position:absolute; top:0; width:24px; height:24px; border-radius:50%; mix-blend-mode:multiply}
+.duo-dot i:first-child{left:0; background:#FF5A36}
+.duo-dot i:last-child{left:10px; background:#2F4BFF}
+.sB .poll{background:#FFFFFF; border-radius:20px; padding:12px; display:grid; gap:7px; box-shadow:0 0 0 1px #EFEBE2; align-self:stretch}
+.sB .opt{display:flex; justify-content:space-between; align-items:center; border-radius:12px; padding:8px 10px; font-weight:600; font-size:13px; background:#F4F1EA}
+.sB .opt.win{background:#2F1A36; color:#FFFFFF}
+.sB .inp{display:flex; align-items:center; gap:8px; padding:8px 14px 18px; flex:none}
+.sB .inp .f{flex:1; background:#F0ECE3; border-radius:999px; padding:11px 16px; color:#8D8893; font-size:14px}
+.sB .round{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; flex:none}
+.sB .tb{color:#9C98A1}
+.sB .tb .on{color:#16141B}
+.paper{flex:1; min-height:0; background:#FFE1D8; border-radius:24px; padding:18px; font-size:16px; line-height:1.5; color:#3A1A12; overflow:hidden; position:relative}
+.caret{display:inline-block; width:2px; height:18px; background:#FF5A36; vertical-align:-3px; animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.sB .seg{display:flex; background:#F0ECE3; border-radius:999px; padding:3px; font-size:12px; font-weight:600}
+.sB .seg span{flex:1; text-align:center; padding:7px 4px; border-radius:999px; color:#6B6773}
+.sB .seg span.on{background:#16141B; color:#FFFFFF}
+.dots{display:flex; gap:8px}
+.dots i{width:28px; height:28px; border-radius:50%; display:block}
+.mas{display:grid; grid-template-columns:1fr 1fr 1fr; grid-auto-rows:62px; gap:6px}
+.mas div{border-radius:12px}
+.huge{font-family:"Bricolage Grotesque", sans-serif; font-weight:800; font-size:92px; line-height:.85; letter-spacing:-.05em}
+.sB .nick{border-radius:18px; padding:10px 12px; display:grid; gap:2px}
+.sB .chk{display:flex; gap:10px; align-items:center; padding:8px 0; border-top:1px solid #ECE7DD; font-size:13px}
+.sB .box{width:20px; height:20px; border-radius:7px; border:2px solid #16141B; display:grid; place-items:center; flex:none}
+.sB .box.on{background:#16141B; color:#FBF9F4}
+.sB .chips{display:flex; gap:6px; flex-wrap:wrap}
+.sB .chips span{padding:6px 12px; border-radius:999px; font-weight:600; font-size:12px; background:#F0ECE3}
+.sB .chips span.on{background:#16141B; color:#FBF9F4}
+
+/* ===== C · LUEUR ===== */
+.dC .dname{font-family:"Unbounded", sans-serif; font-weight:600; letter-spacing:-.02em}
+.sC{background:#0D0F1E; color:#ECE9F4; font-family:"Manrope", system-ui, sans-serif}
+.sC .h{font-family:"Unbounded", sans-serif; font-weight:600; font-size:24px; line-height:1.1; margin:0; letter-spacing:-.01em}
+.sC .mut{color:#8D90AD}
+.glow{position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(60% 40% at 50% 34%, rgba(255,158,122,.42), transparent 70%), radial-gradient(50% 30% at 70% 60%, rgba(255,111,145,.22), transparent 70%)}
+.orb{width:150px; height:150px; border-radius:50%; margin:0 auto;
+  background:radial-gradient(circle at 40% 35%, #FFE3D2, #FF9E7A 40%, #FF6F91 75%, rgba(255,111,145,0) 76%);
+  box-shadow:0 0 80px 20px rgba(255,140,120,.35)}
+.sC .glass{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09); border-radius:18px}
+.sC .faceid{width:64px; height:64px; border-radius:22px; display:grid; place-items:center; margin:0 auto; color:#FFB295; background:rgba(255,158,122,.12); border:1px solid rgba(255,158,122,.35)}
+.sC .b.me{background:linear-gradient(135deg, #FFB08A, #FF7E98); color:#2A0E16; border-bottom-right-radius:6px}
+.sC .b.th{background:#22263F; color:#ECE9F4; border-bottom-left-radius:6px}
+.sC .eph{align-self:center; font-size:11px; color:#FFB295; background:rgba(255,158,122,.1); border:1px solid rgba(255,158,122,.25); border-radius:999px; padding:4px 10px; display:flex; gap:6px; align-items:center}
+.sC .inp{display:flex; align-items:center; gap:8px; padding:8px 14px 18px; flex:none}
+.sC .inp .f{flex:1; background:#181B30; border:1px solid #262A45; border-radius:20px; padding:10px 14px; color:#6F7291}
+.sC .av{width:34px; height:34px; border-radius:50%; flex:none; background:linear-gradient(135deg, #5A4C8C, #2A2F55); display:grid; place-items:center; font-weight:700; font-size:13px; color:#ECE9F4}
+.sC .tb{color:#6F7291; margin:0 12px 12px; border-radius:22px; background:rgba(24,27,48,.85); border:1px solid #262A45; padding:10px 6px 10px}
+.sC .tb .on{color:#FFB295}
+.letterC{flex:1; min-height:0; border-radius:20px; padding:20px 18px; background:linear-gradient(180deg, #F4E9D0, #EBDDBE); color:#3A2A1A; font-family:"Newsreader", Georgia, serif; font-style:italic; font-size:16px; line-height:1.5; overflow:hidden; box-shadow:0 0 60px -10px rgba(255,180,130,.45)}
+.story{position:absolute; inset:0; background:
+  radial-gradient(40% 18% at 50% 58%, #FFD9A0, rgba(255,217,160,0) 70%),
+  linear-gradient(180deg, #2B2050 0%, #8A3E6E 32%, #F0806A 52%, #F7B57C 57%, #3B4E7A 58%, #1E2A4E 80%, #0D1430 100%)}
+.bars{display:flex; gap:4px; padding:0 14px}
+.bars i{flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,.35); display:block}
+.bars i.on{background:#FFFFFF}
+.orbit{position:relative; width:180px; height:180px; margin:0 auto}
+.orbit .ring{position:absolute; inset:0; border-radius:50%; border:1px dashed rgba(244,233,208,.25)}
+.orbit .ring.in{inset:34px; border-style:solid; border-color:rgba(255,158,122,.18)}
+.orbit .p1,.orbit .p2{position:absolute; width:16px; height:16px; border-radius:50%}
+.orbit .p1{top:10px; left:28px; background:#FFB08A; box-shadow:0 0 18px 4px rgba(255,158,122,.6)}
+.orbit .p2{bottom:22px; right:12px; background:#F4E9D0; box-shadow:0 0 18px 4px rgba(244,233,208,.45)}
+.orbit .ctr{position:absolute; inset:0; display:grid; place-content:center; text-align:center}
+.spin{animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Promesses ---------- */
+.prom{padding-block:56px 0; display:grid; gap:20px}
+.prom h2{font-family:var(--f-title); font-weight:800; font-size:clamp(26px, 4vw, 38px); margin:0; letter-spacing:-.02em; text-wrap:balance}
+.prom > p{margin:0; color:var(--muted); max-width:66ch}
+.pgrid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px}
+@media (max-width:760px){ .pgrid{grid-template-columns:minmax(0,1fr)} }
+.pgrid div{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px}
+.pgrid b{display:block; margin-bottom:4px}
+.pgrid p{margin:0; color:var(--muted); font-size:14px}
+.pgrid .warn{border-color:var(--accent)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-7z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-face" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M9 9v1M15 9v1M12 9v4h-1M9 16c1.7 1.3 4.3 1.3 6 0"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+</svg>
+
+<div class="wrap">
+
+<header class="intro">
+  <div class="kick">FouLov · maquettes · novembre 2026</div>
+  <h1>Trois façons de dire « rien que nous deux ».</h1>
+  <p>Trois directions visuelles complètes, chacune sur cinq écrans. Les fonctionnalités sont les mêmes : appairage sécurisé, messages, lettres, souvenirs et votre espace à deux. Seule l'émotion change. Le couple d'exemple s'appelle Inès et Malik, ensemble depuis le 12 mars 2023.</p>
+</header>
+
+<nav class="jump" aria-label="Directions">
+  <a href="#cachet"><i style="background:#8C1D35"></i>A · Cachet</a>
+  <a href="#duo"><i style="background:linear-gradient(90deg,#FF5A36 50%,#2F4BFF 50%)"></i>B · Duo</a>
+  <a href="#lueur"><i style="background:#FF9E7A"></i>C · Lueur</a>
+  <a href="#promesses"><i style="background:var(--fg)"></i>Ce que l'app promet</a>
+</nav>
+
+<!-- ======================= A · CACHET ======================= -->
+<section class="dir dA" id="cachet">
+  <div class="dhead">
+    <div>
+      <p class="dlabel">Direction A</p>
+      <h2 class="dname">Cachet</h2>
+      <p class="dthesis">Chaque message est une lettre scellée à la cire.</p>
+      <p class="dtext">Le chiffrement devient visible et romantique : un sceau bordeaux ferme tout ce que vous envoyez, et seul le téléphone de l'autre peut le briser. Papier rosé, typographie à empattements, gestes lents. Une app qu'on ouvre comme on ouvre une enveloppe.</p>
+    </div>
+    <div class="facts">
+      <div><h4>Couleurs</h4>
+        <div class="sw">
+          <div><span style="background:#8C1D35"></span>Cire<br>#8C1D35</div>
+          <div><span style="background:#F6EDEF"></span>Papier<br>#F6EDEF</div>
+          <div><span style="background:#E9CDD3"></span>Pétale<br>#E9CDD3</div>
+          <div><span style="background:#2B1A1F"></span>Encre<br>#2B1A1F</div>
+          <div><span style="background:#5E7E6E"></span>Sauge<br>#5E7E6E</div>
+        </div>
+      </div>
+      <div><h4>Typographie</h4>
+        <div class="typo"><span class="big" style="font-family:'Gloock',serif">Gloock</span><small>Titres, chiffres, initiales</small></div>
+        <div class="typo" style="margin-top:6px"><span style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600">Figtree</span><small>Texte et interface</small></div>
+      </div>
+      <div><h4>Piste de logo</h4>
+        <div class="logo-row">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#8C1D35"/><circle cx="32" cy="32" r="23" fill="none" stroke="#E9CDD3" stroke-width="1.5" stroke-dasharray="2 3"/><text x="32" y="42" text-anchor="middle" font-family="Gloock, Georgia, serif" font-size="30" fill="#F6EDEF">F</text></svg>
+          <p>Un sceau de cire avec un F gravé. Fonctionne en icône d'app, en avatar et en tampon dans l'interface.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="feel">
+    <div><b>Ressenti</b><p>Intime, élégant, précieux. On a l'impression d'écrire plutôt que de taper.</p></div>
+    <div><b>Force</b><p>La sécurité se raconte sans jargon : le sceau est l'explication.</p></div>
+    <div><b>Risque</b><p>Peut paraître sage pour un public très jeune. À équilibrer avec des animations vivantes.</p></div>
+  </div>
+
+  <div class="phones">
+    <!-- A1 Appairage -->
+    <figure>
+      <div class="phone"><div class="scr sA">
+        <div class="sb"><span>21:04</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body" style="gap:14px;padding-top:14px">
+          <div class="seal">F</div>
+          <div><div class="eb">Étape 3 sur 3</div><h3 class="h" style="margin-top:6px">Scellez votre lien</h3></div>
+          <p class="mut" style="margin:0">Malik voit ces mêmes symboles sur son téléphone. Lisez-les ensemble, à voix haute.</p>
+          <div class="emo">
+            <div><span>🦊</span>Renard</div><div><span>🌙</span>Lune</div><div><span>🔑</span>Clé</div><div><span>🎻</span>Violon</div>
+            <div><span>🌵</span>Cactus</div><div><span>⚓</span>Ancre</div><div><span>🍒</span>Cerise</div><div style="background:transparent;border-color:transparent"></div>
+          </div>
+          <div style="margin-top:auto;display:grid;gap:4px">
+            <span class="btn p">Ce sont les mêmes</span>
+            <span class="btn g">Un symbole est différent</span>
+          </div>
+          <p class="mut" style="margin:0 0 18px;font-size:11px;display:flex;gap:6px"><svg class="ic s" style="color:#5E7E6E"><use href="#i-shield"/></svg>Si un symbole diffère, quelqu'un pourrait s'être glissé entre vous. On recommence.</p>
+        </div>
+      </div></div>
+      <figcaption><b>Appairage</b><span>La vérification des clés devient un petit rituel à deux.</span></figcaption>
+    </figure>
+
+    <!-- A2 Chat -->
+    <figure>
+      <div class="phone"><div class="scr sA">
+        <div class="sb"><span>21:12</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="row" style="padding:6px 16px 10px;border-bottom:1px solid #EAD7DC">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <div class="av">M</div>
+          <div class="grow"><div style="font-weight:700;font-size:15px">Malik</div><div class="mut" style="font-size:11px;display:flex;align-items:center;gap:5px"><span class="seal sm" style="font-size:9px">F</span>Scellé · en ligne</div></div>
+        </div>
+        <div class="body" style="padding:0 14px">
+          <div class="msgs">
+            <div class="div">Aujourd'hui · 21:04</div>
+            <div class="b th">Tu rentres à quelle heure ce soir ?<span class="t">21:04</span></div>
+            <div class="b me">Vers 22h, je passe prendre du pain 🥖<span class="t">21:05</span></div>
+            <div class="b th" style="padding:5px">
+              <div class="photo" style="height:104px;width:170px;background:radial-gradient(circle at 30% 40%,#F2A3B3 0 14%,transparent 15%),radial-gradient(circle at 62% 52%,#E57A93 0 17%,transparent 18%),radial-gradient(circle at 45% 72%,#F7C3CE 0 12%,transparent 13%),linear-gradient(160deg,#7C9A7E,#4E6B55)"></div>
+              <div style="padding:6px 6px 2px">Regarde ce que j'ai trouvé au marché</div>
+            </div>
+            <div class="b me" style="margin-bottom:8px">Des pivoines ! Tu sais que ce sont mes préférées<span class="t">21:09 · lu</span><span class="react" style="background:#FFFFFF;border:1px solid #EAD7DC">❤️</span></div>
+            <div class="b th row" style="gap:8px">
+              <svg class="ic s" style="fill:#8C1D35;stroke:#8C1D35"><use href="#i-play"/></svg>
+              <div class="wave" style="color:#8C1D35"><i style="height:6px"></i><i style="height:14px"></i><i style="height:20px"></i><i style="height:10px"></i><i style="height:16px"></i><i style="height:8px"></i><i style="height:18px"></i><i style="height:12px"></i><i style="height:6px"></i><i style="height:14px"></i><i style="height:9px"></i><i style="height:5px"></i></div>
+              <span class="mut" style="font-size:11px">0:14</span>
+            </div>
+            <div class="mut" style="font-size:11px;font-style:italic">Malik écrit…</div>
+          </div>
+        </div>
+        <div class="inp">
+          <svg class="ic" style="color:#8C1D35"><use href="#i-plus"/></svg>
+          <div class="f">Écrire à Malik…</div>
+          <svg class="ic" style="color:#8C1D35"><use href="#i-mic"/></svg>
+        </div>
+      </div></div>
+      <figcaption><b>Conversation</b><span>Le petit sceau dans l'en-tête rappelle que tout est chiffré.</span></figcaption>
+    </figure>
+
+    <!-- A3 Lettres -->
+    <figure>
+      <div class="phone"><div class="scr sA">
+        <div class="sb"><span>21:20</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body">
+          <div class="row"><h3 class="h grow">Lettres</h3><span class="chip" style="background:#8C1D35;color:#FFF2F5;display:flex;gap:4px;align-items:center"><svg class="ic s"><use href="#i-pen"/></svg>Écrire</span></div>
+          <div class="env"><div class="seal">F</div></div>
+          <div style="text-align:center;display:grid;gap:2px">
+            <div style="font-weight:700">Une lettre de Malik</div>
+            <div class="mut" style="font-size:12px">Scellée jusqu'au 14 février 2027</div>
+            <div class="serif" style="font-size:22px;color:#8C1D35;margin-top:2px">Dans 90 jours</div>
+          </div>
+          <div class="eb" style="margin-top:4px">Déjà ouvertes · 23</div>
+          <div class="list">
+            <div class="row"><div class="grow"><div style="font-weight:600">Pour nos 3 ans</div><div class="mut" style="font-size:11px">De Malik · 12 mars 2026</div></div><span style="font-family:'Caveat',cursive;font-size:18px;color:#8C1D35">M.</span></div>
+            <div class="row"><div class="grow"><div style="font-weight:600">Pardon pour hier soir</div><div class="mut" style="font-size:11px">De toi · 4 janv. 2026</div></div><span style="font-family:'Caveat',cursive;font-size:18px;color:#8C1D35">I.</span></div>
+            <div class="row"><div class="grow"><div style="font-weight:600">Lisbonne, la dernière nuit</div><div class="mut" style="font-size:11px">De Malik · 28 août 2025</div></div><span style="font-family:'Caveat',cursive;font-size:18px;color:#8C1D35">M.</span></div>
+          </div>
+        </div>
+        <div class="tb">
+          <div><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div class="on"><svg class="ic"><use href="#i-mail"/></svg>Lettres</div>
+          <div><svg class="ic"><use href="#i-image"/></svg>Souvenirs</div>
+        </div>
+      </div></div>
+      <figcaption><b>Lettres</b><span>Une lettre peut rester scellée jusqu'à une date choisie.</span></figcaption>
+    </figure>
+
+    <!-- A4 Souvenirs -->
+    <figure>
+      <div class="phone"><div class="scr sA">
+        <div class="sb"><span>21:31</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body">
+          <h3 class="h">Souvenirs</h3>
+          <div class="row" style="gap:14px">
+            <div style="display:grid;justify-items:center;gap:4px;font-size:11px;font-weight:600"><div class="ring"><div style="background:linear-gradient(160deg,#F0B27A,#C0566E)"></div></div>Malik</div>
+            <div style="display:grid;justify-items:center;gap:4px;font-size:11px;font-weight:600"><div class="ring off"><div style="background:linear-gradient(160deg,#9DB7C9,#5E7E6E)"></div></div>Toi</div>
+            <div style="display:grid;justify-items:center;gap:4px;font-size:11px;font-weight:600;color:#8C1D35"><div style="width:52px;height:52px;border-radius:50%;border:1.5px dashed #8C1D35;display:grid;place-items:center"><svg class="ic"><use href="#i-plus"/></svg></div>Story</div>
+          </div>
+          <div class="card" style="display:flex;gap:10px;align-items:center;background:#8C1D35;border-color:#8C1D35;color:#FFF2F5">
+            <div style="width:54px;height:54px;border-radius:10px;flex:none;background:linear-gradient(170deg,#F7C9A0,#D0708A 60%,#5E2A4A)"></div>
+            <div><div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.8;font-weight:700">Il y a un an aujourd'hui</div><div class="serif" style="font-size:17px">Votre premier marché de Noël</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><div class="photo" style="aspect-ratio:1;background:linear-gradient(180deg,#F2C49B,#E0806B 55%,#2F5D7A 56%,#1E3F5A)"></div><div style="font-weight:600;margin-top:5px">Lisbonne</div><div class="mut" style="font-size:11px">48 photos</div></div>
+            <div><div class="photo" style="aspect-ratio:1;background:radial-gradient(circle at 70% 30%,#FFE3A6 0 10%,transparent 11%),linear-gradient(160deg,#6B2B3A,#2B1A1F)"></div><div style="font-weight:600;margin-top:5px">Noël chez ta mère</div><div class="mut" style="font-size:11px">31 photos</div></div>
+          </div>
+        </div>
+        <div class="tb">
+          <div><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-mail"/></svg>Lettres</div>
+          <div class="on"><svg class="ic"><use href="#i-image"/></svg>Souvenirs</div>
+        </div>
+      </div></div>
+      <figcaption><b>Souvenirs</b><span>Stories de 24 h, albums et un rappel « il y a un an ».</span></figcaption>
+    </figure>
+
+    <!-- A5 Nous -->
+    <figure>
+      <div class="phone"><div class="scr sA">
+        <div class="sb"><span>21:40</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body" style="gap:10px">
+          <div class="row" style="justify-content:center;margin-top:6px">
+            <div class="av" style="width:58px;height:58px;font-size:24px;border:3px solid #F6EDEF">I</div>
+            <div class="av" style="width:58px;height:58px;font-size:24px;border:3px solid #F6EDEF;margin-left:-18px;background:#8C1D35;color:#F6EDEF">M</div>
+          </div>
+          <div style="text-align:center">
+            <div class="serif" style="font-size:26px;line-height:1.1">Inès &amp; Malik</div>
+            <div class="mut" style="font-size:12px">Ensemble depuis le 12 mars 2023</div>
+          </div>
+          <div class="card" style="text-align:center;padding:12px">
+            <div class="serif" style="font-size:40px;line-height:1;color:#8C1D35;font-variant-numeric:tabular-nums">1 345</div>
+            <div style="font-weight:600;font-size:12px">jours · 3 ans, 8 mois et 4 jours</div>
+          </div>
+          <div class="eb">Bientôt</div>
+          <div style="display:grid;gap:8px">
+            <div class="row"><div class="date"><b>2</b><small>DÉC</small></div><div class="grow"><div style="font-weight:600">Anniversaire de Malik</div><div class="mut" style="font-size:11px">Dans 16 jours</div></div></div>
+            <div class="row"><div class="date"><b>14</b><small>FÉV</small></div><div class="grow"><div style="font-weight:600">Une lettre s'ouvre</div><div class="mut" style="font-size:11px">Dans 90 jours</div></div></div>
+            <div class="row"><div class="date"><b>12</b><small>MARS</small></div><div class="grow"><div style="font-weight:600">Vos 4 ans</div><div class="mut" style="font-size:11px">Dans 116 jours</div></div></div>
+          </div>
+        </div>
+        <div class="tb">
+          <div class="on"><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-mail"/></svg>Lettres</div>
+          <div><svg class="ic"><use href="#i-image"/></svg>Souvenirs</div>
+        </div>
+      </div></div>
+      <figcaption><b>Nous</b><span>Le compteur de jours et les dates qui arrivent.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= B · DUO ======================= -->
+<section class="dir dB" id="duo">
+  <div class="dhead">
+    <div>
+      <p class="dlabel">Direction B</p>
+      <h2 class="dname"><em>Fou</em><strong>Lov</strong></h2>
+      <p class="dthesis">Toi, moi, et ce qu'on crée quand on se superpose.</p>
+      <p class="dtext">Chaque partenaire a sa couleur : mandarine pour l'un, cobalt pour l'autre. Là où les deux se croisent naît une troisième teinte, prune profond, réservée à ce qui est partagé : sondages, listes, souvenirs communs. Grosse typographie, angles ronds, énergie joyeuse. Le « Fou » de FouLov assumé.</p>
+    </div>
+    <div class="facts">
+      <div><h4>Couleurs</h4>
+        <div class="sw">
+          <div><span style="background:#FF5A36"></span>Toi<br>#FF5A36</div>
+          <div><span style="background:#2F4BFF"></span>L'autre<br>#2F4BFF</div>
+          <div><span style="background:#2F1A36"></span>Nous<br>#2F1A36</div>
+          <div><span style="background:#FBF9F4"></span>Fond<br>#FBF9F4</div>
+          <div><span style="background:#16141B"></span>Encre<br>#16141B</div>
+        </div>
+      </div>
+      <div><h4>Typographie</h4>
+        <div class="typo"><span class="big" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;letter-spacing:-.03em">Bricolage</span><small>Titres et grands chiffres</small></div>
+        <div class="typo" style="margin-top:6px"><span style="font-family:'Onest',sans-serif;font-size:18px;font-weight:600">Onest</span><small>Texte et interface</small></div>
+      </div>
+      <div><h4>Piste de logo</h4>
+        <div class="logo-row">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="24" cy="32" r="18" fill="#FF5A36"/><circle cx="40" cy="32" r="18" fill="#2F4BFF" style="mix-blend-mode:multiply"/></svg>
+          <p>Deux cercles qui se chevauchent. L'intersection forme une amande, la « zone à deux ». Les couleurs peuvent être choisies par le couple.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="feel">
+    <div><b>Ressenti</b><p>Vif, complice, drôle. Une app qui donne envie d'être ouverte dix fois par jour.</p></div>
+    <div><b>Force</b><p>Identité très reconnaissable sur les stores. Chaque couple peut choisir ses deux couleurs.</p></div>
+    <div><b>Risque</b><p>Moins « coffre-fort ». La confiance passera par les textes et l'écran d'appairage.</p></div>
+  </div>
+
+  <div class="phones">
+    <!-- B1 Appairage -->
+    <figure>
+      <div class="phone"><div class="scr sB">
+        <div class="sb"><span>21:04</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body" style="gap:12px">
+          <div class="venn"><i></i><i></i></div>
+          <h3 class="h">Juste vous deux.</h3>
+          <p class="mut" style="margin:0">Vérifiez que vos deux écrans montrent les mêmes 7 symboles, dans le même ordre.</p>
+          <div class="emo">
+            <div><span>🦊</span>Renard</div><div><span>🌙</span>Lune</div><div><span>🔑</span>Clé</div><div><span>🎻</span>Violon</div>
+            <div><span>🌵</span>Cactus</div><div><span>⚓</span>Ancre</div><div><span>🍒</span>Cerise</div><div style="background:transparent;box-shadow:none"></div>
+          </div>
+          <div style="margin-top:auto;display:grid;gap:6px;padding-bottom:18px">
+            <span class="btn p">C'est pareil chez nous</span>
+            <span class="btn g">Ce n'est pas pareil</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><b>Appairage</b><span>Les deux cercles se rejoignent quand la vérification réussit.</span></figcaption>
+    </figure>
+
+    <!-- B2 Chat -->
+    <figure>
+      <div class="phone"><div class="scr sB">
+        <div class="sb"><span>19:42</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="row" style="padding:6px 16px 10px">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <div class="duo-dot"><i></i><i></i></div>
+          <div class="grow"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px;line-height:1">Malik</div><div class="mut" style="font-size:11px;display:flex;align-items:center;gap:4px"><svg class="ic s" style="width:12px;height:12px"><use href="#i-lock"/></svg>Chiffré de bout en bout</div></div>
+        </div>
+        <div class="body" style="padding:0 14px">
+          <div class="msgs">
+            <div class="b th">Ce soir on reste à la maison ?</div>
+            <div class="b me">Oui, mais c'est toi qui choisis le film cette fois 😌</div>
+            <div class="poll">
+              <div class="row"><div class="duo-dot" style="width:28px;height:18px"><i style="width:18px;height:18px"></i><i style="width:18px;height:18px;left:8px"></i></div><b class="grow" style="font-size:13px">On mange quoi ?</b><span class="mut" style="font-size:11px">sondage à deux</span></div>
+              <div class="opt win"><span>Raclette</span><span>🧀 vous deux</span></div>
+              <div class="opt"><span>Sushis</span><span style="width:10px;height:10px;border-radius:50%;background:#2F4BFF"></span></div>
+              <div class="opt"><span>Pâtes fraîches</span><span></span></div>
+            </div>
+            <div class="b th">Raclette validée. Je passe chez le fromager 🏃</div>
+            <div class="b me">Prends du pain aussi stp ❤️</div>
+          </div>
+        </div>
+        <div class="inp">
+          <div class="round" style="background:#F0ECE3"><svg class="ic"><use href="#i-plus"/></svg></div>
+          <div class="f">Message</div>
+          <div class="round" style="background:#FF5A36;color:#FFFFFF"><svg class="ic s"><use href="#i-send"/></svg></div>
+        </div>
+      </div></div>
+      <figcaption><b>Conversation</b><span>Tes bulles en mandarine, les siennes en cobalt, le partagé en prune.</span></figcaption>
+    </figure>
+
+    <!-- B3 Lettre (écriture) -->
+    <figure>
+      <div class="phone"><div class="scr sB">
+        <div class="sb"><span>23:58</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="row" style="padding:4px 16px 4px">
+          <svg class="ic"><use href="#i-x"/></svg>
+          <b class="grow" style="text-align:center">Nouvelle lettre</b>
+          <span style="font-weight:700;color:#FF5A36">Sceller</span>
+        </div>
+        <div class="body" style="gap:12px;padding-bottom:16px">
+          <div class="paper">Malik,<br><br>Ça fait 1 345 jours et tu me fais encore rire au réveil. Je voulais te l'écrire quelque part où personne d'autre ne pourra jamais le lire<span class="caret"></span>
+            <div style="position:absolute;right:16px;bottom:12px;font-size:11px;color:#B0705E">189 mots</div>
+          </div>
+          <div><div class="mut" style="font-size:11px;font-weight:600;margin-bottom:6px">PAPIER</div>
+            <div class="dots"><i style="background:#FFE1D8;box-shadow:0 0 0 2px #FBF9F4,0 0 0 4px #FF5A36"></i><i style="background:#DEE3FF"></i><i style="background:#F3E8C9"></i><i style="background:#E2F0E4"></i><i style="background:#2F1A36"></i></div>
+          </div>
+          <div><div class="mut" style="font-size:11px;font-weight:600;margin-bottom:6px">MALIK POURRA L'OUVRIR</div>
+            <div class="seg"><span>Tout de suite</span><span class="on">14 févr. 2027</span></div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><b>Écrire une lettre</b><span>Choix du papier et de la date d'ouverture.</span></figcaption>
+    </figure>
+
+    <!-- B4 Souvenirs -->
+    <figure>
+      <div class="phone"><div class="scr sB">
+        <div class="sb"><span>12:15</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body">
+          <h3 class="h">Souvenirs</h3>
+          <div class="chips"><span class="on">Tout</span><span>Photos</span><span>Vidéos</span><span>Albums</span></div>
+          <div class="photo" style="height:150px;background:linear-gradient(200deg,#FFC2A8,#FF5A36 45%,#2F1A36)">
+            <div style="position:absolute;left:12px;bottom:10px;color:#FFFFFF">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.1em;opacity:.85">CE JOUR-LÀ · 16 NOV. 2025</div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;line-height:1.05">Votre premier<br>marché de Noël</div>
+            </div>
+          </div>
+          <div class="mas">
+            <div style="grid-row:span 2;background:linear-gradient(180deg,#9FB4FF,#2F4BFF)"></div>
+            <div style="background:#FFD3C6"></div>
+            <div style="background:linear-gradient(135deg,#2F1A36,#6D3A6E)"></div>
+            <div style="grid-column:span 2;background:linear-gradient(90deg,#F7DFA6,#FF8F6B)"></div>
+            <div style="background:#DEE3FF"></div>
+            <div style="background:linear-gradient(160deg,#FF5A36,#FFB199)"></div>
+            <div style="background:#16141B"></div>
+          </div>
+        </div>
+        <div class="tb">
+          <div><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-mail"/></svg>Lettres</div>
+          <div class="on"><svg class="ic"><use href="#i-image"/></svg>Souvenirs</div>
+        </div>
+      </div></div>
+      <figcaption><b>Souvenirs</b><span>Mur de photos et souvenir du jour, mis en avant.</span></figcaption>
+    </figure>
+
+    <!-- B5 Nous -->
+    <figure>
+      <div class="phone"><div class="scr sB">
+        <div class="sb"><span>08:30</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body" style="gap:10px">
+          <div>
+            <div class="huge" style="font-variant-numeric:tabular-nums">1345</div>
+            <div style="font-weight:700;font-size:15px">jours à deux. <span class="mut" style="font-weight:500">Depuis le 12 mars 2023.</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="nick" style="background:#FFE1D8"><span class="mut" style="font-size:10px;font-weight:700">TU L'APPELLES</span><b style="color:#C2401F">Mon soleil</b></div>
+            <div class="nick" style="background:#DEE3FF"><span class="mut" style="font-size:10px;font-weight:700">MALIK T'APPELLE</span><b style="color:#2338C9">Ma tornade</b></div>
+          </div>
+          <div>
+            <div class="row" style="margin-bottom:2px"><b class="grow" style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px">Notre liste</b><span class="mut" style="font-size:11px">2 sur 4</span></div>
+            <div class="chk"><span class="box on"><svg class="ic s" style="width:12px;height:12px;stroke-width:3"><use href="#i-check"/></svg></span><span style="text-decoration:line-through;color:#8D8893">Apprendre les pâtes fraîches</span></div>
+            <div class="chk"><span class="box on"><svg class="ic s" style="width:12px;height:12px;stroke-width:3"><use href="#i-check"/></svg></span><span style="text-decoration:line-through;color:#8D8893">Voir la mer en hiver</span></div>
+            <div class="chk"><span class="box"></span><span>Un week-end à Porto</span></div>
+            <div class="chk"><span class="box"></span><span>Adopter un chat (négociation en cours)</span></div>
+          </div>
+        </div>
+        <div class="tb">
+          <div class="on"><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-mail"/></svg>Lettres</div>
+          <div><svg class="ic"><use href="#i-image"/></svg>Souvenirs</div>
+        </div>
+      </div></div>
+      <figcaption><b>Nous</b><span>Compteur géant, surnoms croisés et liste de choses à vivre.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= C · LUEUR ======================= -->
+<section class="dir dC" id="lueur">
+  <div class="dhead">
+    <div>
+      <p class="dlabel">Direction C</p>
+      <h2 class="dname">Lueur</h2>
+      <p class="dthesis">Votre chambre à deux, la nuit, lampe allumée.</p>
+      <p class="dtext">Un monde sombre et calme, éclairé par une lueur pêche, comme une lampe de chevet. Pensé pour les conversations du soir, les messages éphémères, les photos en vue unique et un coffre protégé par un second code. C'est la direction la plus « confidentielle ».</p>
+    </div>
+    <div class="facts">
+      <div><h4>Couleurs</h4>
+        <div class="sw">
+          <div><span style="background:#0D0F1E"></span>Nuit<br>#0D0F1E</div>
+          <div><span style="background:#FF9E7A"></span>Lueur<br>#FF9E7A</div>
+          <div><span style="background:#FF6F91"></span>Braise<br>#FF6F91</div>
+          <div><span style="background:#F4E9D0"></span>Lune<br>#F4E9D0</div>
+          <div><span style="background:#22263F"></span>Velours<br>#22263F</div>
+        </div>
+      </div>
+      <div><h4>Typographie</h4>
+        <div class="typo"><span class="big" style="font-family:'Unbounded',sans-serif;font-weight:600;font-size:26px">Unbounded</span><small>Titres</small></div>
+        <div class="typo" style="margin-top:6px"><span style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:600">Manrope</span><small>Interface</small></div>
+        <div class="typo" style="margin-top:6px"><span style="font-family:'Newsreader',serif;font-style:italic;font-size:18px">Newsreader italique</span><small>Lettres</small></div>
+      </div>
+      <div><h4>Piste de logo</h4>
+        <div class="logo-row">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0D0F1E"/><circle cx="32" cy="32" r="18" fill="none" stroke="#F4E9D0" stroke-opacity=".35" stroke-dasharray="2 3"/><circle cx="20" cy="22" r="6" fill="#FF9E7A"/><circle cx="45" cy="42" r="4.5" fill="#F4E9D0"/></svg>
+          <p>Deux astres sur la même orbite. Ils tournent l'un autour de l'autre sans jamais se perdre.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="feel">
+    <div><b>Ressenti</b><p>Doux, mystérieux, adulte. On se sent dans une bulle protégée.</p></div>
+    <div><b>Force</b><p>Le sombre met en valeur les photos et économise la batterie sur écran OLED.</p></div>
+    <div><b>Risque</b><p>Il faudra soigner aussi un thème clair pour la journée.</p></div>
+  </div>
+
+  <div class="phones">
+    <!-- C1 Verrouillage -->
+    <figure>
+      <div class="phone"><div class="scr sC">
+        <div class="glow"></div>
+        <div class="sb"><span>22:47</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body" style="position:relative;gap:16px;justify-content:center;text-align:center">
+          <div class="orb"></div>
+          <div><h3 class="h">Bonsoir, Inès</h3><p class="mut" style="margin:8px 0 0">Malik t'a écrit 3 messages<br>et une lettre t'attend.</p></div>
+          <div class="faceid"><svg class="ic l"><use href="#i-face"/></svg></div>
+          <div style="font-weight:600;font-size:13px">Toucher pour ouvrir</div>
+          <div class="mut" style="font-size:12px;text-decoration:underline;text-underline-offset:3px">Utiliser mon code</div>
+        </div>
+        <div style="position:relative;padding:0 22px 22px;text-align:center;font-size:11px" class="mut">
+          <div style="display:flex;gap:6px;justify-content:center;align-items:flex-start"><svg class="ic s" style="color:#7FE0C2"><use href="#i-lock"/></svg><span>Vos clés de chiffrement restent sur ce téléphone. Personne d'autre ne peut lire vos échanges, pas même FouLov.</span></div>
+        </div>
+      </div></div>
+      <figcaption><b>Ouverture</b><span>Biométrie à chaque ouverture, et ce qui vous attend.</span></figcaption>
+    </figure>
+
+    <!-- C2 Chat -->
+    <figure>
+      <div class="phone"><div class="scr sC">
+        <div class="sb"><span>23:02</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="row" style="padding:6px 16px 10px;border-bottom:1px solid #1E2138">
+          <svg class="ic"><use href="#i-back"/></svg>
+          <div class="av">M</div>
+          <div class="grow"><div style="font-weight:700;font-size:15px">Malik</div><div style="font-size:11px;color:#7FE0C2">en ligne</div></div>
+          <svg class="ic" style="color:#FFB295"><use href="#i-clock"/></svg>
+        </div>
+        <div class="body" style="padding:0 14px">
+          <div class="msgs">
+            <div class="eph"><svg class="ic s" style="width:12px;height:12px"><use href="#i-clock"/></svg>Messages éphémères · 1 heure</div>
+            <div class="b th">Tu dors ?<span class="t">23:01</span></div>
+            <div class="b me">Presque. Je relisais ta lettre 🙈<span class="t">23:01</span></div>
+            <div class="b th row" style="gap:10px;padding:10px 12px">
+              <span style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(255,158,122,.15);color:#FFB295;flex:none"><svg class="ic s"><use href="#i-eye"/></svg></span>
+              <div><div style="font-weight:700">Photo</div><div class="mut" style="font-size:11px">Vue unique · capture bloquée</div></div>
+            </div>
+            <div class="b me">Je la regarde demain matin, avec toi 😏<span class="t">23:02</span></div>
+            <div class="b th">Bonne nuit, ma lumière<span class="t">23:02 · disparaît dans 59 min</span></div>
+          </div>
+        </div>
+        <div class="inp">
+          <svg class="ic" style="color:#8D90AD"><use href="#i-plus"/></svg>
+          <div class="f">Écrire…</div>
+          <span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#FFB08A,#FF7E98);color:#2A0E16;flex:none"><svg class="ic s"><use href="#i-send"/></svg></span>
+        </div>
+      </div></div>
+      <figcaption><b>Conversation</b><span>Mode éphémère et photos en vue unique.</span></figcaption>
+    </figure>
+
+    <!-- C3 Lettre lecture -->
+    <figure>
+      <div class="phone"><div class="scr sC">
+        <div class="sb"><span>23:10</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body" style="padding-bottom:16px">
+          <div class="row"><svg class="ic"><use href="#i-back"/></svg><div class="grow"><div style="font-weight:700">Lettre de Malik</div><div class="mut" style="font-size:11px">Écrite le 12 mars 2026 · ouverte ce soir</div></div></div>
+          <div class="letterC">
+            Inès,<br><br>
+            Je t'écris depuis le train, entre Lyon et Paris. Il y a trois ans, à cette heure-ci, je cherchais encore comment te dire bonjour sans bafouiller.<br><br>
+            Aujourd'hui je cherche comment te dire merci…
+            <div style="text-align:right;margin-top:14px;font-size:20px">Malik</div>
+          </div>
+          <div class="row" style="gap:8px">
+            <span class="glass grow" style="padding:11px;text-align:center;font-weight:600">Répondre par lettre</span>
+            <span class="glass" style="width:44px;height:44px;display:grid;place-items:center;color:#FF6F91"><svg class="ic" style="fill:#FF6F91"><use href="#i-heart"/></svg></span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><b>Lire une lettre</b><span>La lettre brille comme une page sous la lampe.</span></figcaption>
+    </figure>
+
+    <!-- C4 Story -->
+    <figure>
+      <div class="phone"><div class="scr sC">
+        <div class="story"></div>
+        <div class="sb"><span>18:56</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="bars" style="position:relative;margin-top:4px"><i class="on"></i><i class="on"></i><i></i></div>
+        <div class="row" style="position:relative;padding:10px 14px">
+          <div class="av" style="width:30px;height:30px;font-size:12px">M</div>
+          <div class="grow"><b style="font-size:13px">Malik</b> <span style="font-size:11px;opacity:.75">il y a 2 h</span></div>
+          <svg class="ic"><use href="#i-x"/></svg>
+        </div>
+        <div style="flex:1"></div>
+        <div style="position:relative;padding:0 22px 26px;text-align:center">
+          <div style="font-family:'Unbounded',sans-serif;font-weight:600;font-size:18px;line-height:1.25;text-shadow:0 2px 12px rgba(0,0,0,.4)">Le même coucher de soleil qu'à Lisbonne</div>
+          <div style="font-size:11px;opacity:.8;margin-top:6px">Visible 24 h, puis effacé</div>
+        </div>
+        <div class="inp" style="position:relative">
+          <div class="f" style="background:rgba(13,15,30,.45);border-color:rgba(255,255,255,.25);color:#D9D7E6">Répondre à Malik…</div>
+          <svg class="ic" style="color:#FFFFFF"><use href="#i-heart"/></svg>
+        </div>
+      </div></div>
+      <figcaption><b>Moment</b><span>Une story de 24 h, réservée à l'autre.</span></figcaption>
+    </figure>
+
+    <!-- C5 Nous -->
+    <figure>
+      <div class="phone"><div class="scr sC">
+        <div class="glow" style="opacity:.6"></div>
+        <div class="sb"><span>22:30</span><span class="bt">5G<i class="bat"></i></span></div>
+        <div class="body" style="position:relative;gap:12px">
+          <div class="orbit">
+            <div class="ring"></div><div class="ring in"></div>
+            <div class="spin" style="position:absolute;inset:0"><div class="p1"></div><div class="p2"></div></div>
+            <div class="ctr"><div style="font-family:'Unbounded',sans-serif;font-weight:700;font-size:30px;font-variant-numeric:tabular-nums">1 345</div><div class="mut" style="font-size:11px">jours sur la même orbite</div></div>
+          </div>
+          <div class="glass row" style="padding:12px">
+            <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(127,224,194,.12);color:#7FE0C2;flex:none"><svg class="ic"><use href="#i-lock"/></svg></span>
+            <div class="grow"><div style="font-weight:700">Coffre</div><div class="mut" style="font-size:11px">12 photos · protégé par un second code</div></div>
+          </div>
+          <div class="glass row" style="padding:12px">
+            <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,158,122,.12);color:#FFB295;flex:none"><svg class="ic"><use href="#i-cal"/></svg></span>
+            <div class="grow"><div style="font-weight:700">Vendredi 20 novembre</div><div class="mut" style="font-size:11px">Dîner au Comptoir · dans 4 jours</div></div>
+          </div>
+        </div>
+        <div class="tb">
+          <div class="on"><svg class="ic"><use href="#i-heart"/></svg>Nous</div>
+          <div><svg class="ic"><use href="#i-chat"/></svg>Messages</div>
+          <div><svg class="ic"><use href="#i-mail"/></svg>Lettres</div>
+          <div><svg class="ic"><use href="#i-image"/></svg>Souvenirs</div>
+        </div>
+      </div></div>
+      <figcaption><b>Nous</b><span>Vos deux astres, le coffre et le prochain rendez-vous.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= PROMESSES ======================= -->
+<section class="prom" id="promesses">
+  <h2>Ce que l'app promettra, quelle que soit la direction</h2>
+  <p>Ces textes apparaîtront tels quels dans FouLov. Ils décrivent l'architecture prévue (chiffrement de bout en bout avec des clés propres à chaque téléphone) et rien de plus.</p>
+  <div class="pgrid">
+    <div><b>Chiffré avant de partir</b><p>Vos messages, photos, vidéos et lettres sont chiffrés sur votre téléphone avant d'être envoyés. Ils ne sont déchiffrés que sur celui de votre partenaire.</p></div>
+    <div><b>Illisible pour nous</b><p>Nos serveurs ne stockent que des données chiffrées. FouLov n'a pas les clés et ne peut pas lire vos échanges.</p></div>
+    <div><b>Ce que nos serveurs voient quand même</b><p>Que vos deux comptes sont liés, l'heure à laquelle un contenu est envoyé et la taille des fichiers. Nous le disons parce que c'est vrai.</p></div>
+    <div class="warn"><b>Le revers d'un vrai chiffrement</b><p>Si vous perdez vos deux téléphones sans avoir gardé votre phrase de récupération, vos échanges sont perdus. Nous ne pourrons pas les récupérer.</p></div>
+  </div>
+</section>
+
+</div>
+
+</body>
+</html>
