@@ -4,7 +4,9 @@ import 'package:foulov/features/intro/intro_screen.dart';
 import 'package:foulov/theme/foulov_theme.dart';
 
 void main() {
-  testWidgets("Avec animations réduites, l'accueil s'affiche directement", (tester) async {
+  testWidgets("Avec animations réduites, l'accueil s'affiche directement", (
+    tester,
+  ) async {
     var started = 0;
     await tester.pumpWidget(
       MediaQuery(

@@ -31,7 +31,8 @@ class _IntroScreenState extends State<IntroScreen> {
   bool _finished = false;
 
   String get _name => _night ? 'intro_night' : 'intro_day';
-  Color get _splash => _night ? FouLovColors.splashNight : FouLovColors.splashDay;
+  Color get _splash =>
+      _night ? FouLovColors.splashNight : FouLovColors.splashDay;
 
   @override
   void didChangeDependencies() {
@@ -70,7 +71,9 @@ class _IntroScreenState extends State<IntroScreen> {
     final c = _video;
     if (c == null || _finished) return;
     final v = c.value;
-    if (v.isInitialized && v.duration > Duration.zero && v.position >= v.duration - const Duration(milliseconds: 40)) {
+    if (v.isInitialized &&
+        v.duration > Duration.zero &&
+        v.position >= v.duration - const Duration(milliseconds: 40)) {
       setState(() => _finished = true);
     }
   }
@@ -94,7 +97,9 @@ class _IntroScreenState extends State<IntroScreen> {
     final theme = _night ? FouLovTheme.nuit : FouLovTheme.jour;
     final c = _video;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: Theme(
         data: theme,
         child: Scaffold(
@@ -106,14 +111,27 @@ class _IntroScreenState extends State<IntroScreen> {
               fit: StackFit.expand,
               children: [
                 // Dernière image : visible dès que la vidéo se termine (ou si elle est sautée).
-                if (_finished) Image.asset('assets/intro/${_name}_last.jpg', fit: BoxFit.cover, gaplessPlayback: true),
+                if (_finished)
+                  Image.asset(
+                    'assets/intro/${_name}_last.jpg',
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                  ),
                 if (!_finished && _ready && c != null)
                   FittedBox(
                     fit: BoxFit.cover,
                     clipBehavior: Clip.hardEdge,
-                    child: SizedBox(width: c.value.size.width, height: c.value.size.height, child: VideoPlayer(c)),
+                    child: SizedBox(
+                      width: c.value.size.width,
+                      height: c.value.size.height,
+                      child: VideoPlayer(c),
+                    ),
                   ),
-                _WelcomeSheet(visible: _finished, onStart: widget.onStart, onJoin: widget.onJoin),
+                _WelcomeSheet(
+                  visible: _finished,
+                  onStart: widget.onStart,
+                  onJoin: widget.onJoin,
+                ),
               ],
             ),
           ),
@@ -124,7 +142,11 @@ class _IntroScreenState extends State<IntroScreen> {
 }
 
 class _WelcomeSheet extends StatelessWidget {
-  const _WelcomeSheet({required this.visible, required this.onStart, required this.onJoin});
+  const _WelcomeSheet({
+    required this.visible,
+    required this.onStart,
+    required this.onJoin,
+  });
 
   final bool visible;
   final VoidCallback onStart;
@@ -145,7 +167,9 @@ class _WelcomeSheet extends StatelessWidget {
           duration: const Duration(milliseconds: 400),
           child: Material(
             color: t.colorScheme.surface,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            ),
             child: Padding(
               padding: EdgeInsets.fromLTRB(24, 28, 24, 20 + bottom),
               child: Column(
@@ -154,17 +178,29 @@ class _WelcomeSheet extends StatelessWidget {
                 children: [
                   Text(
                     'Plantez la\npremière graine.',
-                    style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.1, color: t.colorScheme.onSurface),
+                    style: t.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                      color: t.colorScheme.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'Un espace privé pour vous deux, qui grandit avec chaque jour passé ensemble.',
-                    style: t.textTheme.bodyLarge?.copyWith(color: t.colorScheme.onSurfaceVariant),
+                    style: t.textTheme.bodyLarge?.copyWith(
+                      color: t.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 22),
-                  FilledButton(onPressed: visible ? onStart : null, child: const Text('Commencer')),
+                  FilledButton(
+                    onPressed: visible ? onStart : null,
+                    child: const Text('Commencer'),
+                  ),
                   const SizedBox(height: 6),
-                  TextButton(onPressed: visible ? onJoin : null, child: const Text("J'ai un code d'invitation")),
+                  TextButton(
+                    onPressed: visible ? onJoin : null,
+                    child: const Text("J'ai un code d'invitation"),
+                  ),
                 ],
               ),
             ),

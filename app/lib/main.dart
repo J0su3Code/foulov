@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'features/intro/intro_screen.dart';
+import 'src/rust/frb_generated.dart';
 import 'theme/foulov_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Charge le cœur cryptographique Rust (libsignal, chiffrement des fichiers).
+  await RustLib.init();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const FouLovApp());
