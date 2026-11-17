@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/chat.dart';
 import 'api/crypto.dart';
 import 'api/device.dart';
 import 'dart:async';
@@ -31,10 +32,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  ChatMessage dco_decode_box_autoadd_chat_message(dynamic raw);
+
+  @protected
   Envelope dco_decode_box_autoadd_envelope(dynamic raw);
 
   @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
   KeyBundle dco_decode_box_autoadd_key_bundle(dynamic raw);
+
+  @protected
+  Outgoing dco_decode_box_autoadd_outgoing(dynamic raw);
+
+  @protected
+  ChatMessage dco_decode_chat_message(dynamic raw);
 
   @protected
   EncryptedMedia dco_decode_encrypted_media(dynamic raw);
@@ -43,10 +56,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Envelope dco_decode_envelope(dynamic raw);
 
   @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
   KeyBundle dco_decode_key_bundle(dynamic raw);
 
   @protected
+  List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<ChatMessage> dco_decode_list_chat_message(dynamic raw);
+
+  @protected
   List<OneTimePreKey> dco_decode_list_one_time_pre_key(dynamic raw);
+
+  @protected
+  List<Outgoing> dco_decode_list_outgoing(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -61,7 +86,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OneTimePreKey dco_decode_one_time_pre_key(dynamic raw);
 
   @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  ChatMessage? dco_decode_opt_box_autoadd_chat_message(dynamic raw);
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  Outgoing? dco_decode_opt_box_autoadd_outgoing(dynamic raw);
+
+  @protected
+  Outgoing dco_decode_outgoing(dynamic raw);
+
+  @protected
+  Received dco_decode_received(dynamic raw);
+
+  @protected
   SasSymbol dco_decode_sas_symbol(dynamic raw);
+
+  @protected
+  SentText dco_decode_sent_text(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -82,10 +128,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  ChatMessage sse_decode_box_autoadd_chat_message(SseDeserializer deserializer);
+
+  @protected
   Envelope sse_decode_box_autoadd_envelope(SseDeserializer deserializer);
 
   @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
   KeyBundle sse_decode_box_autoadd_key_bundle(SseDeserializer deserializer);
+
+  @protected
+  Outgoing sse_decode_box_autoadd_outgoing(SseDeserializer deserializer);
+
+  @protected
+  ChatMessage sse_decode_chat_message(SseDeserializer deserializer);
 
   @protected
   EncryptedMedia sse_decode_encrypted_media(SseDeserializer deserializer);
@@ -94,12 +152,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Envelope sse_decode_envelope(SseDeserializer deserializer);
 
   @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
   KeyBundle sse_decode_key_bundle(SseDeserializer deserializer);
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<ChatMessage> sse_decode_list_chat_message(SseDeserializer deserializer);
 
   @protected
   List<OneTimePreKey> sse_decode_list_one_time_pre_key(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<Outgoing> sse_decode_list_outgoing(SseDeserializer deserializer);
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -114,7 +184,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OneTimePreKey sse_decode_one_time_pre_key(SseDeserializer deserializer);
 
   @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  ChatMessage? sse_decode_opt_box_autoadd_chat_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  Outgoing? sse_decode_opt_box_autoadd_outgoing(SseDeserializer deserializer);
+
+  @protected
+  Outgoing sse_decode_outgoing(SseDeserializer deserializer);
+
+  @protected
+  Received sse_decode_received(SseDeserializer deserializer);
+
+  @protected
   SasSymbol sse_decode_sas_symbol(SseDeserializer deserializer);
+
+  @protected
+  SentText sse_decode_sent_text(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -141,13 +234,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_chat_message(
+    ChatMessage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_envelope(Envelope self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_key_bundle(
     KeyBundle self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_box_autoadd_outgoing(Outgoing self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_message(ChatMessage self, SseSerializer serializer);
 
   @protected
   void sse_encode_encrypted_media(
@@ -159,13 +270,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_envelope(Envelope self, SseSerializer serializer);
 
   @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
   void sse_encode_key_bundle(KeyBundle self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_message(
+    List<ChatMessage> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_one_time_pre_key(
     List<OneTimePreKey> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_outgoing(List<Outgoing> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -189,7 +315,37 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_chat_message(
+    ChatMessage? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_outgoing(
+    Outgoing? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_outgoing(Outgoing self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_received(Received self, SseSerializer serializer);
+
+  @protected
   void sse_encode_sas_symbol(SasSymbol self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sent_text(SentText self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

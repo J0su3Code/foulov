@@ -9,7 +9,11 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../src/rust/api/crypto.dart';
 import '../../ui/love.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../auth/auth_service.dart';
+import '../chat/chat_screen.dart';
+import '../chat/chat_service.dart';
 import 'couple_service.dart';
 
 String _pretty(String code) => code.length == 10 ? '${code.substring(0, 5)}-${code.substring(5)}' : code;
@@ -77,10 +81,55 @@ class _CoupleGateState extends State<CoupleGate> {
             },
           );
         }
-        return GardenHome(auth: widget.auth, onShowSymbols: () => setState(() => _showSymbols = true));
+        return _ChatHost(
+          key: ValueKey(s.coupleId),
+          state: s,
+          auth: widget.auth,
+          onShowSymbols: () => setState(() => _showSymbols = true),
+        );
       },
     );
   }
+}
+
+/// Crée le service de messagerie pour la durée de l'écran (abonnement temps réel, boîte d'envoi).
+class _ChatHost extends StatefulWidget {
+  const _ChatHost({super.key, required this.state, required this.auth, required this.onShowSymbols});
+
+  final CoupleState state;
+  final AuthService auth;
+  final VoidCallback onShowSymbols;
+
+  @override
+  State<_ChatHost> createState() => _ChatHostState();
+}
+
+class _ChatHostState extends State<_ChatHost> {
+  late final ChatService _service = ChatService(
+    Supabase.instance.client,
+    partnerId: widget.state.partnerId!,
+    coupleId: widget.state.coupleId!,
+  );
+  late final Future<void> _ready = _service.start();
+
+  @override
+  void dispose() {
+    _service.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<void>(
+        future: _ready,
+        builder: (context, snap) => snap.connectionState != ConnectionState.done
+            ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+            : ChatScreen(
+                service: _service,
+                since: widget.state.since,
+                onShowSymbols: widget.onShowSymbols,
+                onSignOut: widget.auth.signOut,
+              ),
+      );
 }
 
 class _Message extends StatelessWidget {
@@ -691,51 +740,6 @@ class CelebrationScreen extends StatelessWidget {
           ),
           const Positioned.fill(child: PetalBurst()),
         ]),
-      ),
-    );
-  }
-}
-
-// ===================================================================== accueil (provisoire)
-
-class GardenHome extends StatelessWidget {
-  const GardenHome({super.key, required this.auth, required this.onShowSymbols});
-
-  final AuthService auth;
-
-  /// Revoir les 7 symboles à tout moment, par exemple pour que le partenaire vérifie de son côté.
-  final VoidCallback onShowSymbols;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: PetalBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(onPressed: auth.signOut, child: const Text('Se déconnecter')),
-                ),
-                const Spacer(),
-                const Center(child: EntwinedHeart(size: 200)),
-                const SizedBox(height: 16),
-                Text('Jour 1', style: _title(context), textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                Text('Votre jardin vient d\'être planté. Les messages arrivent bientôt.', style: _soft(context), textAlign: TextAlign.center),
-                const Spacer(),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.verified_user_outlined),
-                  label: const Text('Nos 7 symboles'),
-                  onPressed: onShowSymbols,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

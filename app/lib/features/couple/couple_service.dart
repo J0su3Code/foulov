@@ -6,14 +6,17 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../src/rust/api/chat.dart';
 import '../../src/rust/api/crypto.dart';
 import '../../src/rust/api/device.dart';
 
 /// État du couple vu par ce téléphone.
 class CoupleState {
-  const CoupleState({this.coupleId, this.partnerId, this.partnerIdentity, this.verified = false});
+  const CoupleState({this.coupleId, this.partnerId, this.partnerIdentity, this.verified = false, this.since});
 
   final String? coupleId;
+  /// Création de l'espace (« Jour N »).
+  final DateTime? since;
   final String? partnerId;
   final Uint8List? partnerIdentity;
   final bool verified;
@@ -67,12 +70,15 @@ class CoupleService {
     if (rows.isEmpty) return const CoupleState();
     await ensureKeysPublished();
     final coupleId = rows.first['couple_id'] as String;
+    final couple = await _db.from('couples').select('created_at').eq('id', coupleId).maybeSingle();
+    final since = DateTime.tryParse(couple?['created_at'] as String? ?? '')?.toLocal();
     final partner = rows.map((r) => r['user_id'] as String).where((u) => u != _me).firstOrNull;
-    if (partner == null) return CoupleState(coupleId: coupleId);
+    if (partner == null) return CoupleState(coupleId: coupleId, since: since);
     final dev = await _db.from('devices').select('identity_key').eq('user_id', partner).maybeSingle();
     final identity = dev == null ? null : _bytes(dev['identity_key']);
     return CoupleState(
       coupleId: coupleId,
+      since: since,
       partnerId: partner,
       partnerIdentity: identity,
       verified: identity != null && await deviceIsVerified(partner: partner),
@@ -168,22 +174,19 @@ class CoupleService {
   }
 
   /// Reçoit et déchiffre le premier message du partenaire (côté créateur). Renvoie vrai si la session est établie.
+  /// Passe par la même file que la messagerie (`chatReceive`) : atomique, sans doublon, et un éventuel
+  /// premier mot doux arrivé avec le message d'appairage est conservé dans l'historique.
   Future<bool> receiveHello(String partner) async {
     if (await deviceHasSession(partner: partner)) return true;
     final rows = await _db.from('envelopes').select('id, kind, ciphertext').eq('sender_id', partner).order('created_at');
+    final done = <String>[];
     for (final row in rows) {
-      final body = _bytes(row['ciphertext']);
-      try {
-        final pt = await deviceDecrypt(partner: partner, envelope: Envelope(kind: row['kind'] as int, body: body));
-        if (utf8.decode(pt, allowMalformed: true) == _hello) {
-          await _db.from('envelopes').delete().eq('id', row['id'] as String);
-          return true;
-        }
-      } catch (_) {
-        // Message illisible : on le laisse de côté, il ne sera jamais affiché.
-      }
+      final id = row['id'] as String;
+      await chatReceive(partner: partner, envelopeId: id, envelope: Envelope(kind: row['kind'] as int, body: _bytes(row['ciphertext'])));
+      done.add(id);
     }
-    return false;
+    if (done.isNotEmpty) await _db.from('envelopes').delete().inFilter('id', done);
+    return deviceHasSession(partner: partner);
   }
 
   Future<List<SasSymbol>> symbols(Uint8List partnerIdentity) => deviceSasWith(partnerIdentity: partnerIdentity);

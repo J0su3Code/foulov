@@ -106,7 +106,7 @@ pub struct Envelope {
 }
 
 pub struct Device {
-    store: Store,
+    pub(crate) store: Store,
 }
 
 fn addr(partner: &str) -> ProtocolAddress {

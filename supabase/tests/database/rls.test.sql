@@ -1,7 +1,7 @@
 -- Tests des règles d'accès (docs/SECURITY.md §8) : Inès et Malik forment un couple, Zoé est une intruse.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(41);
 
 -- ------------------------------------------------------------ préparation
 insert into auth.users (id, email) values
@@ -74,6 +74,13 @@ select is((select one_time_prekey_id from public.claim_partner_bundle()), null, 
 insert into public.envelopes (couple_id, sender_id, recipient_id, kind, ciphertext)
   values (public.my_couple_id(), '22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 3, '\x0102');
 select pass('Malik envoie une enveloppe chiffrée à Inès');
+insert into public.envelopes (id, couple_id, sender_id, recipient_id, kind, ciphertext)
+  values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public.my_couple_id(), '22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 2, '\x03');
+select pass('l''identifiant d''enveloppe peut être choisi par le téléphone');
+select throws_ok(
+  $$ insert into public.envelopes (id, couple_id, sender_id, recipient_id, kind, ciphertext)
+     values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public.my_couple_id(), '22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 2, '\x03') $$,
+  '23505', null, 'un renvoi après coupure réseau ne crée pas de doublon');
 select throws_ok(
   $$ insert into public.envelopes (couple_id, sender_id, recipient_id, kind, ciphertext)
      values (public.my_couple_id(), '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 2, '\x01') $$,
@@ -108,7 +115,7 @@ select throws_ok($$ select public.new_invitation_code() $$, '42501', null, 'la g
 -- ------------------------------------------------------------ Inès reçoit puis supprime
 select pg_temp.as_admin();
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
-select is((select count(*)::int from public.envelopes), 1, 'Inès reçoit l''enveloppe de Malik');
+select is((select count(*)::int from public.envelopes), 2, 'Inès reçoit les enveloppes de Malik');
 delete from public.envelopes;
 select pg_temp.as_admin();
 select is((select count(*)::int from public.envelopes), 0, 'après réception, l''enveloppe disparaît du serveur');
@@ -123,6 +130,11 @@ select throws_ok($$ select public.create_couple() $$, '42501', null, 'un visiteu
 reset role;
 select is(public.normalize_invitation_code(' k7q4m-9xhpt '), 'K7Q4M9XHPT', 'espaces, tiret et minuscules tolérés');
 select is(public.normalize_invitation_code('ILO'), '110', 'I, L et O sont lus comme 1, 1 et 0');
+
+-- ------------------------------------------------------------ temps réel
+select ok(
+  exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'envelopes'),
+  'les enveloppes sont diffusées en temps réel (filtrées par RLS)');
 
 -- ------------------------------------------------------------ toutes les tables ont RLS
 reset role;

@@ -56,6 +56,21 @@ Toute la cryptographie vit dans une seule bibliothèque Rust (`core/`). Le code 
   - l'*auto-guérison* : après une compromission passagère, les clés suivantes redeviennent sûres.
 - Les clés privées ne sont jamais exportées, sauf dans la sauvegarde chiffrée (§7), et seulement si l'utilisateur l'active.
 
+## 4bis. Messagerie
+
+Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transport dans `app/lib/features/chat/chat_service.dart`.
+
+- **Contenu structuré puis chiffré.** Chaque contenu (texte, réponse citée, réaction, accusé « distribué » ou « lu ») est encodé en protobuf, précédé d'un octet de version, puis chiffré par la session Signal (§4).
+- **Longueur masquée.** Avant chiffrement, le contenu est complété jusqu'au multiple de 160 octets suivant (remplissage de Signal : `0x80` puis des zéros). « Oui » et une phrase de 47 caractères donnent la même taille chiffrée ; un accusé de lecture, une réaction et un message court sont indiscernables par leur taille.
+- **Historique uniquement sur les téléphones**, dans la base SQLCipher (§7). Le serveur ne garde une enveloppe que jusqu'à sa réception : le destinataire la supprime dès qu'elle est enregistrée. Une enveloppe jamais récupérée est effacée après 30 jours.
+- **Ni perte, ni doublon, ni état incohérent.**
+  - Déchiffrer et enregistrer se font dans une seule transaction : si l'app s'arrête au milieu, ni le ratchet ni l'historique n'avancent, et l'enveloppe est simplement retraitée.
+  - Chaque enveloppe porte un identifiant aléatoire choisi par l'expéditeur. Une enveloppe déjà traitée n'est jamais appliquée deux fois.
+  - À l'envoi, le message et son enveloppe chiffrée sont enregistrés ensemble dans une boîte d'envoi locale. Après une coupure réseau ou un redémarrage, la même enveloppe est renvoyée, jamais rechiffrée ; le serveur refuse le doublon par sa clé primaire.
+- **Altération.** Une enveloppe modifiée en route est rejetée et écartée sans bloquer les suivantes. Un test modifie chaque octet, un par un : jamais un contenu modifié n'est accepté. Seuls des champs d'acheminement que Signal n'authentifie pas par conception (numéro de version, identifiants de pré-clés, et le chiffré ML-KEM quand la session est déjà ouverte) peuvent changer sans effet, le contenu restant intact.
+- **Réception instantanée** par Supabase Realtime, filtrée par les règles d'accès : chacun n'est averti que des enveloppes qui lui sont destinées. À chaque reconnexion, l'app récupère tout ce qui est en attente.
+- **Clé du partenaire changée** : les nouvelles enveloppes restent sur le serveur, non lues, et l'app demande de recomparer les 7 symboles (§5.7).
+
 ## 5. Appairage du couple
 
 1. **Inès crée l'espace.** Le serveur crée un couple et un **code d'invitation** de 10 caractères en alphabet Crockford base32, par exemple `K7Q4M-9XHPT`.
@@ -124,6 +139,7 @@ C'est la liste exacte affichée dans l'app :
 | Votre adresse e-mail (ou identifiant Google/Apple) | Se connecter |
 | Que deux comptes forment un couple | Acheminer les messages |
 | L'heure d'envoi de chaque contenu | Acheminer et ordonner |
+| Le nombre d'enveloppes échangées et leur rythme. Le serveur ne distingue pas un message d'un accusé de lecture ou d'une réaction, mais un rythme (message puis accusé quelques secondes après) peut se deviner | Acheminer |
 | La taille approximative des contenus chiffrés (§6.3) | Stockage |
 | Les jetons de notification | Réveiller l'app |
 | Les adresses IP, dans les journaux techniques de nos hébergeurs (Supabase, Cloudflare), selon leurs politiques | Fonctionnement du réseau ; nous n'ajoutons aucun journal applicatif contenant des IP |
