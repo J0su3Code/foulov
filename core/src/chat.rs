@@ -307,7 +307,15 @@ impl Device {
             None => None,
         };
         let id = random16();
-        let sent_at = now_ms();
+        // Heures d'envoi strictement croissantes sur ce téléphone : deux messages envoyés dans la même
+        // milliseconde s'affichent toujours dans l'ordre, chez soi comme chez le partenaire.
+        let last: Option<i64> = self
+            .store
+            .conn
+            .lock()
+            .query_row("SELECT max(sent_at) FROM messages WHERE from_me = 1", [], |r| r.get(0))
+            .map_err(db)?;
+        let sent_at = now_ms().max(last.map_or(0, |l| l + 1));
         let msg = ChatMessage {
             id: hex(&id),
             from_me: true,
@@ -459,14 +467,23 @@ impl Device {
         }
         let data = unpad(plain).ok_or(DeviceError::BadMessage)?;
         let (&version, rest) = data.split_first().ok_or(DeviceError::BadMessage)?;
-        if version != FORMAT_V1 {
-            // Version future : authentique (la session l'a vérifié) mais pas encore compréhensible.
-            return Ok(Received::Nothing);
-        }
-        let content = pb::Content::decode(rest).map_err(|_| DeviceError::BadMessage)?;
+        let content = if version == FORMAT_V1 { pb::Content::decode(rest).ok() } else { None };
+        let Some(body) = content.and_then(|c| c.body) else {
+            // Contenu authentique (la session l'a vérifié) mais d'une version plus récente de l'app : on le garde,
+            // chiffré dans la base locale, pour le relire après la mise à jour (`reprocess_unknown`).
+            if version > FORMAT_V1 || (version == FORMAT_V1 && pb::Content::decode(rest).is_ok()) {
+                self.store
+                    .conn
+                    .lock()
+                    .execute("INSERT INTO unknown_contents (plain, at) VALUES (?1, ?2)", params![plain, now_ms()])
+                    .map_err(db)?;
+                return Ok(Received::Nothing);
+            }
+            return Err(DeviceError::BadMessage);
+        };
         let c = self.store.conn.lock();
-        match content.body {
-            Some(pb::Body::Text(t)) => {
+        match body {
+            pb::Body::Text(t) => {
                 let id = id_from_wire(&t.id).ok_or(DeviceError::BadMessage)?;
                 let body = t.body.trim().to_owned();
                 if body.is_empty() || body.len() > MAX_TEXT_BYTES {
@@ -490,7 +507,7 @@ impl Device {
                     .map_err(db)?;
                 Ok(Received::Message(m))
             }
-            Some(pb::Body::Receipt(r)) => {
+            pb::Body::Receipt(r) => {
                 if r.kind != STATUS_DELIVERED as u32 && r.kind != STATUS_READ as u32 {
                     return Ok(Received::Nothing);
                 }
@@ -509,7 +526,7 @@ impl Device {
                 }
                 Ok(Received::Updated(changed))
             }
-            Some(pb::Body::Reaction(r)) => {
+            pb::Body::Reaction(r) => {
                 let id = id_from_wire(&r.target).ok_or(DeviceError::BadMessage)?;
                 if r.emoji.chars().count() > 8 {
                     return Err(DeviceError::BadMessage);
@@ -522,7 +539,7 @@ impl Device {
                     .map_err(db)?;
                 Ok(Received::Updated(if n > 0 { vec![id] } else { vec![] }))
             }
-            Some(pb::Body::Profile(p)) => {
+            pb::Body::Profile(p) => {
                 let Some(name) = clean_name(&p.name) else { return Err(DeviceError::BadMessage) };
                 let newer = kv_newer(&c, "partner_name", p.updated_at)?;
                 if newer {
@@ -530,7 +547,7 @@ impl Device {
                 }
                 Ok(if newer { Received::Profile } else { Received::Nothing })
             }
-            Some(pb::Body::Couple(k)) => {
+            pb::Body::Couple(k) => {
                 let date = (!k.together_since.is_empty()).then_some(k.together_since.as_str());
                 if date.is_some_and(|d| !valid_date(d)) {
                     return Err(DeviceError::BadMessage);
@@ -541,8 +558,28 @@ impl Device {
                 }
                 Ok(if newer { Received::Profile } else { Received::Nothing })
             }
-            None => Ok(Received::Nothing),
         }
+    }
+
+    /// Relit les contenus gardés faute d'être compris par une version précédente de l'app.
+    /// Renvoie vrai si quelque chose a changé (à appeler au démarrage).
+    pub fn reprocess_unknown(&mut self) -> R<bool> {
+        let rows: Vec<(i64, Vec<u8>)> = {
+            let c = self.store.conn.lock();
+            let mut st = c.prepare("SELECT rowid, plain FROM unknown_contents ORDER BY rowid").map_err(db)?;
+            st.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(db)?.collect::<Result<_, _>>().map_err(db)?
+        };
+        let mut changed = false;
+        for (rowid, plain) in rows {
+            let tx = self.store.conn.clone();
+            let effect = tx.atomically(|| {
+                self.store.conn.lock().execute("DELETE FROM unknown_contents WHERE rowid = ?1", params![rowid]).map_err(db)?;
+                // Toujours pas compris : `apply` le remet dans la table.
+                self.apply(&plain)
+            });
+            changed |= !matches!(effect, Ok(Received::Nothing) | Err(_));
+        }
+        Ok(changed)
     }
 
     /// Profil du couple vu par ce téléphone.
