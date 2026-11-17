@@ -315,3 +315,19 @@ fn profil_du_couple_chiffre_et_synchronise() {
     assert!(malik.set_my_name(INES, "").is_err());
     assert!(malik.set_my_name(INES, &"x".repeat(41)).is_err());
 }
+
+#[test]
+fn un_contenu_d_une_version_plus_recente_est_garde_puis_relu() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    // Champ protobuf 99 inconnu de cette version (« ce que la version suivante saura afficher »).
+    let mut future = vec![1u8, (99 << 3 | 2) as u8 & 0x7f | 0x80, 6, 3, b'h', b'e', b'y'];
+    future = foulov_core::chat::pad(future);
+    let env = malik.encrypt(INES, &future).unwrap();
+    let o = Outgoing { envelope_id: "11111111-1111-4111-8111-111111111111".into(), envelope: env, urgent: true };
+    assert_eq!(recv(&mut ines, MALIK, &o), Received::Nothing, "ni erreur ni affichage");
+    assert!(!ines.reprocess_unknown().unwrap(), "toujours incompris : conservé sans effet");
+    // La session reste saine : la suite passe.
+    let (_, o) = malik.send_text(INES, "après", None).unwrap();
+    assert!(matches!(recv(&mut ines, MALIK, &o), Received::Message(_)));
+}

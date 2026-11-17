@@ -53,6 +53,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> start() async {
     WidgetsBinding.instance.addObserver(this);
+    // Après une mise à jour : ce que l'ancienne version avait gardé sans le comprendre.
+    await chatReprocessUnknown();
     profile = await chatProfile();
     await _loadPage();
     _channel = _db

@@ -154,3 +154,8 @@ pub fn chat_unread() -> anyhow::Result<Vec<String>> {
 pub fn chat_purge() -> anyhow::Result<()> {
     with_device(|d| Ok(d.purge_seen()?))
 }
+
+/// Relit les contenus qu'une version précédente de l'app n'avait pas su lire (au démarrage).
+pub fn chat_reprocess_unknown() -> anyhow::Result<bool> {
+    with_device(|d| Ok(d.reprocess_unknown()?))
+}

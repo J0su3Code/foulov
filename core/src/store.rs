@@ -115,6 +115,8 @@ CREATE TABLE IF NOT EXISTS outbox (
 CREATE TABLE IF NOT EXISTS seen_envelopes (id TEXT PRIMARY KEY, at INTEGER NOT NULL);
 -- Profil du couple (prénoms, surnom, date « ensemble depuis ») : petites valeurs horodatées.
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT, at INTEGER NOT NULL);
+-- Contenus authentiques venant d'une version plus récente de l'app : relus après la mise à jour.
+CREATE TABLE IF NOT EXISTS unknown_contents (plain BLOB NOT NULL, at INTEGER NOT NULL);
 ";
 
 /// Mises à niveau des bases créées par une version précédente (CREATE IF NOT EXISTS n'ajoute pas de colonne).
