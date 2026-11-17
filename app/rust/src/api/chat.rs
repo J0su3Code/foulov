@@ -314,3 +314,13 @@ pub fn chat_media_len(message_id: String) -> anyhow::Result<u64> {
 pub fn chat_media_read(message_id: String, offset: u64, len: u32) -> anyhow::Result<Vec<u8>> {
     with_device(|d| Ok(d.media_read(&message_id, offset, len)?))
 }
+
+/// Photos et vidéos (onglet Saisons), de la plus récente à la plus ancienne. `kind` : 1 photos, 2 vidéos.
+pub fn chat_media_gallery(
+    before_sent_at: Option<i64>,
+    before_id: Option<String>,
+    limit: u32,
+    kind: Option<u8>,
+) -> anyhow::Result<Vec<ChatMessage>> {
+    with_device(|d| Ok(d.media_gallery(before_sent_at.zip(before_id), limit, kind)?.into_iter().map(Into::into).collect()))
+}

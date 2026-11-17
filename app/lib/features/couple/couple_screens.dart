@@ -12,7 +12,7 @@ import '../../ui/love.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth/auth_service.dart';
-import '../chat/chat_screen.dart';
+import '../chat/home_shell.dart';
 import '../chat/chat_service.dart';
 import 'couple_service.dart';
 
@@ -125,7 +125,7 @@ class _ChatHostState extends State<_ChatHost> {
     future: _ready,
     builder: (context, snap) => snap.connectionState != ConnectionState.done
         ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-        : ChatScreen(
+        : HomeShell(
             service: _service,
             since: widget.state.since,
             onShowSymbols: widget.onShowSymbols,
