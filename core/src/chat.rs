@@ -33,7 +33,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7")]
         pub body: Option<Body>,
     }
 
@@ -51,6 +51,15 @@ pub mod pb {
         Couple(Couple),
         #[prost(message, tag = "6")]
         Media(Media),
+        #[prost(message, tag = "7")]
+        Delete(Delete),
+    }
+
+    /// « Supprimer pour nous deux » : l'expéditeur retire un de ses propres messages.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Delete {
+        #[prost(bytes = "vec", tag = "1")]
+        pub target: Vec<u8>,
     }
 
     /// Photo ou vidéo. Le fichier, chiffré sur le téléphone, est sur R2 sous un nom aléatoire ; sa clé, son
@@ -175,6 +184,8 @@ pub struct ChatMessage {
     pub my_reaction: Option<String>,
     pub their_reaction: Option<String>,
     pub media: Option<MediaInfo>,
+    /// Supprimé : il ne reste que la trace « Message supprimé » (ni texte, ni fichier, ni réaction).
+    pub deleted: bool,
 }
 
 /// Enveloppe chiffrée à déposer sur le serveur, avec son identifiant (format UUID, choisi ici).
@@ -320,7 +331,30 @@ pub(crate) fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMess
         my_reaction: r.get(6)?,
         their_reaction: r.get(7)?,
         media,
+        deleted: r.get::<_, i64>(15)? == 1,
     })
+}
+
+/// Efface le contenu d'un message (texte, réactions, photo ou vidéo et son fichier chiffré local) et ne garde que
+/// la trace « supprimé ». `from_me` : n'agit que sur les messages de cet auteur (`None` : n'importe lequel).
+pub(crate) fn erase(c: &rusqlite::Connection, id: &str, from_me: Option<bool>) -> R<bool> {
+    let n = c
+        .execute(
+            "UPDATE messages SET body = '', my_reaction = NULL, their_reaction = NULL, deleted = 1
+             WHERE id = ?1 AND deleted = 0 AND (?2 IS NULL OR from_me = ?2)",
+            params![id, from_me],
+        )
+        .map_err(db)?;
+    if n == 0 {
+        return Ok(false);
+    }
+    let path: Option<Option<String>> =
+        c.query_row("SELECT path FROM media WHERE message_id = ?1", params![id], |r| r.get(0)).optional().map_err(db)?;
+    if let Some(Some(p)) = path {
+        let _ = std::fs::remove_file(p);
+    }
+    c.execute("DELETE FROM media WHERE message_id = ?1", params![id]).map_err(db)?;
+    Ok(true)
 }
 
 // ------------------------------------------------------------------ petites valeurs du profil (table kv)
@@ -348,12 +382,13 @@ fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64) -> R<()> 
 
 /// Message et, s'il y en a une, sa photo ou vidéo.
 pub(crate) const SELECT: &str = "SELECT m.id, m.from_me, m.body, m.reply_to, m.sent_at, m.status, m.my_reaction, \
-    m.their_reaction, md.kind, md.mime, md.width, md.height, md.duration_ms, md.thumb, md.state \
+    m.their_reaction, md.kind, md.mime, md.width, md.height, md.duration_ms, md.thumb, md.state, m.deleted \
     FROM messages m LEFT JOIN media md ON md.message_id = m.id";
 
 impl Device {
     pub(crate) fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
         // Accusés et profil : rien qui mérite de réveiller le téléphone du partenaire.
+        // Une suppression ne réveille pas le téléphone : elle s'appliquera à la prochaine ouverture.
         let urgent = matches!(body, pb::Body::Text(_) | pb::Body::Reaction(_) | pb::Body::Media(_));
         let envelope = self.encrypt(partner, &encode(body))?;
         let envelope_id = uuid_v4();
@@ -398,6 +433,7 @@ impl Device {
             my_reaction: None,
             their_reaction: None,
             media: None,
+            deleted: false,
         };
         let text = pb::Text { id: id.to_vec(), sent_at: sent_at as u64, body: msg.body.clone(), reply_to: reply_wire };
         let tx = self.store.conn.clone();
@@ -427,7 +463,7 @@ impl Device {
                 .conn
                 .lock()
                 .execute(
-                    "UPDATE messages SET my_reaction = ?2 WHERE id = ?1",
+                    "UPDATE messages SET my_reaction = ?2 WHERE id = ?1 AND deleted = 0",
                     params![target, (!emoji.is_empty()).then_some(emoji)],
                 )
                 .map_err(db)?;
@@ -606,13 +642,19 @@ impl Device {
                 }
                 let n = c
                     .execute(
-                        "UPDATE messages SET their_reaction = ?2 WHERE id = ?1",
+                        "UPDATE messages SET their_reaction = ?2 WHERE id = ?1 AND deleted = 0",
                         params![id, (!r.emoji.is_empty()).then_some(r.emoji)],
                     )
                     .map_err(db)?;
                 Ok(Received::Updated(if n > 0 { vec![id] } else { vec![] }))
             }
             pb::Body::Media(m) => crate::chat_media::apply_media(&c, m),
+            pb::Body::Delete(d) => {
+                let id = id_from_wire(&d.target).ok_or(DeviceError::BadMessage)?;
+                // Le partenaire ne peut retirer que ses propres messages, jamais les nôtres.
+                let n = erase(&c, &id, Some(false))?;
+                Ok(Received::Updated(if n { vec![id] } else { vec![] }))
+            }
             pb::Body::Profile(p) => {
                 let Some(name) = clean_name(&p.name) else { return Err(DeviceError::BadMessage) };
                 let newer = kv_newer(&c, "partner_name", p.updated_at)?;
@@ -699,6 +741,43 @@ impl Device {
         tx.atomically(|| {
             kv_set(&self.store.conn.lock(), "together_since", (!date.is_empty()).then_some(date), at)?;
             self.enqueue(partner, pb::Body::Couple(pb::Couple { together_since: date.to_owned(), updated_at: at }), None)
+        })
+    }
+
+    /// « Supprimer pour moi » : efface le message de ce téléphone seulement (le sien ou celui du partenaire).
+    pub fn delete_for_me(&mut self, id: &str) -> R<bool> {
+        let tx = self.store.conn.clone();
+        tx.atomically(|| {
+            let c = self.store.conn.lock();
+            // Un envoi pas encore parti est annulé.
+            c.execute("DELETE FROM outbox WHERE message_id = ?1", params![id]).map_err(db)?;
+            erase(&c, id, None)
+        })
+    }
+
+    /// « Supprimer pour nous deux » (ses propres messages seulement). Renvoie l'enveloppe à envoyer et, pour une
+    /// photo ou vidéo déjà déposée, le nom de l'objet à effacer sur R2.
+    pub fn delete_for_both(&mut self, partner: &str, id: &str) -> R<(Outgoing, Option<String>)> {
+        let wire = unhex(id).filter(|b| b.len() == 16).ok_or(DeviceError::BadMessage)?;
+        let tx = self.store.conn.clone();
+        tx.atomically(|| {
+            let object_key = {
+                let c = self.store.conn.lock();
+                let mine: Option<i64> =
+                    c.query_row("SELECT from_me FROM messages WHERE id = ?1", params![id], |r| r.get(0)).optional().map_err(db)?;
+                if mine != Some(1) {
+                    return Err(DeviceError::Protocol("on ne peut supprimer pour les deux que ses propres messages".into()));
+                }
+                let key: Option<Option<String>> = c
+                    .query_row("SELECT object_key FROM media WHERE message_id = ?1", params![id], |r| r.get(0))
+                    .optional()
+                    .map_err(db)?;
+                c.execute("DELETE FROM outbox WHERE message_id = ?1", params![id]).map_err(db)?;
+                erase(&c, id, Some(true))?;
+                key.flatten()
+            };
+            let out = self.enqueue(partner, pb::Body::Delete(pb::Delete { target: wire }), None)?;
+            Ok((out, object_key))
         })
     }
 

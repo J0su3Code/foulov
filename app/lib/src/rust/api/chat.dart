@@ -9,48 +9,98 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`
 
-Future<CoupleProfile> chatProfile() => RustLib.instance.api.crateApiChatChatProfile();
+Future<CoupleProfile> chatProfile() =>
+    RustLib.instance.api.crateApiChatChatProfile();
 
-Future<Outgoing> chatSetMyName({required String partner, required String name}) =>
-    RustLib.instance.api.crateApiChatChatSetMyName(partner: partner, name: name);
+Future<Outgoing> chatSetMyName({
+  required String partner,
+  required String name,
+}) => RustLib.instance.api.crateApiChatChatSetMyName(
+  partner: partner,
+  name: name,
+);
 
 Future<void> chatSetPartnerNickname({required String nickname}) =>
     RustLib.instance.api.crateApiChatChatSetPartnerNickname(nickname: nickname);
 
-Future<Outgoing> chatSetTogetherSince({required String partner, required String date}) =>
-    RustLib.instance.api.crateApiChatChatSetTogetherSince(partner: partner, date: date);
+Future<Outgoing> chatSetTogetherSince({
+  required String partner,
+  required String date,
+}) => RustLib.instance.api.crateApiChatChatSetTogetherSince(
+  partner: partner,
+  date: date,
+);
 
-Future<SentText> chatSendText({required String partner, required String body, String? replyTo}) =>
-    RustLib.instance.api.crateApiChatChatSendText(partner: partner, body: body, replyTo: replyTo);
+Future<SentText> chatSendText({
+  required String partner,
+  required String body,
+  String? replyTo,
+}) => RustLib.instance.api.crateApiChatChatSendText(
+  partner: partner,
+  body: body,
+  replyTo: replyTo,
+);
 
-Future<Outgoing> chatSendReaction({required String partner, required String target, required String emoji}) =>
-    RustLib.instance.api.crateApiChatChatSendReaction(partner: partner, target: target, emoji: emoji);
+Future<Outgoing> chatSendReaction({
+  required String partner,
+  required String target,
+  required String emoji,
+}) => RustLib.instance.api.crateApiChatChatSendReaction(
+  partner: partner,
+  target: target,
+  emoji: emoji,
+);
 
 /// `kind` : 2 = distribué, 3 = lu.
-Future<Outgoing?> chatSendReceipt({required String partner, required List<String> ids, required int kind}) =>
-    RustLib.instance.api.crateApiChatChatSendReceipt(partner: partner, ids: ids, kind: kind);
+Future<Outgoing?> chatSendReceipt({
+  required String partner,
+  required List<String> ids,
+  required int kind,
+}) => RustLib.instance.api.crateApiChatChatSendReceipt(
+  partner: partner,
+  ids: ids,
+  kind: kind,
+);
 
-Future<List<Outgoing>> chatOutbox() => RustLib.instance.api.crateApiChatChatOutbox();
+Future<List<Outgoing>> chatOutbox() =>
+    RustLib.instance.api.crateApiChatChatOutbox();
 
 /// Le serveur a accepté l'enveloppe ; renvoie le message passé à « envoyé », s'il y en a un.
 Future<String?> chatOutboxSent({required String envelopeId}) =>
     RustLib.instance.api.crateApiChatChatOutboxSent(envelopeId: envelopeId);
 
-Future<Received> chatReceive({required String partner, required String envelopeId, required Envelope envelope}) =>
-    RustLib.instance.api.crateApiChatChatReceive(partner: partner, envelopeId: envelopeId, envelope: envelope);
+Future<Received> chatReceive({
+  required String partner,
+  required String envelopeId,
+  required Envelope envelope,
+}) => RustLib.instance.api.crateApiChatChatReceive(
+  partner: partner,
+  envelopeId: envelopeId,
+  envelope: envelope,
+);
 
 /// Historique du plus récent au plus ancien ; `before_*` : dernier message déjà affiché.
-Future<List<ChatMessage>> chatMessages({PlatformInt64? beforeSentAt, String? beforeId, required int limit}) =>
-    RustLib.instance.api.crateApiChatChatMessages(beforeSentAt: beforeSentAt, beforeId: beforeId, limit: limit);
+Future<List<ChatMessage>> chatMessages({
+  PlatformInt64? beforeSentAt,
+  String? beforeId,
+  required int limit,
+}) => RustLib.instance.api.crateApiChatChatMessages(
+  beforeSentAt: beforeSentAt,
+  beforeId: beforeId,
+  limit: limit,
+);
 
-Future<ChatMessage?> chatMessage({required String id}) => RustLib.instance.api.crateApiChatChatMessage(id: id);
+Future<ChatMessage?> chatMessage({required String id}) =>
+    RustLib.instance.api.crateApiChatChatMessage(id: id);
 
-Future<List<String>> chatUnread() => RustLib.instance.api.crateApiChatChatUnread();
+Future<List<String>> chatUnread() =>
+    RustLib.instance.api.crateApiChatChatUnread();
 
 Future<void> chatPurge() => RustLib.instance.api.crateApiChatChatPurge();
 
 /// Relit les contenus qu'une version précédente de l'app n'avait pas su lire (au démarrage).
-Future<bool> chatReprocessUnknown() => RustLib.instance.api.crateApiChatChatReprocessUnknown();
+Future<bool> chatReprocessUnknown() =>
+    RustLib.instance.api.crateApiChatChatReprocessUnknown();
 
 /// Chiffre la photo (ou vidéo), garde le chiffré dans `dir`, ajoute le message « en attente ».
 Future<CreatedMedia> chatCreateMedia({
@@ -78,16 +128,32 @@ Future<CreatedMedia> chatCreateMedia({
 );
 
 /// Le chiffré est sur R2 : prépare le message chiffré pour le partenaire (à vider par la boîte d'envoi).
-Future<Outgoing> chatMediaUploaded({required String partner, required String messageId, required String objectKey}) =>
-    RustLib.instance.api.crateApiChatChatMediaUploaded(partner: partner, messageId: messageId, objectKey: objectKey);
+Future<Outgoing> chatMediaUploaded({
+  required String partner,
+  required String messageId,
+  required String objectKey,
+}) => RustLib.instance.api.crateApiChatChatMediaUploaded(
+  partner: partner,
+  messageId: messageId,
+  objectKey: objectKey,
+);
 
-Future<List<PendingUpload>> chatPendingUploads() => RustLib.instance.api.crateApiChatChatPendingUploads();
+Future<List<PendingUpload>> chatPendingUploads() =>
+    RustLib.instance.api.crateApiChatChatPendingUploads();
 
-Future<List<PendingDownload>> chatPendingDownloads() => RustLib.instance.api.crateApiChatChatPendingDownloads();
+Future<List<PendingDownload>> chatPendingDownloads() =>
+    RustLib.instance.api.crateApiChatChatPendingDownloads();
 
 /// Vérifie le fichier téléchargé (taille, empreinte) et le range dans `dir`. Faux s'il a été altéré.
-Future<bool> chatMediaDownloaded({required String messageId, required String downloaded, required String dir}) =>
-    RustLib.instance.api.crateApiChatChatMediaDownloaded(messageId: messageId, downloaded: downloaded, dir: dir);
+Future<bool> chatMediaDownloaded({
+  required String messageId,
+  required String downloaded,
+  required String dir,
+}) => RustLib.instance.api.crateApiChatChatMediaDownloaded(
+  messageId: messageId,
+  downloaded: downloaded,
+  dir: dir,
+);
 
 /// Déchiffre en mémoire pour l'affichage.
 Future<Uint8List> chatOpenMedia({required String messageId}) =>
@@ -123,8 +189,15 @@ Future<BigInt> chatMediaLen({required String messageId}) =>
     RustLib.instance.api.crateApiChatChatMediaLen(messageId: messageId);
 
 /// Morceau déchiffré (au plus 4 Mio) : lecture vidéo sans fichier en clair.
-Future<Uint8List> chatMediaRead({required String messageId, required BigInt offset, required int len}) =>
-    RustLib.instance.api.crateApiChatChatMediaRead(messageId: messageId, offset: offset, len: len);
+Future<Uint8List> chatMediaRead({
+  required String messageId,
+  required BigInt offset,
+  required int len,
+}) => RustLib.instance.api.crateApiChatChatMediaRead(
+  messageId: messageId,
+  offset: offset,
+  len: len,
+);
 
 /// Photos et vidéos (onglet Saisons), de la plus récente à la plus ancienne. `kind` : 1 photos, 2 vidéos.
 Future<List<ChatMessage>> chatMediaGallery({
@@ -137,6 +210,19 @@ Future<List<ChatMessage>> chatMediaGallery({
   beforeId: beforeId,
   limit: limit,
   kind: kind,
+);
+
+/// « Supprimer pour moi » : sur ce téléphone seulement.
+Future<bool> chatDeleteForMe({required String id}) =>
+    RustLib.instance.api.crateApiChatChatDeleteForMe(id: id);
+
+/// « Supprimer pour nous deux » (ses propres messages seulement).
+Future<DeletedForBoth> chatDeleteForBoth({
+  required String partner,
+  required String id,
+}) => RustLib.instance.api.crateApiChatChatDeleteForBoth(
+  partner: partner,
+  id: id,
 );
 
 class ChatMessage {
@@ -152,6 +238,9 @@ class ChatMessage {
   final String? theirReaction;
   final MediaInfo? media;
 
+  /// Supprimé : seule la trace « Message supprimé » reste.
+  final bool deleted;
+
   const ChatMessage({
     required this.id,
     required this.fromMe,
@@ -162,6 +251,7 @@ class ChatMessage {
     this.myReaction,
     this.theirReaction,
     this.media,
+    required this.deleted,
   });
 
   @override
@@ -174,7 +264,8 @@ class ChatMessage {
       status.hashCode ^
       myReaction.hashCode ^
       theirReaction.hashCode ^
-      media.hashCode;
+      media.hashCode ^
+      deleted.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -189,7 +280,8 @@ class ChatMessage {
           status == other.status &&
           myReaction == other.myReaction &&
           theirReaction == other.theirReaction &&
-          media == other.media;
+          media == other.media &&
+          deleted == other.deleted;
 }
 
 /// Profil du couple, jamais visible du serveur.
@@ -203,10 +295,19 @@ class CoupleProfile {
   /// « AAAA-MM-JJ ».
   final String? togetherSince;
 
-  const CoupleProfile({this.myName, this.partnerName, this.partnerNickname, this.togetherSince});
+  const CoupleProfile({
+    this.myName,
+    this.partnerName,
+    this.partnerNickname,
+    this.togetherSince,
+  });
 
   @override
-  int get hashCode => myName.hashCode ^ partnerName.hashCode ^ partnerNickname.hashCode ^ togetherSince.hashCode;
+  int get hashCode =>
+      myName.hashCode ^
+      partnerName.hashCode ^
+      partnerNickname.hashCode ^
+      togetherSince.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -231,7 +332,30 @@ class CreatedMedia {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is CreatedMedia && runtimeType == other.runtimeType && message == other.message && upload == other.upload;
+      other is CreatedMedia &&
+          runtimeType == other.runtimeType &&
+          message == other.message &&
+          upload == other.upload;
+}
+
+class DeletedForBoth {
+  final Outgoing outgoing;
+
+  /// Photo ou vidéo déjà déposée : objet à effacer sur R2.
+  final String? objectKey;
+
+  const DeletedForBoth({required this.outgoing, this.objectKey});
+
+  @override
+  int get hashCode => outgoing.hashCode ^ objectKey.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DeletedForBoth &&
+          runtimeType == other.runtimeType &&
+          outgoing == other.outgoing &&
+          objectKey == other.objectKey;
 }
 
 /// Photo ou vidéo jointe. `state` : 0 à envoyer, 1 sur ce téléphone, 2 à télécharger, 3 illisible.
@@ -287,10 +411,16 @@ class Outgoing {
   /// Mérite une notification (message, réaction) ; faux pour les accusés de réception.
   final bool urgent;
 
-  const Outgoing({required this.envelopeId, required this.kind, required this.body, required this.urgent});
+  const Outgoing({
+    required this.envelopeId,
+    required this.kind,
+    required this.body,
+    required this.urgent,
+  });
 
   @override
-  int get hashCode => envelopeId.hashCode ^ kind.hashCode ^ body.hashCode ^ urgent.hashCode;
+  int get hashCode =>
+      envelopeId.hashCode ^ kind.hashCode ^ body.hashCode ^ urgent.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -308,7 +438,11 @@ class PendingDownload {
   final String objectKey;
   final BigInt size;
 
-  const PendingDownload({required this.messageId, required this.objectKey, required this.size});
+  const PendingDownload({
+    required this.messageId,
+    required this.objectKey,
+    required this.size,
+  });
 
   @override
   int get hashCode => messageId.hashCode ^ objectKey.hashCode ^ size.hashCode;
@@ -328,7 +462,11 @@ class PendingUpload {
   final String path;
   final BigInt size;
 
-  const PendingUpload({required this.messageId, required this.path, required this.size});
+  const PendingUpload({
+    required this.messageId,
+    required this.path,
+    required this.size,
+  });
 
   @override
   int get hashCode => messageId.hashCode ^ path.hashCode ^ size.hashCode;
@@ -354,10 +492,19 @@ class Received {
   /// Le profil du couple a changé (prénom du partenaire, date « ensemble depuis »).
   final bool profileChanged;
 
-  const Received({this.message, required this.updated, required this.rejected, required this.profileChanged});
+  const Received({
+    this.message,
+    required this.updated,
+    required this.rejected,
+    required this.profileChanged,
+  });
 
   @override
-  int get hashCode => message.hashCode ^ updated.hashCode ^ rejected.hashCode ^ profileChanged.hashCode;
+  int get hashCode =>
+      message.hashCode ^
+      updated.hashCode ^
+      rejected.hashCode ^
+      profileChanged.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -382,5 +529,8 @@ class SentText {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SentText && runtimeType == other.runtimeType && message == other.message && outgoing == other.outgoing;
+      other is SentText &&
+          runtimeType == other.runtimeType &&
+          message == other.message &&
+          outgoing == other.outgoing;
 }

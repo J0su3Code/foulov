@@ -86,7 +86,7 @@ fn addr_key(a: &ProtocolAddress) -> String {
     format!("{}.{}", a.name(), u32::from(a.device_id()))
 }
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v BLOB NOT NULL);
@@ -134,6 +134,13 @@ fn migrate(conn: &Connection) -> Result<(), StoreError> {
     if !has_urgent {
         // Version 3 : les accusés de réception ne réveillent pas le téléphone du partenaire.
         conn.execute_batch("ALTER TABLE outbox ADD COLUMN urgent INTEGER NOT NULL DEFAULT 1")?;
+    }
+    let has_deleted: bool = conn
+        .prepare("SELECT 1 FROM pragma_table_info('messages') WHERE name = 'deleted'")?
+        .exists([])?;
+    if !has_deleted {
+        // Version 4 : messages supprimés (pour soi ou pour les deux) : il ne reste qu'une trace « supprimé ».
+        conn.execute_batch("ALTER TABLE messages ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")?;
     }
     Ok(())
 }
