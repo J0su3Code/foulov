@@ -1,7 +1,7 @@
 -- Tests des règles d'accès (docs/SECURITY.md §8) : Inès et Malik forment un couple, Zoé est une intruse.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(47);
+select plan(48);
 
 -- ------------------------------------------------------------ préparation
 insert into auth.users (id, email) values
@@ -150,6 +150,11 @@ select is((select user_id from public.push_tokens where token = 'jeton-de-test-i
 select is((select column_default from information_schema.columns where table_name = 'envelopes' and column_name = 'urgent'), 'true',
   'une enveloppe est urgente par défaut (message, réaction)');
 select ok(exists (select 1 from pg_trigger where tgname = 'envelopes_notify'), 'chaque enveloppe urgente déclenche la notification');
+
+-- ------------------------------------------------------------ présence et écriture
+select is(
+  (select count(*)::int from pg_policies where schemaname = 'realtime' and tablename = 'messages' and policyname like 'couple : %'), 2,
+  'le canal temps réel de chaque couple est réservé à ses deux membres');
 
 -- ------------------------------------------------------------ temps réel
 select ok(

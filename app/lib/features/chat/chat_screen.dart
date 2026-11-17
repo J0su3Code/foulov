@@ -60,7 +60,10 @@ class _ChatScreenState extends State<ChatScreen> {
     _s.addListener(_changed);
     _s.visible = widget.active;
     _scroll.addListener(_onScroll);
-    _input.addListener(() => setState(() {}));
+    _input.addListener(() {
+      _s.typing(_input.text.trim().isNotEmpty);
+      setState(() {});
+    });
   }
 
   @override
@@ -349,8 +352,13 @@ class _ChatScreenState extends State<ChatScreen> {
                       reverse: true,
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                      itemCount: msgs.length + 1,
+                      itemCount: msgs.length + 1 + (_s.partnerTyping ? 1 : 0),
                       itemBuilder: (context, i) {
+                        // Les trois points de « écrit… », tout en bas de la conversation.
+                        if (_s.partnerTyping) {
+                          if (i == 0) return const _TypingBubble();
+                          i -= 1;
+                        }
                         if (i == msgs.length) return _s.hasMore ? const _Loading() : const _E2EBadge();
                         final m = msgs[i];
                         final older = i + 1 < msgs.length ? msgs[i + 1] : null;
@@ -493,7 +501,34 @@ class _Header extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    if (subtitle != null) Text(subtitle, style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant)),
+                    // « écrit… » ou « en ligne » d'abord ; sinon vos jours ensemble.
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: service.partnerTyping
+                          ? Text(
+                              'écrit…',
+                              key: const ValueKey('t'),
+                              style: TextStyle(fontSize: 12.5, color: cs.secondary, fontWeight: FontWeight.w600),
+                            )
+                          : service.partnerOnline
+                          ? Text(
+                              'en ligne',
+                              key: const ValueKey('o'),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF7FE0C2)
+                                    : const Color(0xFF2E8F6E),
+                              ),
+                            )
+                          : subtitle == null
+                          ? const SizedBox.shrink()
+                          : Text(
+                              subtitle,
+                              key: const ValueKey('d'),
+                              style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
+                            ),
+                    ),
                   ],
                 ),
               ),
@@ -1364,6 +1399,78 @@ class _DeletedBubble extends StatelessWidget {
               const SizedBox(width: 8),
               Text(_time(m.sentAt), style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Trois points qui sautillent doucement : ton amour est en train d'écrire.
+class _TypingBubble extends StatefulWidget {
+  const _TypingBubble();
+
+  @override
+  State<_TypingBubble> createState() => _TypingBubbleState();
+}
+
+class _TypingBubbleState extends State<_TypingBubble> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+    ..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final night = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Semantics(
+          label: 'Ton amour est en train d\'écrire',
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: night ? FouLovColors.velours2 : cs.surfaceContainer,
+              border: Border.all(color: cs.outline),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                bottomLeft: Radius.circular(6),
+              ),
+            ),
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, _) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var k = 0; k < 3; k++)
+                    Builder(
+                      builder: (_) {
+                        final t = ((_c.value - k * .15) % 1.0);
+                        final up = t < .3 ? sin(t / .3 * pi) : 0.0;
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                          width: 7,
+                          height: 7,
+                          transform: Matrix4.translationValues(0, -3 * up, 0),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: cs.onSurface.withValues(alpha: .35 + .5 * up),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

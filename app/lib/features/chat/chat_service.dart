@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:video_compress/video_compress.dart' as vc;
@@ -60,6 +61,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> start() async {
     WidgetsBinding.instance.addObserver(this);
+    showActivity = (await _prefs.read(key: _activityPref)) != 'off';
     // Après une mise à jour : ce que l'ancienne version avait gardé sans le comprendre.
     await chatReprocessUnknown();
     profile = await chatProfile();
@@ -83,6 +85,111 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(_transfer());
     unawaited(chatPurge().catchError((_) {}));
     unawaited(PushService.register(_db));
+    _startLive();
+  }
+
+  // ------------------------------------------------------------------ présence et « en train d'écrire »
+  //
+  // Canal temps réel privé du couple (réservé aux deux membres par les règles d'accès). Il ne transporte aucun
+  // contenu : seulement « présent » et « écrit en ce moment ». Le serveur peut donc savoir quand l'un de vous est
+  // actif (docs/SECURITY.md §10) ; chacun peut le couper, et ne voit alors plus non plus celui de l'autre.
+
+  static const _prefs = FlutterSecureStorage();
+  static const _activityPref = 'foulov.show_activity';
+  bool showActivity = true;
+  bool partnerOnline = false;
+  bool partnerTyping = false;
+  RealtimeChannel? _live;
+  Timer? _typingOff, _partnerTypingOff;
+  DateTime _typingSentAt = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _typingSent = false;
+
+  void _startLive() {
+    _live = _db
+        .channel('couple:$coupleId', opts: const RealtimeChannelConfig(private: true))
+        .onPresenceSync((_) => _readPresence())
+        .onPresenceJoin((_) => _readPresence())
+        .onPresenceLeave((_) => _readPresence())
+        .onBroadcast(
+          event: 'typing',
+          callback: (m) {
+            final p = (m['payload'] as Map?) ?? m;
+            if (!showActivity || p['u'] != partnerId) return;
+            partnerTyping = p['on'] == true;
+            // Sans nouvelle dans les 6 s (réseau coupé, app fermée), l'indicateur s'éteint de lui-même.
+            _partnerTypingOff?.cancel();
+            if (partnerTyping) {
+              _partnerTypingOff = Timer(const Duration(seconds: 6), () {
+                partnerTyping = false;
+                _notify();
+              });
+            }
+            _notify();
+          },
+        )
+        .subscribe((status, _) {
+          if (status == RealtimeSubscribeStatus.subscribed) unawaited(_announce());
+        });
+  }
+
+  void _readPresence() {
+    final online =
+        showActivity &&
+        (_live?.presenceState().any((s) => s.presences.any((p) => p.payload['u'] == partnerId)) ?? false);
+    if (!online) partnerTyping = false;
+    if (online != partnerOnline) {
+      partnerOnline = online;
+      _notify();
+    }
+  }
+
+  /// Présent seulement quand l'app est au premier plan et que l'indicateur est activé.
+  Future<void> _announce() async {
+    final c = _live;
+    if (c == null) return;
+    try {
+      if (showActivity && _foreground) {
+        await c.track({'u': _me});
+      } else {
+        await c.untrack();
+      }
+    } catch (_) {}
+  }
+
+  /// Appelé à chaque frappe : « écrit » au plus toutes les 3 s, puis « n'écrit plus » après 4 s sans frappe.
+  void typing(bool hasText) {
+    if (!showActivity) return;
+    _typingOff?.cancel();
+    if (!hasText) {
+      _sendTyping(false);
+      return;
+    }
+    if (!_typingSent || DateTime.now().difference(_typingSentAt) > const Duration(seconds: 3)) _sendTyping(true);
+    _typingOff = Timer(const Duration(seconds: 4), () => _sendTyping(false));
+  }
+
+  void _sendTyping(bool on) {
+    if (!on && !_typingSent) return;
+    _typingSent = on;
+    _typingSentAt = DateTime.now();
+    unawaited(
+      _live
+          ?.sendBroadcastMessage(event: 'typing', payload: {'u': _me, 'on': on})
+          .catchError((_) => ChannelResponse.error),
+    );
+  }
+
+  Future<void> setShowActivity(bool on) async {
+    showActivity = on;
+    await _prefs.write(key: _activityPref, value: on ? 'on' : 'off');
+    if (!on) {
+      _sendTyping(false);
+      partnerTyping = false;
+      partnerOnline = false;
+    }
+    await _announce();
+    _readPresence();
+    _notify();
   }
 
   @override
@@ -91,6 +198,10 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _retry?.cancel();
     _http.close();
+    _typingOff?.cancel();
+    _partnerTypingOff?.cancel();
+    final live = _live;
+    if (live != null) unawaited(_db.removeChannel(live));
     final c = _channel;
     if (c != null) unawaited(_db.removeChannel(c));
     super.dispose();
@@ -99,6 +210,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
+    if (!_foreground) _sendTyping(false);
+    unawaited(_announce());
     if (_foreground) {
       unawaited(pull());
       unawaited(flush());
@@ -196,6 +309,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   // ------------------------------------------------------------------ envoi
 
   Future<void> send(String text, {String? replyTo}) async {
+    _typingOff?.cancel();
+    _sendTyping(false);
     final s = await chatSendText(partner: partnerId, body: text, replyTo: replyTo);
     _upsert(s.message);
     _notify();

@@ -153,6 +153,7 @@ C'est la liste exacte affichée dans l'app :
 | Le nombre d'enveloppes échangées et leur rythme. Le serveur ne distingue pas un message d'un accusé de lecture ou d'une réaction, mais un rythme (message puis accusé quelques secondes après) peut se deviner | Acheminer |
 | La taille approximative des contenus chiffrés (§6.3) | Stockage |
 | Les jetons de notification | Réveiller l'app |
+| Quand l'un de vous a l'app ouverte (« en ligne ») et quand il écrit (« écrit… »), jamais ce qu'il écrit. Canal temps réel privé, réservé aux deux membres du couple par les règles d'accès. **Désactivable** dans « Notre espace » (on ne voit alors plus non plus ceux de l'autre) | Indicateurs de présence et d'écriture |
 | Les adresses IP, dans les journaux techniques de nos hébergeurs (Supabase, Cloudflare), selon leurs politiques | Fonctionnement du réseau ; nous n'ajoutons aucun journal applicatif contenant des IP |
 
 Jamais : contenu, noms de fichiers, légendes, dates du couple, surnoms, réponses aux questions, état du jardin, carnet d'adresses, numéro de téléphone.
