@@ -189,3 +189,49 @@ fn galerie_des_saisons_par_pages_et_par_type() {
     let next = malik.media_gallery(Some((first[1].sent_at, first[1].id.clone())), 10, None).unwrap();
     assert_eq!(next.len(), 3, "page suivante sans doublon");
 }
+
+#[test]
+fn supprimer_pour_nous_deux_et_pour_moi() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    // Une photo de Malik, reçue et téléchargée par Inès.
+    let (msg, up) = malik.create_media(&dir.path().join("m"), &[5u8; 4000], photo("oups")).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
+    let dl = dir.path().join("dl.part");
+    fs::copy(&up.path, &dl).unwrap();
+    ines.media_downloaded(&r.id, &dl, &dir.path().join("i")).unwrap();
+    let ines_file = dir.path().join("i").join(format!("{}.flm", r.id));
+    assert!(ines_file.exists());
+
+    // Inès ne peut pas supprimer pour les deux un message de Malik.
+    assert!(ines.delete_for_both(MALIK, &r.id).is_err());
+
+    // Malik supprime pour les deux : son fichier local disparaît, l'objet R2 à effacer est indiqué.
+    let (del, key) = malik.delete_for_both(INES, &msg.id).unwrap();
+    assert_eq!(key.as_deref(), Some(KEY));
+    assert!(!del.urgent, "une suppression ne réveille pas le téléphone");
+    assert!(!Path::new(&up.path).exists());
+    let gone = malik.message(&msg.id).unwrap().unwrap();
+    assert!(gone.deleted && gone.body.is_empty() && gone.media.is_none());
+
+    // Chez Inès : texte, photo et fichier chiffré local effacés, trace « supprimé ».
+    assert_eq!(ines.receive(MALIK, &del.envelope_id, &del.envelope).unwrap(), Received::Updated(vec![r.id.clone()]));
+    let m = ines.message(&r.id).unwrap().unwrap();
+    assert!(m.deleted && m.body.is_empty() && m.media.is_none());
+    assert!(!ines_file.exists(), "fichier local effacé");
+    assert!(ines.media_gallery(None, 10, None).unwrap().is_empty(), "plus dans les Saisons");
+    assert!(ines.open_media(&r.id).is_err());
+
+    // « Pour moi » : un message du partenaire, effacé seulement ici.
+    let (t, o) = malik.send_text(INES, "à garder chez Malik", None).unwrap();
+    ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap();
+    assert!(ines.delete_for_me(&t.id).unwrap());
+    assert!(ines.message(&t.id).unwrap().unwrap().deleted);
+    assert!(!malik.message(&t.id).unwrap().unwrap().deleted);
+    // Un envoi pas encore parti est annulé par « pour moi ».
+    let (t2, _) = malik.send_text(INES, "finalement non", None).unwrap();
+    let before = malik.outbox().unwrap().len();
+    malik.delete_for_me(&t2.id).unwrap();
+    assert_eq!(malik.outbox().unwrap().len(), before - 1);
+}

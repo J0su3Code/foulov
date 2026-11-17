@@ -265,11 +265,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 title: const Text('Répondre'),
                 onTap: () => Navigator.pop(context, 'reply'),
               ),
+              if (m.body.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.copy_rounded),
+                  title: const Text('Copier'),
+                  onTap: () => Navigator.pop(context, 'copy'),
+                ),
               ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: const Text('Copier'),
-                onTap: () => Navigator.pop(context, 'copy'),
+                leading: const Icon(Icons.delete_outline_rounded),
+                title: const Text('Supprimer pour moi'),
+                onTap: () => Navigator.pop(context, 'del-me'),
               ),
+              if (m.fromMe)
+                ListTile(
+                  leading: Icon(Icons.delete_forever_outlined, color: cs.error),
+                  title: Text('Supprimer pour nous deux', style: TextStyle(color: cs.error)),
+                  onTap: () => Navigator.pop(context, 'del-both'),
+                ),
             ],
           ),
         ),
@@ -282,6 +294,34 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message copié')));
     }
     if (choice.startsWith('r:')) await _s.react(m.id, choice.substring(2));
+    if (choice.startsWith('del-') && mounted) {
+      final both = choice == 'del-both';
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(both ? 'Supprimer pour vous deux ?' : 'Supprimer pour toi ?'),
+          content: Text(
+            both
+                ? 'Le message disparaît aussi du téléphone de ton amour (s\'il l\'a déjà vu, il a pu le lire). '
+                      'Le fichier chiffré est effacé du serveur.'
+                : 'Le message disparaît seulement de ce téléphone. Ton amour le garde.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Supprimer')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      HapticFeedback.mediumImpact();
+      try {
+        both ? await _s.deleteForBoth(m.id) : await _s.deleteForMe(m.id);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('La suppression n\'a pas abouti.')));
+        }
+      }
+    }
   }
 
   @override
@@ -689,6 +729,7 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final m = widget.m;
+    if (m.deleted) return _DeletedBubble(m: m, groupTop: widget.groupTop);
     final t = Theme.of(context);
     final cs = t.colorScheme;
     final night = t.brightness == Brightness.dark;
@@ -930,7 +971,11 @@ class _Quote extends StatelessWidget {
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg.withValues(alpha: .85)),
               ),
               Text(
-                q?.body ?? 'Message introuvable',
+                q == null
+                    ? 'Message introuvable'
+                    : (q.deleted
+                          ? 'Message supprimé'
+                          : (q.body.isNotEmpty ? q.body : (q.media?.kind == 2 ? '🎬 Vidéo' : '📷 Photo'))),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 13, color: fg.withValues(alpha: .75)),
@@ -1283,6 +1328,45 @@ class _PhotoState extends State<_Photo> {
                 ),
         );
       },
+    );
+  }
+}
+
+/// Trace d'un message supprimé : ni texte, ni fichier, ni réaction.
+class _DeletedBubble extends StatelessWidget {
+  const _DeletedBubble({required this.m, required this.groupTop});
+
+  final ChatMessage m;
+  final bool groupTop;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(top: groupTop ? 10 : 2),
+      child: Align(
+        alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: cs.outline),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.block_rounded, size: 15, color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(
+                m.fromMe ? 'Tu as supprimé ce message' : 'Message supprimé',
+                style: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(width: 8),
+              Text(_time(m.sentAt), style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

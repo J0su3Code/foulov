@@ -17,6 +17,8 @@ pub struct ChatMessage {
     pub my_reaction: Option<String>,
     pub their_reaction: Option<String>,
     pub media: Option<MediaInfo>,
+    /// Supprimé : seule la trace « Message supprimé » reste.
+    pub deleted: bool,
 }
 
 /// Photo ou vidéo jointe. `state` : 0 à envoyer, 1 sur ce téléphone, 2 à télécharger, 3 illisible.
@@ -50,6 +52,7 @@ impl From<core::ChatMessage> for ChatMessage {
                 thumb: x.thumb,
                 state: x.state,
             }),
+            deleted: m.deleted,
         }
     }
 }
@@ -323,4 +326,23 @@ pub fn chat_media_gallery(
     kind: Option<u8>,
 ) -> anyhow::Result<Vec<ChatMessage>> {
     with_device(|d| Ok(d.media_gallery(before_sent_at.zip(before_id), limit, kind)?.into_iter().map(Into::into).collect()))
+}
+
+/// « Supprimer pour moi » : sur ce téléphone seulement.
+pub fn chat_delete_for_me(id: String) -> anyhow::Result<bool> {
+    with_device(|d| Ok(d.delete_for_me(&id)?))
+}
+
+pub struct DeletedForBoth {
+    pub outgoing: Outgoing,
+    /// Photo ou vidéo déjà déposée : objet à effacer sur R2.
+    pub object_key: Option<String>,
+}
+
+/// « Supprimer pour nous deux » (ses propres messages seulement).
+pub fn chat_delete_for_both(partner: String, id: String) -> anyhow::Result<DeletedForBoth> {
+    with_device(|d| {
+        let (o, k) = d.delete_for_both(&partner, &id)?;
+        Ok(DeletedForBoth { outgoing: o.into(), object_key: k })
+    })
 }

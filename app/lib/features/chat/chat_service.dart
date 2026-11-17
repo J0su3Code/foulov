@@ -211,6 +211,34 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(flush());
   }
 
+  Future<void> deleteForMe(String id) async {
+    await chatDeleteForMe(id: id);
+    _cache.remove(id);
+    await _refresh([id]);
+    _notify();
+  }
+
+  /// Efface aussi chez le partenaire (ses propres messages seulement), et le fichier chiffré sur le serveur.
+  Future<void> deleteForBoth(String id) async {
+    final r = await chatDeleteForBoth(partner: partnerId, id: id);
+    _cache.remove(id);
+    await _refresh([id]);
+    _notify();
+    unawaited(flush());
+    final key = r.objectKey;
+    if (key != null) {
+      try {
+        final link = await _link({'action': 'delete', 'key': key});
+        final res = await _http.delete(Uri.parse(link['url'] as String)).timeout(const Duration(seconds: 30));
+        if (res.statusCode != 204 && res.statusCode != 200 && kDebugMode) {
+          debugPrint('[FOULOVE] effacement ${res.statusCode}');
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[FOULOVE] effacement : $e');
+      }
+    }
+  }
+
   /// Vide la boîte d'envoi, dans l'ordre. Une seule exécution à la fois.
   Future<void> flush() async {
     if (_flushing) {

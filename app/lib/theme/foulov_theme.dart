@@ -75,7 +75,7 @@ abstract final class FouLovTheme {
       scaffoldBackgroundColor: scheme.surface,
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(64, 52), // pleine largeur seulement dans une colonne étirée (pas dans les dialogues)
           shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
         ),

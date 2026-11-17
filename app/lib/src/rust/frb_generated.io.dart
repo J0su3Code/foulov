@@ -60,6 +60,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CreatedMedia dco_decode_created_media(dynamic raw);
 
   @protected
+  DeletedForBoth dco_decode_deleted_for_both(dynamic raw);
+
+  @protected
   EncryptedMedia dco_decode_encrypted_media(dynamic raw);
 
   @protected
@@ -192,6 +195,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CreatedMedia sse_decode_created_media(SseDeserializer deserializer);
 
   @protected
+  DeletedForBoth sse_decode_deleted_for_both(SseDeserializer deserializer);
+
+  @protected
   EncryptedMedia sse_decode_encrypted_media(SseDeserializer deserializer);
 
   @protected
@@ -210,16 +216,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ChatMessage> sse_decode_list_chat_message(SseDeserializer deserializer);
 
   @protected
-  List<OneTimePreKey> sse_decode_list_one_time_pre_key(SseDeserializer deserializer);
+  List<OneTimePreKey> sse_decode_list_one_time_pre_key(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<Outgoing> sse_decode_list_outgoing(SseDeserializer deserializer);
 
   @protected
-  List<PendingDownload> sse_decode_list_pending_download(SseDeserializer deserializer);
+  List<PendingDownload> sse_decode_list_pending_download(
+    SseDeserializer deserializer,
+  );
 
   @protected
-  List<PendingUpload> sse_decode_list_pending_upload(SseDeserializer deserializer);
+  List<PendingUpload> sse_decode_list_pending_upload(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -240,13 +252,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
-  ChatMessage? sse_decode_opt_box_autoadd_chat_message(SseDeserializer deserializer);
+  ChatMessage? sse_decode_opt_box_autoadd_chat_message(
+    SseDeserializer deserializer,
+  );
 
   @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
-  MediaInfo? sse_decode_opt_box_autoadd_media_info(SseDeserializer deserializer);
+  MediaInfo? sse_decode_opt_box_autoadd_media_info(
+    SseDeserializer deserializer,
+  );
 
   @protected
   Outgoing? sse_decode_opt_box_autoadd_outgoing(SseDeserializer deserializer);
@@ -288,7 +304,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
-  void sse_encode_AnyhowException(AnyhowException self, SseSerializer serializer);
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
@@ -297,19 +316,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
-  void sse_encode_box_autoadd_chat_message(ChatMessage self, SseSerializer serializer);
+  void sse_encode_box_autoadd_chat_message(
+    ChatMessage self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_envelope(Envelope self, SseSerializer serializer);
 
   @protected
-  void sse_encode_box_autoadd_i_64(PlatformInt64 self, SseSerializer serializer);
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_box_autoadd_key_bundle(KeyBundle self, SseSerializer serializer);
+  void sse_encode_box_autoadd_key_bundle(
+    KeyBundle self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_box_autoadd_media_info(MediaInfo self, SseSerializer serializer);
+  void sse_encode_box_autoadd_media_info(
+    MediaInfo self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_outgoing(Outgoing self, SseSerializer serializer);
@@ -327,7 +358,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_created_media(CreatedMedia self, SseSerializer serializer);
 
   @protected
-  void sse_encode_encrypted_media(EncryptedMedia self, SseSerializer serializer);
+  void sse_encode_deleted_for_both(
+    DeletedForBoth self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_encrypted_media(
+    EncryptedMedia self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_envelope(Envelope self, SseSerializer serializer);
@@ -342,49 +382,82 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_chat_message(List<ChatMessage> self, SseSerializer serializer);
+  void sse_encode_list_chat_message(
+    List<ChatMessage> self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_list_one_time_pre_key(List<OneTimePreKey> self, SseSerializer serializer);
+  void sse_encode_list_one_time_pre_key(
+    List<OneTimePreKey> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_outgoing(List<Outgoing> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_pending_download(List<PendingDownload> self, SseSerializer serializer);
+  void sse_encode_list_pending_download(
+    List<PendingDownload> self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_list_pending_upload(List<PendingUpload> self, SseSerializer serializer);
+  void sse_encode_list_pending_upload(
+    List<PendingUpload> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer);
+  void sse_encode_list_prim_u_8_strict(
+    Uint8List self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_list_sas_symbol(List<SasSymbol> self, SseSerializer serializer);
+  void sse_encode_list_sas_symbol(
+    List<SasSymbol> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_media_info(MediaInfo self, SseSerializer serializer);
 
   @protected
-  void sse_encode_one_time_pre_key(OneTimePreKey self, SseSerializer serializer);
+  void sse_encode_one_time_pre_key(
+    OneTimePreKey self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
-  void sse_encode_opt_box_autoadd_chat_message(ChatMessage? self, SseSerializer serializer);
+  void sse_encode_opt_box_autoadd_chat_message(
+    ChatMessage? self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_opt_box_autoadd_i_64(PlatformInt64? self, SseSerializer serializer);
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_opt_box_autoadd_media_info(MediaInfo? self, SseSerializer serializer);
+  void sse_encode_opt_box_autoadd_media_info(
+    MediaInfo? self,
+    SseSerializer serializer,
+  );
 
   @protected
-  void sse_encode_opt_box_autoadd_outgoing(Outgoing? self, SseSerializer serializer);
+  void sse_encode_opt_box_autoadd_outgoing(
+    Outgoing? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer);
@@ -393,7 +466,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_outgoing(Outgoing self, SseSerializer serializer);
 
   @protected
-  void sse_encode_pending_download(PendingDownload self, SseSerializer serializer);
+  void sse_encode_pending_download(
+    PendingDownload self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_pending_upload(PendingUpload self, SseSerializer serializer);
@@ -426,11 +502,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 // Section: wire_class
 
 class RustLibWire implements BaseWire {
-  factory RustLibWire.fromExternalLibrary(ExternalLibrary lib) => RustLibWire(lib.ffiDynamicLibrary);
+  factory RustLibWire.fromExternalLibrary(ExternalLibrary lib) =>
+      RustLibWire(lib.ffiDynamicLibrary);
 
   /// Holds the symbol lookup function.
-  final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) _lookup;
+  final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
+  _lookup;
 
   /// The symbols are looked up in [dynamicLibrary].
-  RustLibWire(ffi.DynamicLibrary dynamicLibrary) : _lookup = dynamicLibrary.lookup;
+  RustLibWire(ffi.DynamicLibrary dynamicLibrary)
+    : _lookup = dynamicLibrary.lookup;
 }
