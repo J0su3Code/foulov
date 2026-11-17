@@ -16,8 +16,10 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--theme', default='day', choices=['day', 'night'])
 ap.add_argument('--out', default='render/day')
 ap.add_argument('--frames', default='')            # liste "20,100" pour des images fixes ; vide = animation complète
+ap.add_argument('--range', default='')             # "112-225" : ne rend que ces images de l'animation (même numérotation)
 ap.add_argument('--res', default='540x1200')
 ap.add_argument('--samples', type=int, default=40)
+ap.add_argument('--tbounces', type=int, default=64)   # traversées transparentes max (8 = ancien réglage, pour comparaison)
 ap.add_argument('--fps', type=int, default=30)
 A = ap.parse_args(argv)
 NIGHT = A.theme == 'night'
@@ -149,6 +151,9 @@ sc.cycles.use_denoising = True
 try: sc.cycles.denoiser = 'OPENIMAGEDENOISE'
 except Exception: pass
 sc.cycles.max_bounces = 8; sc.cycles.transmission_bounces = 8
+# Chaque contour de pétale ou de feuille découpé par l'alpha compte comme une traversée transparente. Dans le bouton,
+# un rayon en franchit plus de 8 (valeur par défaut) : au-delà, Cycles renvoie du noir → rectangle sombre derrière la fleur.
+sc.cycles.transparent_max_bounces = A.tbounces
 rx, ry = map(int, A.res.split('x'))
 sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = rx, ry, 100
 sc.render.fps = FPS
@@ -506,6 +511,9 @@ if A.frames:
         sc.frame_set(F(fr)); sc.render.filepath = os.path.join(out, f'still_{fr:04d}.png')
         bpy.ops.render.render(write_still=True)
 else:
+    if A.range:
+        a, b = (F(int(x)) for x in A.range.split('-'))
+        sc.frame_start, sc.frame_end = a, b
     sc.render.filepath = os.path.join(out, '')
     bpy.ops.render.render(animation=True)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, f'intro_{A.theme}.blend'))
