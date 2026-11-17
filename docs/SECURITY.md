@@ -93,13 +93,16 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
 
 ## 6. Photos, vidéos et fichiers
 
+0. **Métadonnées retirées avant tout** : une photo est réencodée en JPEG (2048 px au plus) sur le téléphone, ce qui supprime ses données EXIF (position GPS, modèle du téléphone, date de prise de vue). Elles ne quittent jamais le téléphone.
 1. Pour chaque fichier, le téléphone génère une **clé aléatoire de 256 bits**.
 2. Le fichier est chiffré en **blocs de 64 Kio** avec AES-256-GCM. Chaque bloc a un nonce dérivé de son numéro et un drapeau « dernier bloc » : on ne peut ni réordonner, ni tronquer, ni mélanger des blocs sans que ça se détecte.
 3. **Taille masquée** : le fichier chiffré est complété jusqu'au palier suivant, environ +12 % au maximum, pour ne pas révéler la taille exacte.
-4. Envoi vers le bucket privé R2 `foulovmedia-private`, via une **URL pré-signée** courte (5 min), délivrée par une fonction serveur après vérification que l'utilisateur appartient au couple. Le nom de l'objet est un identifiant aléatoire.
+4. Envoi vers le bucket privé R2 `foulovmedia-private`, via une **URL pré-signée** courte (5 min), délivrée par la fonction serveur `media` après vérification que l'utilisateur appartient au couple. Le nom de l'objet est aléatoire (`c/<couple>/<128 bits>`), et **la taille exacte du fichier chiffré fait partie de la signature** (SigV4 écrite avec WebCrypto, `supabase/functions/media/presign.ts`) : un lien ne permet de déposer qu'un objet de cette taille, sous ce nom. Chacun n'obtient de lien de lecture que pour les objets de son couple.
 5. La clé du fichier, son empreinte SHA-256 et ses métadonnées (type, dimensions, légende) **voyagent à l'intérieur du message chiffré**, jamais en clair.
 6. Les miniatures sont des fichiers à part, chiffrés de la même façon.
 7. Le bucket public `foulovmedia` n'est pas utilisé pour les contenus des couples.
+8. **Réception** : la miniature (dans le message chiffré) s'affiche aussitôt ; le fichier est téléchargé, sa taille et son empreinte SHA-256 vérifiées, sinon il est effacé et marqué illisible.
+9. **Sur le téléphone, les fichiers restent chiffrés** ; leur clé ne quitte jamais la base SQLCipher. Une photo n'est déchiffrée qu'**en mémoire**, pour l'affichage : rien n'est jamais écrit en clair, et les photos n'apparaissent pas dans la galerie du téléphone.
 
 ## 7. Stockage local, verrouillage et récupération
 

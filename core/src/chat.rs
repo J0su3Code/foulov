@@ -33,7 +33,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6")]
         pub body: Option<Body>,
     }
 
@@ -49,6 +49,46 @@ pub mod pb {
         Profile(Profile),
         #[prost(message, tag = "5")]
         Couple(Couple),
+        #[prost(message, tag = "6")]
+        Media(Media),
+    }
+
+    /// Photo ou vidéo. Le fichier, chiffré sur le téléphone, est sur R2 sous un nom aléatoire ; sa clé, son
+    /// empreinte, ses dimensions et une miniature voyagent ici, dans le message chiffré.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Media {
+        #[prost(bytes = "vec", tag = "1")]
+        pub id: Vec<u8>,
+        #[prost(uint64, tag = "2")]
+        pub sent_at: u64,
+        #[prost(string, tag = "3")]
+        pub caption: String,
+        #[prost(bytes = "vec", optional, tag = "4")]
+        pub reply_to: Option<Vec<u8>>,
+        /// 1 = photo, 2 = vidéo.
+        #[prost(uint32, tag = "5")]
+        pub kind: u32,
+        #[prost(string, tag = "6")]
+        pub object_key: String,
+        #[prost(bytes = "vec", tag = "7")]
+        pub file_key: Vec<u8>,
+        /// SHA-256 du fichier chiffré.
+        #[prost(bytes = "vec", tag = "8")]
+        pub sha256: Vec<u8>,
+        /// Taille du fichier chiffré.
+        #[prost(uint64, tag = "9")]
+        pub size: u64,
+        #[prost(string, tag = "10")]
+        pub mime: String,
+        #[prost(uint32, tag = "11")]
+        pub width: u32,
+        #[prost(uint32, tag = "12")]
+        pub height: u32,
+        #[prost(uint32, tag = "13")]
+        pub duration_ms: u32,
+        /// Miniature JPEG, affichée aussitôt pendant le téléchargement.
+        #[prost(bytes = "vec", tag = "14")]
+        pub thumb: Vec<u8>,
     }
 
     /// Le prénom que l'expéditeur se donne (affiché chez le partenaire, sauf s'il lui a choisi un surnom).
@@ -108,6 +148,20 @@ pub const STATUS_SENT: u8 = 1;
 pub const STATUS_DELIVERED: u8 = 2;
 pub const STATUS_READ: u8 = 3;
 
+/// Photo ou vidéo jointe à un message.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MediaInfo {
+    /// 1 = photo, 2 = vidéo.
+    pub kind: u8,
+    pub mime: String,
+    pub width: u32,
+    pub height: u32,
+    pub duration_ms: u32,
+    pub thumb: Vec<u8>,
+    /// 0 = à envoyer, 1 = sur ce téléphone, 2 = à télécharger, 3 = illisible (altéré).
+    pub state: u8,
+}
+
 /// Un message de l'historique local.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChatMessage {
@@ -120,6 +174,7 @@ pub struct ChatMessage {
     pub status: u8,
     pub my_reaction: Option<String>,
     pub their_reaction: Option<String>,
+    pub media: Option<MediaInfo>,
 }
 
 /// Enveloppe chiffrée à déposer sur le serveur, avec son identifiant (format UUID, choisi ici).
@@ -180,27 +235,27 @@ pub enum Received {
     Rejected,
 }
 
-type R<T> = Result<T, DeviceError>;
+pub(crate) type R<T> = Result<T, DeviceError>;
 
-fn db(e: rusqlite::Error) -> DeviceError {
+pub(crate) fn db(e: rusqlite::Error) -> DeviceError {
     DeviceError::Store(StoreError::from(e))
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
-fn random16() -> [u8; 16] {
+pub(crate) fn random16() -> [u8; 16] {
     let mut b = [0u8; 16];
     OsRng.try_fill_bytes(&mut b).expect("générateur du système");
     b
 }
 
-fn hex(b: &[u8]) -> String {
+pub(crate) fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
-fn unhex(s: &str) -> Option<Vec<u8>> {
+pub(crate) fn unhex(s: &str) -> Option<Vec<u8>> {
     if s.len() % 2 != 0 {
         return None;
     }
@@ -208,7 +263,7 @@ fn unhex(s: &str) -> Option<Vec<u8>> {
 }
 
 /// Identifiant de message reçu : exactement 16 octets.
-fn id_from_wire(b: &[u8]) -> Option<String> {
+pub(crate) fn id_from_wire(b: &[u8]) -> Option<String> {
     (b.len() == 16).then(|| hex(b))
 }
 
@@ -241,7 +296,20 @@ fn encode(body: pb::Body) -> Vec<u8> {
     pad(v)
 }
 
-fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMessage> {
+pub(crate) fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMessage> {
+    let kind: Option<i64> = r.get(8)?;
+    let media = match kind {
+        Some(k) => Some(MediaInfo {
+            kind: k as u8,
+            mime: r.get(9)?,
+            width: r.get::<_, i64>(10)? as u32,
+            height: r.get::<_, i64>(11)? as u32,
+            duration_ms: r.get::<_, i64>(12)? as u32,
+            thumb: r.get(13)?,
+            state: r.get::<_, i64>(14)? as u8,
+        }),
+        None => None,
+    };
     Ok(ChatMessage {
         id: r.get(0)?,
         from_me: r.get::<_, i64>(1)? == 1,
@@ -251,6 +319,7 @@ fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMessage> {
         status: r.get::<_, i64>(5)? as u8,
         my_reaction: r.get(6)?,
         their_reaction: r.get(7)?,
+        media,
     })
 }
 
@@ -277,12 +346,15 @@ fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64) -> R<()> 
     Ok(())
 }
 
-const COLS: &str = "id, from_me, body, reply_to, sent_at, status, my_reaction, their_reaction";
+/// Message et, s'il y en a une, sa photo ou vidéo.
+pub(crate) const SELECT: &str = "SELECT m.id, m.from_me, m.body, m.reply_to, m.sent_at, m.status, m.my_reaction, \
+    m.their_reaction, md.kind, md.mime, md.width, md.height, md.duration_ms, md.thumb, md.state \
+    FROM messages m LEFT JOIN media md ON md.message_id = m.id";
 
 impl Device {
-    fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
+    pub(crate) fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
         // Accusés et profil : rien qui mérite de réveiller le téléphone du partenaire.
-        let urgent = matches!(body, pb::Body::Text(_) | pb::Body::Reaction(_));
+        let urgent = matches!(body, pb::Body::Text(_) | pb::Body::Reaction(_) | pb::Body::Media(_));
         let envelope = self.encrypt(partner, &encode(body))?;
         let envelope_id = uuid_v4();
         self.store
@@ -325,6 +397,7 @@ impl Device {
             status: STATUS_PENDING,
             my_reaction: None,
             their_reaction: None,
+            media: None,
         };
         let text = pb::Text { id: id.to_vec(), sent_at: sent_at as u64, body: msg.body.clone(), reply_to: reply_wire };
         let tx = self.store.conn.clone();
@@ -503,7 +576,7 @@ impl Device {
                     return Ok(Received::Nothing);
                 }
                 let m = c
-                    .query_row(&format!("SELECT {COLS} FROM messages WHERE id = ?1"), params![id], row_to_message)
+                    .query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message)
                     .map_err(db)?;
                 Ok(Received::Message(m))
             }
@@ -539,6 +612,7 @@ impl Device {
                     .map_err(db)?;
                 Ok(Received::Updated(if n > 0 { vec![id] } else { vec![] }))
             }
+            pb::Body::Media(m) => crate::chat_media::apply_media(&c, m),
             pb::Body::Profile(p) => {
                 let Some(name) = clean_name(&p.name) else { return Err(DeviceError::BadMessage) };
                 let newer = kv_newer(&c, "partner_name", p.updated_at)?;
@@ -634,7 +708,7 @@ impl Device {
         let (sa, id) = before.unwrap_or((i64::MAX, String::new()));
         let mut st = c
             .prepare(&format!(
-                "SELECT {COLS} FROM messages WHERE (sent_at, id) < (?1, ?2) ORDER BY sent_at DESC, id DESC LIMIT ?3"
+                "{SELECT} WHERE (m.sent_at, m.id) < (?1, ?2) ORDER BY m.sent_at DESC, m.id DESC LIMIT ?3"
             ))
             .map_err(db)?;
         let rows = st.query_map(params![sa, id, limit.min(500)], row_to_message).map_err(db)?;
@@ -645,7 +719,7 @@ impl Device {
         self.store
             .conn
             .lock()
-            .query_row(&format!("SELECT {COLS} FROM messages WHERE id = ?1"), params![id], row_to_message)
+            .query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message)
             .optional()
             .map_err(db)
     }

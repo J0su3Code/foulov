@@ -1,0 +1,140 @@
+//! Photos dans la conversation : deux téléphones, un « R2 » simulé (un dossier), et les cas difficiles :
+//! fichier altéré sur le serveur, app arrêtée avant l'envoi, nom d'objet suspect.
+
+use std::fs;
+use std::path::Path;
+
+use foulov_core::chat::{Received, STATUS_PENDING, STATUS_SENT};
+use foulov_core::chat_media::{KIND_PHOTO, NewMedia};
+use foulov_core::device::{Device, LocalBundle, PartnerBundle};
+
+const INES: &str = "ines";
+const MALIK: &str = "malik";
+const KEY: &str = "c/0f2c1a6e-1111-4222-8333-444455556666/0123456789abcdef0123456789abcdef";
+
+fn view(b: &LocalBundle) -> PartnerBundle {
+    PartnerBundle {
+        registration_id: b.registration_id,
+        device_id: b.device_id,
+        identity_key: b.identity_key.clone(),
+        signed_prekey_id: b.signed_prekey_id,
+        signed_prekey: b.signed_prekey.clone(),
+        signed_prekey_sig: b.signed_prekey_sig.clone(),
+        kyber_prekey_id: b.kyber_prekey_id,
+        kyber_prekey: b.kyber_prekey.clone(),
+        kyber_prekey_sig: b.kyber_prekey_sig.clone(),
+        one_time_prekey: b.one_time_prekeys.first().cloned(),
+    }
+}
+
+fn couple(dir: &Path) -> (Device, Device) {
+    let mut ines = Device::open(&dir.join("ines.db"), &[1; 32]).unwrap();
+    let mut malik = Device::open(&dir.join("malik.db"), &[2; 32]).unwrap();
+    let ib = ines.generate_bundle(5).unwrap();
+    malik.generate_bundle(5).unwrap();
+    malik.start_session(INES, &view(&ib)).unwrap();
+    (ines, malik)
+}
+
+fn photo(caption: &str) -> NewMedia<'_> {
+    NewMedia {
+        kind: KIND_PHOTO,
+        mime: "image/jpeg",
+        width: 1600,
+        height: 1200,
+        duration_ms: 0,
+        thumb: b"miniature-jpeg",
+        caption,
+        reply_to: None,
+    }
+}
+
+#[test]
+fn photo_envoyee_recue_verifiee_et_ouverte() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    let plain: Vec<u8> = (0..300_000u32).map(|i| (i * 7 % 251) as u8).collect();
+
+    // Malik : la photo est chiffrée et apparaît tout de suite, « en attente ».
+    let (msg, up) = malik.create_media(&dir.path().join("m-media"), &plain, photo("  Les tulipes 🌷 ")).unwrap();
+    assert_eq!(msg.body, "Les tulipes 🌷");
+    assert_eq!(msg.status, STATUS_PENDING);
+    assert_eq!(msg.media.as_ref().unwrap().state, 0);
+    let on_disk = fs::read(&up.path).unwrap();
+    assert_eq!(on_disk.len() as u64, up.size);
+    assert!(!on_disk.windows(64).any(|w| w == &plain[1000..1064]), "jamais en clair sur le téléphone");
+    assert_eq!(malik.open_media(&msg.id).unwrap(), plain, "Malik revoit sa photo avant même l'envoi");
+
+    // Dépôt sur « R2 », puis message chiffré au partenaire.
+    let r2 = dir.path().join("r2.bin");
+    fs::copy(&up.path, &r2).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    assert!(o.urgent, "une photo mérite une notification");
+    malik.outbox_sent(&o.envelope_id).unwrap();
+    assert_eq!(malik.message(&msg.id).unwrap().unwrap().status, STATUS_SENT);
+    assert!(malik.pending_uploads().unwrap().is_empty());
+
+    // Inès : la miniature tout de suite, puis le téléchargement vérifié et l'ouverture en mémoire.
+    let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
+    let m = r.media.unwrap();
+    assert_eq!((m.state, m.width, m.thumb.as_slice()), (2, 1600, b"miniature-jpeg".as_slice()));
+    let todo = ines.pending_downloads().unwrap();
+    assert_eq!(todo.len(), 1);
+    assert_eq!(todo[0].object_key, KEY);
+    let dl = dir.path().join("dl.part");
+    fs::copy(&r2, &dl).unwrap();
+    assert!(ines.media_downloaded(&r.id, &dl, &dir.path().join("i-media")).unwrap());
+    assert!(ines.pending_downloads().unwrap().is_empty());
+    assert_eq!(ines.open_media(&r.id).unwrap(), plain);
+    assert_eq!(ines.message(&r.id).unwrap().unwrap().media.unwrap().state, 1);
+}
+
+#[test]
+fn un_fichier_altere_sur_le_serveur_est_refuse() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    let (msg, up) = malik.create_media(&dir.path().join("m"), &[42u8; 5000], photo("")).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
+    let mut bad = fs::read(&up.path).unwrap();
+    bad[100] ^= 1;
+    let dl = dir.path().join("dl.part");
+    fs::write(&dl, &bad).unwrap();
+    assert!(!ines.media_downloaded(&r.id, &dl, &dir.path().join("i")).unwrap());
+    assert!(!dl.exists(), "fichier suspect effacé");
+    assert_eq!(ines.message(&r.id).unwrap().unwrap().media.unwrap().state, 3, "marqué illisible");
+    assert!(ines.open_media(&r.id).is_err());
+}
+
+#[test]
+fn app_arretee_avant_l_envoi_puis_reprise() {
+    let dir = tempfile::tempdir().unwrap();
+    let (_, mut malik) = couple(dir.path());
+    let (msg, up) = malik.create_media(&dir.path().join("m"), &[7u8; 2000], photo("métro")).unwrap();
+    drop(malik);
+    let mut malik = Device::open(&dir.path().join("malik.db"), &[2; 32]).unwrap();
+    assert_eq!(malik.pending_uploads().unwrap(), vec![up.clone()]);
+    malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    assert!(malik.pending_uploads().unwrap().is_empty());
+    assert!(malik.media_uploaded(INES, &msg.id, KEY).is_err(), "jamais envoyé deux fois");
+}
+
+#[test]
+fn contenus_suspects_refuses() {
+    let dir = tempfile::tempdir().unwrap();
+    let (_, mut malik) = couple(dir.path());
+    let m = dir.path().join("m");
+    assert!(malik.create_media(&m, &[], photo("")).is_err(), "fichier vide");
+    let mut p = photo("");
+    p.mime = "application/x-sh";
+    assert!(malik.create_media(&m, &[1], p).is_err(), "type non autorisé");
+    let mut p = photo("");
+    p.mime = "video/mp4";
+    assert!(malik.create_media(&m, &[1], p).is_err(), "photo déclarée en vidéo");
+    let big = vec![0u8; 70 * 1024];
+    let mut p = photo("");
+    p.thumb = &big;
+    assert!(malik.create_media(&m, &[1], p).is_err(), "miniature trop lourde");
+    let (msg, _) = malik.create_media(&m, &[1, 2, 3], photo("")).unwrap();
+    assert!(malik.media_uploaded(INES, &msg.id, "c/../../secret").is_err(), "nom d'objet suspect");
+}

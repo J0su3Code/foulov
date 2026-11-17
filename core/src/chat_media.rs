@@ -1,0 +1,326 @@
+//! Photos et vidéos dans la conversation (`docs/SECURITY.md` §6).
+//!
+//! Envoi :
+//! 1. `create_media` chiffre le fichier (clé aléatoire, STREAM AES-256-GCM, Padmé), garde le chiffré sur ce
+//!    téléphone et ajoute le message à l'historique, « en attente ».
+//! 2. L'app dépose le chiffré sur R2 avec un lien temporaire (taille signée), puis appelle `media_uploaded` :
+//!    le message chiffré (clé du fichier, empreinte, miniature, dimensions) part alors vers le partenaire.
+//!    Si l'app s'arrête entre les deux, `pending_uploads` permet de reprendre.
+//!
+//! Réception : la miniature s'affiche aussitôt ; l'app télécharge le chiffré, `media_downloaded` vérifie son
+//! empreinte SHA-256, et `open_media` le déchiffre **en mémoire** pour l'affichage. Sur le téléphone, le fichier
+//! reste chiffré ; sa clé ne quitte jamais la base SQLCipher.
+
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use rusqlite::{OptionalExtension, params};
+
+use crate::chat::{ChatMessage, Outgoing, R, Received, SELECT, db, hex, id_from_wire, now_ms, pb, random16, row_to_message, unhex};
+use crate::device::{Device, DeviceError};
+use crate::media;
+
+pub const KIND_PHOTO: u8 = 1;
+pub const KIND_VIDEO: u8 = 2;
+/// Plafond du fichier chiffré (le serveur applique le même).
+pub const MAX_MEDIA_BYTES: u64 = 220 * 1024 * 1024;
+/// Plafond de la miniature, qui voyage dans le message chiffré.
+pub const MAX_THUMB_BYTES: usize = 64 * 1024;
+const MIMES: &[&str] = &["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4", "video/quicktime"];
+
+/// Fichier à déposer sur R2.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PendingUpload {
+    pub message_id: String,
+    pub path: String,
+    pub size: u64,
+}
+
+/// Fichier à télécharger depuis R2.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PendingDownload {
+    pub message_id: String,
+    pub object_key: String,
+    pub size: u64,
+}
+
+/// Description d'une photo ou vidéo à envoyer.
+pub struct NewMedia<'a> {
+    pub kind: u8,
+    pub mime: &'a str,
+    pub width: u32,
+    pub height: u32,
+    pub duration_ms: u32,
+    pub thumb: &'a [u8],
+    pub caption: &'a str,
+    pub reply_to: Option<&'a str>,
+}
+
+fn invalid(what: &str) -> DeviceError {
+    DeviceError::Protocol(format!("média invalide : {what}"))
+}
+
+/// Nom d'objet attribué par le serveur : « c/<couple>/<32 hex> ».
+fn valid_object_key(k: &str) -> bool {
+    let parts: Vec<&str> = k.split('/').collect();
+    parts.len() == 3
+        && parts[0] == "c"
+        && parts[1].len() == 36
+        && parts[1].chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+        && parts[2].len() == 32
+        && parts[2].chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+}
+
+fn check_meta(kind: u8, mime: &str, thumb: &[u8], caption: &str, w: u32, h: u32) -> bool {
+    (kind == KIND_PHOTO || kind == KIND_VIDEO)
+        && MIMES.contains(&mime)
+        && (mime.starts_with("image/") == (kind == KIND_PHOTO))
+        && thumb.len() <= MAX_THUMB_BYTES
+        && caption.len() <= crate::chat::MAX_TEXT_BYTES
+        && w <= 20_000
+        && h <= 20_000
+}
+
+/// Écriture sûre : fichier temporaire puis renommage (jamais de fichier à moitié écrit sous le nom final).
+fn write_atomic(path: &Path, data: &[u8]) -> std::io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, data)?;
+    fs::rename(&tmp, path)
+}
+
+fn io(e: std::io::Error) -> DeviceError {
+    DeviceError::Protocol(format!("fichier : {e}"))
+}
+
+/// Applique un message « photo ou vidéo » reçu (appelé dans la transaction de `receive`).
+pub(crate) fn apply_media(c: &rusqlite::Connection, m: pb::Media) -> R<Received> {
+    let id = id_from_wire(&m.id).ok_or(DeviceError::BadMessage)?;
+    let kind = u8::try_from(m.kind).map_err(|_| DeviceError::BadMessage)?;
+    let caption = m.caption.trim().to_owned();
+    if !check_meta(kind, &m.mime, &m.thumb, &caption, m.width, m.height)
+        || !valid_object_key(&m.object_key)
+        || m.file_key.len() != 32
+        || m.sha256.len() != 32
+        || m.size == 0
+        || m.size > MAX_MEDIA_BYTES
+    {
+        return Err(DeviceError::BadMessage);
+    }
+    let now = now_ms();
+    let sent_at = i64::try_from(m.sent_at).ok().filter(|s| (now - 30 * 86_400_000..now + 600_000).contains(s)).unwrap_or(now);
+    let reply_to = m.reply_to.as_deref().and_then(id_from_wire);
+    let n = c
+        .execute(
+            "INSERT OR IGNORE INTO messages (id, from_me, body, reply_to, sent_at, received_at, status) VALUES (?1, 0, ?2, ?3, ?4, ?5, 0)",
+            params![id, caption, reply_to, sent_at, now],
+        )
+        .map_err(db)?;
+    if n == 0 {
+        return Ok(Received::Nothing);
+    }
+    c.execute(
+        "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, 2)",
+        params![id, kind, m.object_key, m.file_key, m.sha256, m.size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb],
+    )
+    .map_err(db)?;
+    let msg = c.query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message).map_err(db)?;
+    Ok(Received::Message(msg))
+}
+
+impl Device {
+    /// Chiffre la photo ou vidéo, garde le chiffré dans `dir` et ajoute le message (« en attente »).
+    /// Renvoie le message et le fichier à déposer.
+    pub fn create_media(&mut self, dir: &Path, plain: &[u8], m: NewMedia<'_>) -> R<(ChatMessage, PendingUpload)> {
+        let caption = m.caption.trim();
+        if plain.is_empty() || !check_meta(m.kind, m.mime, m.thumb, caption, m.width, m.height) {
+            return Err(invalid("type, taille ou légende"));
+        }
+        if media::ciphertext_len(plain.len() as u64) > MAX_MEDIA_BYTES {
+            return Err(invalid("fichier trop volumineux"));
+        }
+        let reply = match m.reply_to {
+            Some(r) => Some(unhex(r).filter(|b| b.len() == 16).map(|_| r.to_owned()).ok_or(DeviceError::BadMessage)?),
+            None => None,
+        };
+        let enc = media::encrypt(plain).map_err(|e| invalid(&e.to_string()))?;
+        let id = hex(&random16());
+        fs::create_dir_all(dir).map_err(io)?;
+        let path: PathBuf = dir.join(format!("{id}.flm"));
+        write_atomic(&path, &enc.ciphertext).map_err(io)?;
+        let size = enc.ciphertext.len() as u64;
+        let path_s = path.to_string_lossy().into_owned();
+
+        let last: Option<i64> = self
+            .store
+            .conn
+            .lock()
+            .query_row("SELECT max(sent_at) FROM messages WHERE from_me = 1", [], |r| r.get(0))
+            .map_err(db)?;
+        let sent_at = now_ms().max(last.map_or(0, |l| l + 1));
+        let tx = self.store.conn.clone();
+        let res = tx.atomically(|| {
+            let c = self.store.conn.lock();
+            c.execute(
+                "INSERT INTO messages (id, from_me, body, reply_to, sent_at, received_at, status) VALUES (?1, 1, ?2, ?3, ?4, ?4, 0)",
+                params![id, caption, reply, sent_at],
+            )
+            .map_err(db)?;
+            c.execute(
+                "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state)
+                 VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 0)",
+                params![id, m.kind, enc.key.to_vec(), enc.sha256.to_vec(), size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb, path_s],
+            )
+            .map_err(db)?;
+            c.query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message).map_err(db)
+        });
+        match res {
+            Ok(msg) => Ok((msg, PendingUpload { message_id: id, path: path_s, size })),
+            Err(e) => {
+                let _ = fs::remove_file(&path);
+                Err(e)
+            }
+        }
+    }
+
+    /// Le chiffré est sur R2 sous `object_key` : envoie le message chiffré au partenaire.
+    pub fn media_uploaded(&mut self, partner: &str, message_id: &str, object_key: &str) -> R<Outgoing> {
+        if !valid_object_key(object_key) {
+            return Err(invalid("nom d'objet"));
+        }
+        let tx = self.store.conn.clone();
+        tx.atomically(|| {
+            let row = {
+                let c = self.store.conn.lock();
+                let n = c
+                    .execute(
+                        "UPDATE media SET object_key = ?2, state = 1 WHERE message_id = ?1 AND state = 0",
+                        params![message_id, object_key],
+                    )
+                    .map_err(db)?;
+                if n == 0 {
+                    return Err(invalid("rien à envoyer pour ce message"));
+                }
+                c.query_row(
+                    "SELECT m.sent_at, m.body, m.reply_to, md.kind, md.file_key, md.sha256, md.size, md.mime, md.width,
+                            md.height, md.duration_ms, md.thumb
+                     FROM messages m JOIN media md ON md.message_id = m.id WHERE m.id = ?1",
+                    params![message_id],
+                    |r| {
+                        Ok(pb::Media {
+                            id: unhex(message_id).unwrap_or_default(),
+                            sent_at: r.get::<_, i64>(0)? as u64,
+                            caption: r.get(1)?,
+                            reply_to: r.get::<_, Option<String>>(2)?.and_then(|s| unhex(&s)),
+                            kind: r.get::<_, i64>(3)? as u32,
+                            object_key: object_key.to_owned(),
+                            file_key: r.get(4)?,
+                            sha256: r.get(5)?,
+                            size: r.get::<_, i64>(6)? as u64,
+                            mime: r.get(7)?,
+                            width: r.get::<_, i64>(8)? as u32,
+                            height: r.get::<_, i64>(9)? as u32,
+                            duration_ms: r.get::<_, i64>(10)? as u32,
+                            thumb: r.get(11)?,
+                        })
+                    },
+                )
+                .map_err(db)?
+            };
+            self.enqueue(partner, pb::Body::Media(row), Some(message_id))
+        })
+    }
+
+    /// Photos et vidéos créées mais pas encore déposées (l'app s'est arrêtée, coupure réseau).
+    pub fn pending_uploads(&self) -> R<Vec<PendingUpload>> {
+        let c = self.store.conn.lock();
+        let mut st = c.prepare("SELECT message_id, path, size FROM media WHERE state = 0 AND path IS NOT NULL").map_err(db)?;
+        let rows = st
+            .query_map([], |r| Ok(PendingUpload { message_id: r.get(0)?, path: r.get(1)?, size: r.get::<_, i64>(2)? as u64 }))
+            .map_err(db)?;
+        rows.collect::<Result<_, _>>().map_err(db)
+    }
+
+    /// Photos et vidéos reçues à télécharger.
+    pub fn pending_downloads(&self) -> R<Vec<PendingDownload>> {
+        let c = self.store.conn.lock();
+        let mut st = c.prepare("SELECT message_id, object_key, size FROM media WHERE state = 2 ORDER BY rowid DESC").map_err(db)?;
+        let rows = st
+            .query_map([], |r| {
+                Ok(PendingDownload { message_id: r.get(0)?, object_key: r.get(1)?, size: r.get::<_, i64>(2)? as u64 })
+            })
+            .map_err(db)?;
+        rows.collect::<Result<_, _>>().map_err(db)
+    }
+
+    /// Le chiffré a été téléchargé dans `downloaded` : vérifie sa taille et son empreinte, puis le range dans `dir`.
+    /// Renvoie faux (et efface le fichier) si le contenu n'est pas exactement celui annoncé par le partenaire.
+    pub fn media_downloaded(&mut self, message_id: &str, downloaded: &Path, dir: &Path) -> R<bool> {
+        let row: Option<(i64, Vec<u8>)> = self
+            .store
+            .conn
+            .lock()
+            .query_row("SELECT size, sha256 FROM media WHERE message_id = ?1 AND state = 2", params![message_id], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .optional()
+            .map_err(db)?;
+        let Some((size, sha)) = row else { return Ok(false) };
+        let data = fs::read(downloaded).map_err(io)?;
+        let expected: [u8; 32] = sha.try_into().map_err(|_| DeviceError::BadMessage)?;
+        if data.len() as i64 != size || !media::verify_sha256(&data, &expected) {
+            let _ = fs::remove_file(downloaded);
+            // Altéré ou substitué : on ne réessaie pas indéfiniment, la photo est marquée illisible.
+            self.store
+                .conn
+                .lock()
+                .execute("UPDATE media SET state = 3 WHERE message_id = ?1", params![message_id])
+                .map_err(db)?;
+            return Ok(false);
+        }
+        fs::create_dir_all(dir).map_err(io)?;
+        let path = dir.join(format!("{message_id}.flm"));
+        fs::rename(downloaded, &path).or_else(|_| write_atomic(&path, &data)).map_err(io)?;
+        self.store
+            .conn
+            .lock()
+            .execute(
+                "UPDATE media SET path = ?2, state = 1 WHERE message_id = ?1",
+                params![message_id, path.to_string_lossy().into_owned()],
+            )
+            .map_err(db)?;
+        Ok(true)
+    }
+
+    /// Déchiffre la photo ou vidéo en mémoire, pour l'affichage. Rien n'est écrit en clair.
+    pub fn open_media(&self, message_id: &str) -> R<Vec<u8>> {
+        let row: Option<(Option<String>, Vec<u8>)> = self
+            .store
+            .conn
+            .lock()
+            .query_row("SELECT path, file_key FROM media WHERE message_id = ?1 AND state IN (0, 1)", params![message_id], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .optional()
+            .map_err(db)?;
+        let (Some(path), key) = row.ok_or_else(|| invalid("pas encore disponible"))? else {
+            return Err(invalid("pas encore disponible"));
+        };
+        let key: [u8; 32] = key.try_into().map_err(|_| DeviceError::BadMessage)?;
+        let data = fs::read(&path).map_err(io)?;
+        media::decrypt(&key, &data).map_err(|_| DeviceError::BadMessage)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn noms_d_objets() {
+        assert!(valid_object_key("c/0f2c1a6e-1111-4222-8333-444455556666/0123456789abcdef0123456789abcdef"));
+        assert!(!valid_object_key("c/0f2c1a6e-1111-4222-8333-444455556666/../../etc"));
+        assert!(!valid_object_key("c/x/0123456789abcdef0123456789abcdef"));
+        assert!(!valid_object_key("d/0f2c1a6e-1111-4222-8333-444455556666/0123456789abcdef0123456789abcdef"));
+    }
+}

@@ -102,6 +102,63 @@ Future<void> chatPurge() => RustLib.instance.api.crateApiChatChatPurge();
 Future<bool> chatReprocessUnknown() =>
     RustLib.instance.api.crateApiChatChatReprocessUnknown();
 
+/// Chiffre la photo (ou vidéo), garde le chiffré dans `dir`, ajoute le message « en attente ».
+Future<CreatedMedia> chatCreateMedia({
+  required String dir,
+  required List<int> plain,
+  required int kind,
+  required String mime,
+  required int width,
+  required int height,
+  required int durationMs,
+  required List<int> thumb,
+  required String caption,
+  String? replyTo,
+}) => RustLib.instance.api.crateApiChatChatCreateMedia(
+  dir: dir,
+  plain: plain,
+  kind: kind,
+  mime: mime,
+  width: width,
+  height: height,
+  durationMs: durationMs,
+  thumb: thumb,
+  caption: caption,
+  replyTo: replyTo,
+);
+
+/// Le chiffré est sur R2 : prépare le message chiffré pour le partenaire (à vider par la boîte d'envoi).
+Future<Outgoing> chatMediaUploaded({
+  required String partner,
+  required String messageId,
+  required String objectKey,
+}) => RustLib.instance.api.crateApiChatChatMediaUploaded(
+  partner: partner,
+  messageId: messageId,
+  objectKey: objectKey,
+);
+
+Future<List<PendingUpload>> chatPendingUploads() =>
+    RustLib.instance.api.crateApiChatChatPendingUploads();
+
+Future<List<PendingDownload>> chatPendingDownloads() =>
+    RustLib.instance.api.crateApiChatChatPendingDownloads();
+
+/// Vérifie le fichier téléchargé (taille, empreinte) et le range dans `dir`. Faux s'il a été altéré.
+Future<bool> chatMediaDownloaded({
+  required String messageId,
+  required String downloaded,
+  required String dir,
+}) => RustLib.instance.api.crateApiChatChatMediaDownloaded(
+  messageId: messageId,
+  downloaded: downloaded,
+  dir: dir,
+);
+
+/// Déchiffre en mémoire pour l'affichage.
+Future<Uint8List> chatOpenMedia({required String messageId}) =>
+    RustLib.instance.api.crateApiChatChatOpenMedia(messageId: messageId);
+
 class ChatMessage {
   final String id;
   final bool fromMe;
@@ -113,6 +170,7 @@ class ChatMessage {
   final int status;
   final String? myReaction;
   final String? theirReaction;
+  final MediaInfo? media;
 
   const ChatMessage({
     required this.id,
@@ -123,6 +181,7 @@ class ChatMessage {
     required this.status,
     this.myReaction,
     this.theirReaction,
+    this.media,
   });
 
   @override
@@ -134,7 +193,8 @@ class ChatMessage {
       sentAt.hashCode ^
       status.hashCode ^
       myReaction.hashCode ^
-      theirReaction.hashCode;
+      theirReaction.hashCode ^
+      media.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -148,7 +208,8 @@ class ChatMessage {
           sentAt == other.sentAt &&
           status == other.status &&
           myReaction == other.myReaction &&
-          theirReaction == other.theirReaction;
+          theirReaction == other.theirReaction &&
+          media == other.media;
 }
 
 /// Profil du couple, jamais visible du serveur.
@@ -187,6 +248,68 @@ class CoupleProfile {
           togetherSince == other.togetherSince;
 }
 
+class CreatedMedia {
+  final ChatMessage message;
+  final PendingUpload upload;
+
+  const CreatedMedia({required this.message, required this.upload});
+
+  @override
+  int get hashCode => message.hashCode ^ upload.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreatedMedia &&
+          runtimeType == other.runtimeType &&
+          message == other.message &&
+          upload == other.upload;
+}
+
+/// Photo ou vidéo jointe. `state` : 0 à envoyer, 1 sur ce téléphone, 2 à télécharger, 3 illisible.
+class MediaInfo {
+  final int kind;
+  final String mime;
+  final int width;
+  final int height;
+  final int durationMs;
+  final Uint8List thumb;
+  final int state;
+
+  const MediaInfo({
+    required this.kind,
+    required this.mime,
+    required this.width,
+    required this.height,
+    required this.durationMs,
+    required this.thumb,
+    required this.state,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      mime.hashCode ^
+      width.hashCode ^
+      height.hashCode ^
+      durationMs.hashCode ^
+      thumb.hashCode ^
+      state.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MediaInfo &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          mime == other.mime &&
+          width == other.width &&
+          height == other.height &&
+          durationMs == other.durationMs &&
+          thumb == other.thumb &&
+          state == other.state;
+}
+
 /// Enveloppe à déposer dans la table `envelopes` (l'identifiant sert de clé primaire : renvoi sans doublon).
 class Outgoing {
   final String envelopeId;
@@ -216,6 +339,54 @@ class Outgoing {
           kind == other.kind &&
           body == other.body &&
           urgent == other.urgent;
+}
+
+class PendingDownload {
+  final String messageId;
+  final String objectKey;
+  final BigInt size;
+
+  const PendingDownload({
+    required this.messageId,
+    required this.objectKey,
+    required this.size,
+  });
+
+  @override
+  int get hashCode => messageId.hashCode ^ objectKey.hashCode ^ size.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PendingDownload &&
+          runtimeType == other.runtimeType &&
+          messageId == other.messageId &&
+          objectKey == other.objectKey &&
+          size == other.size;
+}
+
+class PendingUpload {
+  final String messageId;
+  final String path;
+  final BigInt size;
+
+  const PendingUpload({
+    required this.messageId,
+    required this.path,
+    required this.size,
+  });
+
+  @override
+  int get hashCode => messageId.hashCode ^ path.hashCode ^ size.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PendingUpload &&
+          runtimeType == other.runtimeType &&
+          messageId == other.messageId &&
+          path == other.path &&
+          size == other.size;
 }
 
 /// Effet d'une enveloppe reçue : un nouveau message, des messages modifiés (statut, réaction), ou rien.

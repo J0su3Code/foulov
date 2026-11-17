@@ -16,6 +16,18 @@ pub struct ChatMessage {
     pub status: u8,
     pub my_reaction: Option<String>,
     pub their_reaction: Option<String>,
+    pub media: Option<MediaInfo>,
+}
+
+/// Photo ou vidéo jointe. `state` : 0 à envoyer, 1 sur ce téléphone, 2 à télécharger, 3 illisible.
+pub struct MediaInfo {
+    pub kind: u8,
+    pub mime: String,
+    pub width: u32,
+    pub height: u32,
+    pub duration_ms: u32,
+    pub thumb: Vec<u8>,
+    pub state: u8,
 }
 
 impl From<core::ChatMessage> for ChatMessage {
@@ -29,6 +41,15 @@ impl From<core::ChatMessage> for ChatMessage {
             status: m.status,
             my_reaction: m.my_reaction,
             their_reaction: m.their_reaction,
+            media: m.media.map(|x| MediaInfo {
+                kind: x.kind,
+                mime: x.mime,
+                width: x.width,
+                height: x.height,
+                duration_ms: x.duration_ms,
+                thumb: x.thumb,
+                state: x.state,
+            }),
         }
     }
 }
@@ -158,4 +179,92 @@ pub fn chat_purge() -> anyhow::Result<()> {
 /// Relit les contenus qu'une version précédente de l'app n'avait pas su lire (au démarrage).
 pub fn chat_reprocess_unknown() -> anyhow::Result<bool> {
     with_device(|d| Ok(d.reprocess_unknown()?))
+}
+
+// ------------------------------------------------------------------ photos et vidéos
+
+pub struct PendingUpload {
+    pub message_id: String,
+    pub path: String,
+    pub size: u64,
+}
+
+pub struct PendingDownload {
+    pub message_id: String,
+    pub object_key: String,
+    pub size: u64,
+}
+
+pub struct CreatedMedia {
+    pub message: ChatMessage,
+    pub upload: PendingUpload,
+}
+
+/// Chiffre la photo (ou vidéo), garde le chiffré dans `dir`, ajoute le message « en attente ».
+#[allow(clippy::too_many_arguments)]
+pub fn chat_create_media(
+    dir: String,
+    plain: Vec<u8>,
+    kind: u8,
+    mime: String,
+    width: u32,
+    height: u32,
+    duration_ms: u32,
+    thumb: Vec<u8>,
+    caption: String,
+    reply_to: Option<String>,
+) -> anyhow::Result<CreatedMedia> {
+    with_device(|d| {
+        let (m, u) = d.create_media(
+            std::path::Path::new(&dir),
+            &plain,
+            foulov_core::chat_media::NewMedia {
+                kind,
+                mime: &mime,
+                width,
+                height,
+                duration_ms,
+                thumb: &thumb,
+                caption: &caption,
+                reply_to: reply_to.as_deref(),
+            },
+        )?;
+        Ok(CreatedMedia {
+            message: m.into(),
+            upload: PendingUpload { message_id: u.message_id, path: u.path, size: u.size },
+        })
+    })
+}
+
+/// Le chiffré est sur R2 : prépare le message chiffré pour le partenaire (à vider par la boîte d'envoi).
+pub fn chat_media_uploaded(partner: String, message_id: String, object_key: String) -> anyhow::Result<Outgoing> {
+    with_device(|d| Ok(d.media_uploaded(&partner, &message_id, &object_key)?.into()))
+}
+
+pub fn chat_pending_uploads() -> anyhow::Result<Vec<PendingUpload>> {
+    with_device(|d| {
+        Ok(d.pending_uploads()?
+            .into_iter()
+            .map(|u| PendingUpload { message_id: u.message_id, path: u.path, size: u.size })
+            .collect())
+    })
+}
+
+pub fn chat_pending_downloads() -> anyhow::Result<Vec<PendingDownload>> {
+    with_device(|d| {
+        Ok(d.pending_downloads()?
+            .into_iter()
+            .map(|u| PendingDownload { message_id: u.message_id, object_key: u.object_key, size: u.size })
+            .collect())
+    })
+}
+
+/// Vérifie le fichier téléchargé (taille, empreinte) et le range dans `dir`. Faux s'il a été altéré.
+pub fn chat_media_downloaded(message_id: String, downloaded: String, dir: String) -> anyhow::Result<bool> {
+    with_device(|d| Ok(d.media_downloaded(&message_id, std::path::Path::new(&downloaded), std::path::Path::new(&dir))?))
+}
+
+/// Déchiffre en mémoire pour l'affichage.
+pub fn chat_open_media(message_id: String) -> anyhow::Result<Vec<u8>> {
+    with_device(|d| Ok(d.open_media(&message_id)?))
 }

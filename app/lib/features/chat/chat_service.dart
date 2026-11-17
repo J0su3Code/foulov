@@ -1,8 +1,14 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/widgets.dart';
+import 'dart:ui' show ImageDescriptor, ImmutableBuffer;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/bytea.dart';
@@ -70,8 +76,10 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
           // À chaque (re)connexion, on rattrape ce qui est arrivé pendant la coupure.
           if (status == RealtimeSubscribeStatus.subscribed) pull();
         });
+    _mediaDir = '${(await getApplicationSupportDirectory()).path}/media';
     unawaited(pull());
     unawaited(flush());
+    unawaited(_transfer());
     unawaited(chatPurge().catchError((_) {}));
     unawaited(PushService.register(_db));
   }
@@ -81,6 +89,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _retry?.cancel();
+    _http.close();
     final c = _channel;
     if (c != null) unawaited(_db.removeChannel(c));
     super.dispose();
@@ -92,6 +101,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     if (_foreground) {
       unawaited(pull());
       unawaited(flush());
+      unawaited(_transfer());
       unawaited(_readVisible());
     }
   }
@@ -244,6 +254,156 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  // ------------------------------------------------------------------ photos
+
+  late final String _mediaDir;
+  final _http = http.Client();
+  bool _hasDownloads = false;
+  bool _transferring = false, _transferAgain = false;
+
+  /// Photos déchiffrées récemment (en mémoire seulement), pour un défilement fluide. ~60 Mo au plus.
+  final _cache = <String, Uint8List>{}; // ordre d'insertion = ordre d'usage (LinkedHashMap)
+  int _cacheBytes = 0;
+  static const _cacheMax = 60 * 1024 * 1024;
+
+  /// Prépare et envoie une photo de la galerie ou de l'appareil photo.
+  ///
+  /// Avant tout chiffrement, la photo est réencodée en JPEG (2048 px au plus) : cela retire toutes ses
+  /// métadonnées (position GPS, modèle du téléphone, date), qui ne quittent donc jamais le téléphone.
+  Future<void> sendPhoto(String path, {String caption = '', String? replyTo}) async {
+    final full = await FlutterImageCompress.compressWithFile(
+      path,
+      minWidth: 2048,
+      minHeight: 2048,
+      quality: 86,
+      format: CompressFormat.jpeg,
+      keepExif: false,
+    );
+    if (full == null) throw StateError('photo illisible');
+    final size = await _imageSize(full);
+    final thumb = await _thumbnail(full);
+    final created = await chatCreateMedia(
+      dir: _mediaDir,
+      plain: full,
+      kind: 1,
+      mime: 'image/jpeg',
+      width: size.$1,
+      height: size.$2,
+      durationMs: 0,
+      thumb: thumb,
+      caption: caption,
+      replyTo: replyTo,
+    );
+    _remember(created.message.id, full);
+    _upsert(created.message);
+    _notify();
+    unawaited(_transfer());
+  }
+
+  static Future<(int, int)> _imageSize(Uint8List jpeg) async {
+    final buffer = await ImmutableBuffer.fromUint8List(jpeg);
+    final desc = await ImageDescriptor.encoded(buffer);
+    final r = (desc.width, desc.height);
+    desc.dispose();
+    buffer.dispose();
+    return r;
+  }
+
+  /// Miniature (320 px) qui voyage dans le message chiffré : affichée aussitôt chez le partenaire.
+  static Future<Uint8List> _thumbnail(Uint8List full) async {
+    for (final q in [62, 45, 30]) {
+      final t = await FlutterImageCompress.compressWithList(
+        full,
+        minWidth: 320,
+        minHeight: 320,
+        quality: q,
+        keepExif: false,
+      );
+      if (t.length <= 60 * 1024) return t;
+    }
+    throw StateError('miniature trop lourde');
+  }
+
+  /// Photo déchiffrée en mémoire (jamais écrite en clair).
+  Future<Uint8List?> photo(String id) async {
+    final hit = _cache.remove(id);
+    if (hit != null) {
+      _cache[id] = hit; // plus récemment utilisée
+      return hit;
+    }
+    try {
+      final b = await chatOpenMedia(messageId: id);
+      _remember(id, b);
+      return b;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _remember(String id, Uint8List b) {
+    _cache[id] = b;
+    _cacheBytes += b.length;
+    while (_cacheBytes > _cacheMax && _cache.isNotEmpty) {
+      final first = _cache.keys.first;
+      _cacheBytes -= _cache.remove(first)!.length;
+    }
+  }
+
+  /// Dépose les photos en attente et télécharge celles reçues. Une exécution à la fois.
+  Future<void> _transfer() async {
+    if (_transferring) {
+      _transferAgain = true;
+      return;
+    }
+    _transferring = true;
+    try {
+      do {
+        _transferAgain = false;
+        for (final u in await chatPendingUploads()) {
+          final link = await _link({'action': 'upload', 'size': u.size.toInt()});
+          final file = File(u.path);
+          final req = http.StreamedRequest('PUT', Uri.parse(link['url'] as String))..contentLength = u.size.toInt();
+          // pipe ferme le flux à la fin du fichier (sinon la requête attendrait indéfiniment).
+          unawaited(file.openRead().pipe(req.sink));
+          final res = await _http.send(req).timeout(const Duration(minutes: 5));
+          await res.stream.drain<void>().timeout(const Duration(minutes: 1));
+          if (res.statusCode != 200) throw HttpException('dépôt ${res.statusCode}');
+          await chatMediaUploaded(partner: partnerId, messageId: u.messageId, objectKey: link['key'] as String);
+          await _refresh([u.messageId]);
+          _notify();
+          unawaited(flush());
+        }
+        for (final d in await chatPendingDownloads()) {
+          final link = await _link({'action': 'download', 'key': d.objectKey});
+          final part = File('$_mediaDir/${d.messageId}.part');
+          await part.parent.create(recursive: true);
+          final res = await _http
+              .send(http.Request('GET', Uri.parse(link['url'] as String)))
+              .timeout(const Duration(minutes: 1));
+          if (res.statusCode != 200) {
+            await res.stream.drain<void>();
+            throw HttpException('téléchargement ${res.statusCode}');
+          }
+          await res.stream.pipe(part.openWrite()).timeout(const Duration(minutes: 10));
+          await chatMediaDownloaded(messageId: d.messageId, downloaded: part.path, dir: _mediaDir);
+          await _refresh([d.messageId]);
+          _notify();
+        }
+      } while (_transferAgain);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FOULOVE] photos : $e');
+      _scheduleRetry();
+    } finally {
+      _transferring = false;
+    }
+  }
+
+  Future<Map<String, dynamic>> _link(Map<String, dynamic> body) async {
+    final r = await _db.functions.invoke('media', body: body).timeout(const Duration(seconds: 30));
+    if (r.status != 200 || r.data is! Map) throw HttpException('lien ${r.status}');
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
   /// Nouvelles tentatives : 2 s, 4 s, 8 s… jusqu'à 1 min, avec un peu d'aléa.
   void _scheduleRetry() {
     _retry?.cancel();
@@ -252,6 +412,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     _retry = Timer(Duration(milliseconds: ms), () {
       unawaited(flush());
       unawaited(pull());
+      unawaited(_transfer());
     });
   }
 
@@ -288,6 +449,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
             if (m != null) {
               _upsert(m);
               fresh.add(m.id);
+              if (m.media != null) _hasDownloads = true;
             }
             if (res.updated.isNotEmpty) await _refresh(res.updated);
             if (res.profileChanged) profile = await chatProfile();
@@ -311,6 +473,10 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
         }
         if (rows.length == 200) _pullAgain = true;
       } while (_pullAgain);
+      if (_hasDownloads) {
+        _hasDownloads = false;
+        unawaited(_transfer());
+      }
     } catch (e) {
       if (kDebugMode) debugPrint('[FOULOVE] réception : $e');
       _scheduleRetry();
