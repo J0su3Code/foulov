@@ -165,3 +165,27 @@ fn video_chiffree_depuis_un_fichier_puis_lue_par_morceaux() {
     assert_eq!(ines.media_read(&r.id, 123_457, 65_536).unwrap(), &plain[123_457..123_457 + 65_536]);
     assert!(ines.media_read(&r.id, 2_000_000, 10).unwrap().is_empty());
 }
+
+#[test]
+fn galerie_des_saisons_par_pages_et_par_type() {
+    let dir = tempfile::tempdir().unwrap();
+    let (_, mut malik) = couple(dir.path());
+    let m = dir.path().join("m");
+    let mut ids = Vec::new();
+    for i in 0..5u8 {
+        let mut p = photo("");
+        if i % 2 == 1 {
+            p.kind = foulov_core::chat_media::KIND_VIDEO;
+            p.mime = "video/mp4";
+        }
+        ids.push(malik.create_media(&m, &[i + 1; 100], p).unwrap().0.id);
+    }
+    malik.send_text(INES, "un mot, pas un média", None).unwrap();
+    let all = malik.media_gallery(None, 10, None).unwrap();
+    assert_eq!(all.iter().map(|x| x.id.clone()).collect::<Vec<_>>(), ids.iter().rev().cloned().collect::<Vec<_>>());
+    assert_eq!(malik.media_gallery(None, 10, Some(2)).unwrap().len(), 2, "vidéos seulement");
+    assert_eq!(malik.media_gallery(None, 10, Some(1)).unwrap().len(), 3, "photos seulement");
+    let first = malik.media_gallery(None, 2, None).unwrap();
+    let next = malik.media_gallery(Some((first[1].sent_at, first[1].id.clone())), 10, None).unwrap();
+    assert_eq!(next.len(), 3, "page suivante sans doublon");
+}

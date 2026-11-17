@@ -331,6 +331,21 @@ impl Device {
         Ok(true)
     }
 
+    /// Toutes les photos et vidéos (onglet Saisons), de la plus récente à la plus ancienne, par pages.
+    /// `kind` : 1 photos, 2 vidéos, `None` les deux. Les médias illisibles (altérés) sont exclus.
+    pub fn media_gallery(&self, before: Option<(i64, String)>, limit: u32, kind: Option<u8>) -> R<Vec<ChatMessage>> {
+        let c = self.store.conn.lock();
+        let (sa, id) = before.unwrap_or((i64::MAX, String::new()));
+        let mut st = c
+            .prepare(&format!(
+                "{SELECT} WHERE md.kind IS NOT NULL AND md.state != 3 AND (?4 IS NULL OR md.kind = ?4)
+                 AND (m.sent_at, m.id) < (?1, ?2) ORDER BY m.sent_at DESC, m.id DESC LIMIT ?3"
+            ))
+            .map_err(db)?;
+        let rows = st.query_map(params![sa, id, limit.min(500), kind], row_to_message).map_err(db)?;
+        rows.collect::<Result<_, _>>().map_err(db)
+    }
+
     fn reader(&self, message_id: &str) -> R<media::MediaReader> {
         let row: Option<(Option<String>, Vec<u8>)> = self
             .store
