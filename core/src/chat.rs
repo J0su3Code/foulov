@@ -33,7 +33,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8")]
         pub body: Option<Body>,
     }
 
@@ -53,6 +53,28 @@ pub mod pb {
         Media(Media),
         #[prost(message, tag = "7")]
         Delete(Delete),
+        #[prost(message, tag = "8")]
+        Date(DateEntry),
+    }
+
+    /// Une date importante du couple (ou sa suppression).
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct DateEntry {
+        #[prost(bytes = "vec", tag = "1")]
+        pub id: Vec<u8>,
+        #[prost(string, tag = "2")]
+        pub title: String,
+        /// « AAAA-MM-JJ ».
+        #[prost(string, tag = "3")]
+        pub date: String,
+        #[prost(bool, tag = "4")]
+        pub yearly: bool,
+        #[prost(uint32, optional, tag = "5")]
+        pub remind_days: Option<u32>,
+        #[prost(uint64, tag = "6")]
+        pub updated_at: u64,
+        #[prost(bool, tag = "7")]
+        pub deleted: bool,
     }
 
     /// « Supprimer pour nous deux » : l'expéditeur retire un de ses propres messages.
@@ -218,7 +240,7 @@ fn clean_name(s: &str) -> Option<String> {
 }
 
 /// Date « AAAA-MM-JJ » plausible (de 1900 à aujourd'hui + 1 an), vérifiée sans dépendance.
-fn valid_date(s: &str) -> bool {
+pub(crate) fn valid_date(s: &str) -> bool {
     let b = s.as_bytes();
     if b.len() != 10 || b[4] != b'-' || b[7] != b'-' {
         return false;
@@ -240,6 +262,8 @@ pub enum Received {
     Updated(Vec<String>),
     /// Le profil du couple a changé (prénom du partenaire, date « ensemble depuis »).
     Profile,
+    /// Les dates importantes ont changé.
+    Dates,
     /// Rien à afficher : doublon, message d'appairage, contenu d'une version future.
     Nothing,
     /// Enveloppe illisible (altérée ou corrompue) : écartée, jamais affichée.
@@ -387,7 +411,7 @@ pub(crate) const SELECT: &str = "SELECT m.id, m.from_me, m.body, m.reply_to, m.s
 
 impl Device {
     pub(crate) fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
-        // Accusés et profil : rien qui mérite de réveiller le téléphone du partenaire.
+        // Accusés, profil, dates, suppressions : rien qui mérite de réveiller le téléphone du partenaire.
         // Une suppression ne réveille pas le téléphone : elle s'appliquera à la prochaine ouverture.
         let urgent = matches!(body, pb::Body::Text(_) | pb::Body::Reaction(_) | pb::Body::Media(_));
         let envelope = self.encrypt(partner, &encode(body))?;
@@ -649,6 +673,7 @@ impl Device {
                 Ok(Received::Updated(if n > 0 { vec![id] } else { vec![] }))
             }
             pb::Body::Media(m) => crate::chat_media::apply_media(&c, m),
+            pb::Body::Date(d) => crate::dates::apply_date(&c, d),
             pb::Body::Delete(d) => {
                 let id = id_from_wire(&d.target).ok_or(DeviceError::BadMessage)?;
                 // Le partenaire ne peut retirer que ses propres messages, jamais les nôtres.

@@ -71,6 +71,11 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
 - **Réception instantanée** par Supabase Realtime, filtrée par les règles d'accès : chacun n'est averti que des enveloppes qui lui sont destinées. À chaque reconnexion, l'app récupère tout ce qui est en attente.
 - **Clé du partenaire changée** : les nouvelles enveloppes restent sur le serveur, non lues, et l'app demande de recomparer les 7 symboles (§5.7).
 
+## 4ter. Dates importantes
+
+- Chaque date (titre, jour, « chaque année », rappel) voyage **chiffrée** par la session Signal ; le serveur n'en voit rien. La modification la plus récente l'emporte, date par date ; une suppression laisse une trace datée pour qu'une ancienne version arrivée en retard ne la fasse pas réapparaître.
+- Les **rappels sont programmés par le téléphone lui-même** (notifications locales) : aucun serveur ne sait quand ni quoi. Sur l'écran verrouillé, leur texte reste masqué si le téléphone masque les contenus sensibles.
+
 ## 5. Appairage du couple
 
 1. **Inès crée l'espace.** Le serveur crée un couple et un **code d'invitation** de 10 caractères en alphabet Crockford base32, par exemple `K7Q4M-9XHPT`.

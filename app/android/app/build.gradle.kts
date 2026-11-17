@@ -14,6 +14,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Rappels programmés (flutter_local_notifications) : API java.time sur les anciens Android.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -49,4 +51,5 @@ flutter {
 dependencies {
     // Thème AppCompat de l'activité (requis par local_auth sur Android 8 et antérieurs).
     implementation("androidx.appcompat:appcompat:1.7.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

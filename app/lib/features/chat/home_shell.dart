@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'chat_screen.dart';
 import 'chat_service.dart';
 import 'seasons_screen.dart';
+import '../dates/dates_screen.dart';
 
-/// L'espace du couple, avec sa barre de navigation. Les onglets Jardin et Dates s'ajouteront ici quand ils
-/// existeront vraiment : la barre ne montre que ce qui fonctionne.
+/// L'espace du couple, avec sa barre de navigation (Messages, Saisons, Dates). La barre ne montre que ce qui
+/// fonctionne vraiment.
 class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
@@ -44,6 +45,7 @@ class _HomeShellState extends State<HomeShell> {
             active: _tab == 0,
           ),
           SeasonsScreen(service: widget.service),
+          DatesScreen(service: widget.service),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -63,6 +65,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.photo_library_outlined),
             selectedIcon: Icon(Icons.photo_library_rounded),
             label: 'Saisons',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.event_outlined),
+            selectedIcon: Icon(Icons.event_rounded),
+            label: 'Dates',
           ),
         ],
       ),
