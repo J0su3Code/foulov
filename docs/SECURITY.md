@@ -62,10 +62,11 @@ Toute la cryptographie vit dans une seule bibliothèque Rust (`core/`). Le code 
    - L'alphabet exclut I, L, O et U ; à la saisie, I et L sont lus comme 1, et O comme 0.
    - Le code vaut 50 bits, s'utilise une seule fois et expire après 24 h.
    - Seul son hachage SHA-256 est stocké sur le serveur.
-2. **En personne : QR code.** Le QR code d'Inès contient le code, l'empreinte de sa clé d'identité et un **secret d'appairage** de 128 bits qui ne passe jamais par le serveur. Malik le scanne :
-   - son téléphone compare l'empreinte à la clé publiée par le serveur ; si elles diffèrent, l'appairage échoue ;
-   - le secret d'appairage permet ensuite de confirmer la clé de Malik auprès d'Inès.
-   La vérification est **automatique**.
+2. **En personne : QR code.** Le QR code d'Inès contient le code et l'empreinte de sa clé d'identité, `SHA-256("FouLov-ID-v1" ‖ clé)`. Malik le scanne :
+   - son téléphone compare cette empreinte à la clé publiée par le serveur ; si elles diffèrent, l'appairage s'arrête et rien n'est envoyé ;
+   - si elles correspondent, la clé d'Inès est marquée « vérifiée » chez Malik, sans action de sa part ;
+   - côté Inès, la vérification se fait en comparant les 7 symboles : ils sont côte à côte, il suffit de regarder les deux écrans.
+   *Prévu* : un secret d'appairage de 128 bits, inclus dans le QR code et jamais envoyé au serveur, pour confirmer aussi automatiquement la clé de Malik chez Inès.
 3. **À distance : le code.** Inès dicte ou envoie le code, et Malik le tape. Les deux écrans affichent ensuite **7 symboles** :
    - ils sont dérivés de `SHA-256("FouLov-SAS-v1" ‖ longueurs ‖ clé_identité_A ‖ clé_identité_B)`, avec les clés triées, puis tirés d'une liste de 64 symboles (42 bits) ;
    - le couple les compare à voix haute ou en appel vidéo ;
