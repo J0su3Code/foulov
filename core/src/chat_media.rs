@@ -22,11 +22,14 @@ use crate::media;
 
 pub const KIND_PHOTO: u8 = 1;
 pub const KIND_VIDEO: u8 = 2;
+/// Message vocal (la « miniature » transporte alors la forme d'onde : jusqu'à 64 amplitudes de 0 à 255).
+pub const KIND_VOICE: u8 = 3;
 /// Plafond du fichier chiffré (le serveur applique le même).
 pub const MAX_MEDIA_BYTES: u64 = 220 * 1024 * 1024;
 /// Plafond de la miniature, qui voyage dans le message chiffré.
 pub const MAX_THUMB_BYTES: usize = 64 * 1024;
-const MIMES: &[&str] = &["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4", "video/quicktime"];
+const MIMES: &[&str] =
+    &["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4", "video/quicktime", "audio/mp4", "audio/aac"];
 
 /// Fichier à déposer sur R2.
 #[derive(Clone, Debug, PartialEq)]
@@ -72,10 +75,15 @@ fn valid_object_key(k: &str) -> bool {
 }
 
 fn check_meta(kind: u8, mime: &str, thumb: &[u8], caption: &str, w: u32, h: u32) -> bool {
-    (kind == KIND_PHOTO || kind == KIND_VIDEO)
-        && MIMES.contains(&mime)
-        && (mime.starts_with("image/") == (kind == KIND_PHOTO))
-        && thumb.len() <= MAX_THUMB_BYTES
+    let family = match kind {
+        KIND_PHOTO => "image/",
+        KIND_VIDEO => "video/",
+        KIND_VOICE => "audio/",
+        _ => return false,
+    };
+    MIMES.contains(&mime)
+        && mime.starts_with(family)
+        && thumb.len() <= if kind == KIND_VOICE { 64 } else { MAX_THUMB_BYTES }
         && caption.len() <= crate::chat::MAX_TEXT_BYTES
         && w <= 20_000
         && h <= 20_000
@@ -331,14 +339,14 @@ impl Device {
         Ok(true)
     }
 
-    /// Toutes les photos et vidéos (onglet Saisons), de la plus récente à la plus ancienne, par pages.
+    /// Toutes les photos et vidéos (onglet Saisons ; les messages vocaux n'y figurent pas), de la plus récente à la plus ancienne, par pages.
     /// `kind` : 1 photos, 2 vidéos, `None` les deux. Les médias illisibles (altérés) sont exclus.
     pub fn media_gallery(&self, before: Option<(i64, String)>, limit: u32, kind: Option<u8>) -> R<Vec<ChatMessage>> {
         let c = self.store.conn.lock();
         let (sa, id) = before.unwrap_or((i64::MAX, String::new()));
         let mut st = c
             .prepare(&format!(
-                "{SELECT} WHERE md.kind IS NOT NULL AND md.state != 3 AND (?4 IS NULL OR md.kind = ?4)
+                "{SELECT} WHERE md.kind IN (1, 2) AND md.state != 3 AND (?4 IS NULL OR md.kind = ?4)
                  AND (m.sent_at, m.id) < (?1, ?2) ORDER BY m.sent_at DESC, m.id DESC LIMIT ?3"
             ))
             .map_err(db)?;

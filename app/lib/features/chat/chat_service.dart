@@ -491,6 +491,32 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Envoie un message vocal : chiffré par blocs depuis le fichier enregistré, qui est ensuite effacé.
+  /// La forme d'onde (64 barres) voyage dans le message chiffré.
+  Future<void> sendVoice(String path, int durationMs, List<int> waveform, {String? replyTo}) async {
+    try {
+      final created = await chatCreateMediaFile(
+        dir: _mediaDir,
+        src: path,
+        kind: 3,
+        mime: 'audio/mp4',
+        width: 0,
+        height: 0,
+        durationMs: durationMs,
+        thumb: Uint8List.fromList(waveform),
+        caption: '',
+        replyTo: replyTo,
+      );
+      _upsert(created.message);
+      _notify();
+      unawaited(_transfer());
+    } finally {
+      try {
+        await File(path).delete();
+      } catch (_) {}
+    }
+  }
+
   static Future<(int, int)> _imageSize(Uint8List jpeg) async {
     final buffer = await ImmutableBuffer.fromUint8List(jpeg);
     final desc = await ImageDescriptor.encoded(buffer);

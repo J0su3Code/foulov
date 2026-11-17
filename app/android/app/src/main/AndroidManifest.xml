@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Android 13+ : afficher les notifications « Nouveau message ». -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Messages vocaux : demandé seulement au premier enregistrement. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="FouLove"
         android:name="${applicationName}"
