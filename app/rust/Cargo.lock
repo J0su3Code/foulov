@@ -768,6 +768,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "async-trait",
+ "futures-util",
  "libsignal-protocol",
  "rand 0.9.5",
  "rusqlite",

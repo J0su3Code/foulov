@@ -11,7 +11,7 @@
 //! après une nouvelle vérification des symboles (§5).
 
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use async_trait::async_trait;
 use libsignal_protocol::{
@@ -22,6 +22,18 @@ use libsignal_protocol::{
 use rusqlite::{Connection, OptionalExtension, params};
 
 type SResult<T> = Result<T, SignalProtocolError>;
+
+/// Connexion SQLCipher partagée entre les magasins, utilisable depuis plusieurs fils (appels venant de Flutter).
+#[derive(Clone)]
+pub(crate) struct Db(Arc<Mutex<Connection>>);
+
+impl Db {
+    fn lock(&self) -> MutexGuard<'_, Connection> {
+        // Un fil qui a paniqué ne doit pas rendre la base inutilisable : la connexion reste cohérente
+        // (chaque écriture est atomique côté SQLite).
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -72,7 +84,7 @@ CREATE TABLE IF NOT EXISTS kyber_base_keys_seen (
 
 /// Base locale chiffrée et ses magasins libsignal (une poignée par magasin, connexion partagée).
 pub struct Store {
-    conn: Rc<Connection>,
+    conn: Db,
     pub identity: IdentityHandle,
     pub sessions: SessionHandle,
     pub prekeys: PreKeyHandle,
@@ -102,7 +114,7 @@ impl Store {
         )?;
         conn.execute_batch(SCHEMA)?;
         conn.execute("INSERT OR IGNORE INTO meta (k, v) VALUES ('schema_version', ?1)", params![SCHEMA_VERSION.to_be_bytes().to_vec()])?;
-        let conn = Rc::new(conn);
+        let conn = Db(Arc::new(Mutex::new(conn)));
         Ok(Store {
             identity: IdentityHandle(conn.clone()),
             sessions: SessionHandle(conn.clone()),
@@ -115,7 +127,8 @@ impl Store {
 
     /// Enregistre l'identité de ce téléphone (première ouverture uniquement).
     pub fn initialize_identity(&self, identity: &IdentityKeyPair, registration_id: u32) -> Result<(), StoreError> {
-        let tx = self.conn.unchecked_transaction()?;
+        let guard = self.conn.lock();
+        let tx = guard.unchecked_transaction()?;
         tx.execute("INSERT INTO meta (k, v) VALUES ('identity', ?1)", params![identity.serialize().to_vec()])?;
         tx.execute("INSERT INTO meta (k, v) VALUES ('registration_id', ?1)", params![registration_id.to_be_bytes().to_vec()])?;
         tx.commit()?;
@@ -123,18 +136,18 @@ impl Store {
     }
 
     pub fn has_identity(&self) -> Result<bool, StoreError> {
-        Ok(self.conn.query_row("SELECT count(*) FROM meta WHERE k = 'identity'", [], |r| r.get::<_, i64>(0))? == 1)
+        Ok(self.conn.lock().query_row("SELECT count(*) FROM meta WHERE k = 'identity'", [], |r| r.get::<_, i64>(0))? == 1)
     }
 
     /// Le couple a comparé les 7 symboles et confirmé qu'ils sont identiques.
     pub fn mark_verified(&self, address: &ProtocolAddress) -> Result<(), StoreError> {
-        self.conn.execute("UPDATE identities SET verified = 1 WHERE address = ?1", params![addr_key(address)])?;
+        self.conn.lock().execute("UPDATE identities SET verified = 1 WHERE address = ?1", params![addr_key(address)])?;
         Ok(())
     }
 
     pub fn is_verified(&self, address: &ProtocolAddress) -> Result<bool, StoreError> {
         let v: Option<i64> = self
-            .conn
+            .conn.lock()
             .query_row("SELECT verified FROM identities WHERE address = ?1", params![addr_key(address)], |r| r.get(0))
             .optional()?;
         Ok(v == Some(1))
@@ -143,7 +156,8 @@ impl Store {
     /// Accepte une nouvelle clé du partenaire (nouveau téléphone), après décision explicite de l'utilisateur.
     /// La nouvelle clé repart « non vérifiée » : il faudra recomparer les symboles.
     pub fn accept_identity_change(&self, address: &ProtocolAddress, identity: &IdentityKey) -> Result<(), StoreError> {
-        let tx = self.conn.unchecked_transaction()?;
+        let guard = self.conn.lock();
+        let tx = guard.unchecked_transaction()?;
         tx.execute(
             "INSERT INTO identities (address, identity, verified, first_seen) VALUES (?1, ?2, 0, unixepoch())
              ON CONFLICT (address) DO UPDATE SET identity = excluded.identity, verified = 0",
@@ -154,21 +168,33 @@ impl Store {
         Ok(())
     }
 
+    /// Compteur persistant (identifiants de pré-clés). Renvoie la valeur courante puis l'incrémente de `n`.
+    pub(crate) fn next_counter(&self, name: &str, n: u32) -> Result<u32, StoreError> {
+        let guard = self.conn.lock();
+        let tx = guard.unchecked_transaction()?;
+        let cur: Option<Vec<u8>> = tx.query_row("SELECT v FROM meta WHERE k = ?1", params![name], |r| r.get(0)).optional()?;
+        let start = cur.and_then(|b| b.try_into().ok()).map(u32::from_be_bytes).unwrap_or(1);
+        let next = start.checked_add(n).ok_or_else(|| StoreError::Db("compteur saturé".into()))?;
+        tx.execute("INSERT OR REPLACE INTO meta (k, v) VALUES (?1, ?2)", params![name, next.to_be_bytes().to_vec()])?;
+        tx.commit()?;
+        Ok(start)
+    }
+
     /// Change la clé de chiffrement de la base (par exemple après restauration).
     pub fn rekey(&self, new_key: &[u8; 32]) -> Result<(), StoreError> {
         let hex: String = new_key.iter().map(|b| format!("{b:02x}")).collect();
-        self.conn.execute_batch(&format!("PRAGMA rekey = \"x'{hex}'\";"))?;
+        self.conn.lock().execute_batch(&format!("PRAGMA rekey = \"x'{hex}'\";"))?;
         Ok(())
     }
 }
 
 // ------------------------------------------------------------------ identité
 
-pub struct IdentityHandle(Rc<Connection>);
+pub struct IdentityHandle(Db);
 
 impl IdentityHandle {
     fn meta(&self, k: &str) -> SResult<Vec<u8>> {
-        self.0
+        self.0.lock()
             .query_row("SELECT v FROM meta WHERE k = ?1", params![k], |r| r.get(0))
             .optional()
             .map_err(cb("get_identity_key_pair"))?
@@ -195,7 +221,7 @@ impl IdentityKeyStore for IdentityHandle {
             // Clé différente : on ne remplace jamais silencieusement (voir accept_identity_change).
             Some(_) => Err(SignalProtocolError::UntrustedIdentity(address.clone())),
             None => {
-                self.0
+                self.0.lock()
                     .execute(
                         "INSERT INTO identities (address, identity, verified, first_seen) VALUES (?1, ?2, 0, unixepoch())",
                         params![addr_key(address), identity.serialize().to_vec()],
@@ -215,7 +241,7 @@ impl IdentityKeyStore for IdentityHandle {
 
     async fn get_identity(&self, address: &ProtocolAddress) -> SResult<Option<IdentityKey>> {
         let v: Option<Vec<u8>> = self
-            .0
+            .0.lock()
             .query_row("SELECT identity FROM identities WHERE address = ?1", params![addr_key(address)], |r| r.get(0))
             .optional()
             .map_err(cb("get_identity"))?;
@@ -225,13 +251,13 @@ impl IdentityKeyStore for IdentityHandle {
 
 // ------------------------------------------------------------------ sessions
 
-pub struct SessionHandle(Rc<Connection>);
+pub struct SessionHandle(Db);
 
 #[async_trait(?Send)]
 impl SessionStore for SessionHandle {
     async fn load_session(&self, address: &ProtocolAddress) -> SResult<Option<SessionRecord>> {
         let v: Option<Vec<u8>> = self
-            .0
+            .0.lock()
             .query_row("SELECT record FROM sessions WHERE address = ?1", params![addr_key(address)], |r| r.get(0))
             .optional()
             .map_err(cb("load_session"))?;
@@ -239,7 +265,7 @@ impl SessionStore for SessionHandle {
     }
 
     async fn store_session(&mut self, address: &ProtocolAddress, record: &SessionRecord) -> SResult<()> {
-        self.0
+        self.0.lock()
             .execute(
                 "INSERT INTO sessions (address, record) VALUES (?1, ?2) ON CONFLICT (address) DO UPDATE SET record = excluded.record",
                 params![addr_key(address), record.serialize()?],
@@ -251,13 +277,13 @@ impl SessionStore for SessionHandle {
 
 // ------------------------------------------------------------------ pré-clés
 
-pub struct PreKeyHandle(Rc<Connection>);
+pub struct PreKeyHandle(Db);
 
 #[async_trait(?Send)]
 impl PreKeyStore for PreKeyHandle {
     async fn get_pre_key(&self, id: PreKeyId) -> SResult<PreKeyRecord> {
         let v: Option<Vec<u8>> = self
-            .0
+            .0.lock()
             .query_row("SELECT record FROM prekeys WHERE id = ?1", params![u32::from(id)], |r| r.get(0))
             .optional()
             .map_err(cb("get_pre_key"))?;
@@ -265,25 +291,25 @@ impl PreKeyStore for PreKeyHandle {
     }
 
     async fn save_pre_key(&mut self, id: PreKeyId, record: &PreKeyRecord) -> SResult<()> {
-        self.0
+        self.0.lock()
             .execute("INSERT OR REPLACE INTO prekeys (id, record) VALUES (?1, ?2)", params![u32::from(id), record.serialize()?])
             .map_err(cb("save_pre_key"))?;
         Ok(())
     }
 
     async fn remove_pre_key(&mut self, id: PreKeyId) -> SResult<()> {
-        self.0.execute("DELETE FROM prekeys WHERE id = ?1", params![u32::from(id)]).map_err(cb("remove_pre_key"))?;
+        self.0.lock().execute("DELETE FROM prekeys WHERE id = ?1", params![u32::from(id)]).map_err(cb("remove_pre_key"))?;
         Ok(())
     }
 }
 
-pub struct SignedPreKeyHandle(Rc<Connection>);
+pub struct SignedPreKeyHandle(Db);
 
 #[async_trait(?Send)]
 impl SignedPreKeyStore for SignedPreKeyHandle {
     async fn get_signed_pre_key(&self, id: SignedPreKeyId) -> SResult<SignedPreKeyRecord> {
         let v: Option<Vec<u8>> = self
-            .0
+            .0.lock()
             .query_row("SELECT record FROM signed_prekeys WHERE id = ?1", params![u32::from(id)], |r| r.get(0))
             .optional()
             .map_err(cb("get_signed_pre_key"))?;
@@ -291,19 +317,19 @@ impl SignedPreKeyStore for SignedPreKeyHandle {
     }
 
     async fn save_signed_pre_key(&mut self, id: SignedPreKeyId, record: &SignedPreKeyRecord) -> SResult<()> {
-        self.0
+        self.0.lock()
             .execute("INSERT OR REPLACE INTO signed_prekeys (id, record) VALUES (?1, ?2)", params![u32::from(id), record.serialize()?])
             .map_err(cb("save_signed_pre_key"))?;
         Ok(())
     }
 }
 
-pub struct KyberPreKeyHandle(Rc<Connection>);
+pub struct KyberPreKeyHandle(Db);
 
 impl KyberPreKeyHandle {
     /// Enregistre une pré-clé ML-KEM en précisant si c'est la clé « de dernier recours » (non supprimée à l'usage).
     pub fn save_with_kind(&self, id: KyberPreKeyId, record: &KyberPreKeyRecord, last_resort: bool) -> SResult<()> {
-        self.0
+        self.0.lock()
             .execute(
                 "INSERT OR REPLACE INTO kyber_prekeys (id, record, last_resort) VALUES (?1, ?2, ?3)",
                 params![u32::from(id), record.serialize()?, last_resort as i64],
@@ -317,7 +343,7 @@ impl KyberPreKeyHandle {
 impl KyberPreKeyStore for KyberPreKeyHandle {
     async fn get_kyber_pre_key(&self, id: KyberPreKeyId) -> SResult<KyberPreKeyRecord> {
         let v: Option<Vec<u8>> = self
-            .0
+            .0.lock()
             .query_row("SELECT record FROM kyber_prekeys WHERE id = ?1", params![u32::from(id)], |r| r.get(0))
             .optional()
             .map_err(cb("get_kyber_pre_key"))?;
@@ -331,7 +357,7 @@ impl KyberPreKeyStore for KyberPreKeyHandle {
 
     async fn mark_kyber_pre_key_used(&mut self, id: KyberPreKeyId, ec_id: SignedPreKeyId, base_key: &PublicKey) -> SResult<()> {
         let last_resort: Option<i64> = self
-            .0
+            .0.lock()
             .query_row("SELECT last_resort FROM kyber_prekeys WHERE id = ?1", params![u32::from(id)], |r| r.get(0))
             .optional()
             .map_err(cb("mark_kyber_pre_key_used"))?;
@@ -339,13 +365,13 @@ impl KyberPreKeyStore for KyberPreKeyHandle {
             None => Err(SignalProtocolError::InvalidKyberPreKeyId),
             // Pré-clé à usage unique : supprimée dès qu'elle a servi.
             Some(0) => {
-                self.0.execute("DELETE FROM kyber_prekeys WHERE id = ?1", params![u32::from(id)]).map_err(cb("mark_kyber_pre_key_used"))?;
+                self.0.lock().execute("DELETE FROM kyber_prekeys WHERE id = ?1", params![u32::from(id)]).map_err(cb("mark_kyber_pre_key_used"))?;
                 Ok(())
             }
             // Dernier recours : refuser toute réutilisation de la même combinaison (rejeu).
             Some(_) => {
                 let inserted = self
-                    .0
+                    .0.lock()
                     .execute(
                         "INSERT OR IGNORE INTO kyber_base_keys_seen (kyber_id, signed_id, base_key) VALUES (?1, ?2, ?3)",
                         params![u32::from(id), u32::from(ec_id), base_key.serialize().to_vec()],

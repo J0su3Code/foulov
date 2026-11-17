@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/crypto.dart';
+import 'api/device.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -27,7 +28,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  bool dco_decode_bool(dynamic raw);
+
+  @protected
+  Envelope dco_decode_box_autoadd_envelope(dynamic raw);
+
+  @protected
+  KeyBundle dco_decode_box_autoadd_key_bundle(dynamic raw);
+
+  @protected
   EncryptedMedia dco_decode_encrypted_media(dynamic raw);
+
+  @protected
+  Envelope dco_decode_envelope(dynamic raw);
+
+  @protected
+  KeyBundle dco_decode_key_bundle(dynamic raw);
+
+  @protected
+  List<OneTimePreKey> dco_decode_list_one_time_pre_key(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -39,7 +58,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SasSymbol> dco_decode_list_sas_symbol(dynamic raw);
 
   @protected
+  OneTimePreKey dco_decode_one_time_pre_key(dynamic raw);
+
+  @protected
   SasSymbol dco_decode_sas_symbol(dynamic raw);
+
+  @protected
+  int dco_decode_u_32(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -54,7 +79,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  Envelope sse_decode_box_autoadd_envelope(SseDeserializer deserializer);
+
+  @protected
+  KeyBundle sse_decode_box_autoadd_key_bundle(SseDeserializer deserializer);
+
+  @protected
   EncryptedMedia sse_decode_encrypted_media(SseDeserializer deserializer);
+
+  @protected
+  Envelope sse_decode_envelope(SseDeserializer deserializer);
+
+  @protected
+  KeyBundle sse_decode_key_bundle(SseDeserializer deserializer);
+
+  @protected
+  List<OneTimePreKey> sse_decode_list_one_time_pre_key(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -66,7 +111,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SasSymbol> sse_decode_list_sas_symbol(SseDeserializer deserializer);
 
   @protected
+  OneTimePreKey sse_decode_one_time_pre_key(SseDeserializer deserializer);
+
+  @protected
   SasSymbol sse_decode_sas_symbol(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -78,9 +129,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
     SseSerializer serializer,
@@ -90,8 +138,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_envelope(Envelope self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_key_bundle(
+    KeyBundle self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_encrypted_media(
     EncryptedMedia self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_envelope(Envelope self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_key_bundle(KeyBundle self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_one_time_pre_key(
+    List<OneTimePreKey> self,
     SseSerializer serializer,
   );
 
@@ -111,7 +183,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_one_time_pre_key(
+    OneTimePreKey self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_sas_symbol(SasSymbol self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
@@ -121,9 +202,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
 // Section: wire_class
