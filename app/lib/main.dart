@@ -6,13 +6,15 @@ import 'core/config.dart';
 import 'core/secure_session_storage.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/login_screen.dart';
+import 'features/couple/couple_screens.dart';
+import 'features/couple/couple_service.dart';
 import 'features/intro/intro_screen.dart';
 import 'src/rust/frb_generated.dart';
 import 'theme/foulov_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Charge le cœur cryptographique Rust (libsignal, chiffrement des fichiers).
+  // Charge le cœur cryptographique Rust (libsignal, chiffrement des fichiers, base locale chiffrée).
   await RustLib.init();
   AppConfig.check();
   await Supabase.initialize(
@@ -43,7 +45,7 @@ class FouLovApp extends StatelessWidget {
   }
 }
 
-/// Sans session : intro puis connexion. Avec session : l'espace du couple (appairage à venir).
+/// Sans session : intro puis connexion. Avec session : l'espace du couple.
 class _AuthGate extends StatelessWidget {
   const _AuthGate({required this.auth});
 
@@ -62,46 +64,14 @@ class _AuthGate extends StatelessWidget {
             ),
           );
         }
-        // Connecté : on ferme l'écran de connexion resté au-dessus.
+        // Connecté : on ferme l'écran de connexion resté au-dessus, puis on oriente vers l'espace du couple.
         WidgetsBinding.instance.addPostFrameCallback((_) => Navigator.of(context).popUntil((r) => r.isFirst));
-        return _SignedIn(auth: auth);
+        return CoupleGate(
+          key: ValueKey(auth.session?.user.id),
+          auth: auth,
+          couple: CoupleService(Supabase.instance.client),
+        );
       },
-    );
-  }
-}
-
-class _SignedIn extends StatelessWidget {
-  const _SignedIn({required this.auth});
-
-  final AuthService auth;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final provider = auth.session?.user.appMetadata['provider'] as String? ?? 'email';
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
-              Icon(Icons.verified_user_outlined, size: 48, color: t.colorScheme.secondary),
-              const SizedBox(height: 16),
-              Text('Tu es connecté.', style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Text(
-                'Connexion par ${provider == 'google' ? 'Google' : 'code e-mail'}. Prochaine étape : créer votre espace '
-                'ou rejoindre celui de ton partenaire.',
-                style: t.textTheme.bodyLarge?.copyWith(color: t.colorScheme.onSurfaceVariant),
-              ),
-              const Spacer(),
-              TextButton(onPressed: auth.signOut, child: const Text('Se déconnecter')),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
