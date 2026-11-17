@@ -34,8 +34,20 @@ class CoupleGate extends StatefulWidget {
 
 class _CoupleGateState extends State<CoupleGate> {
   late Future<CoupleState> _state = widget.couple.load();
+  // Après avoir rejoint par QR code, ce téléphone est déjà vérifié, mais il affiche quand même les symboles :
+  // le partenaire en a besoin pour vérifier de son côté.
+  bool _showSymbols = false;
 
-  void _reload() => setState(() => _state = widget.couple.load());
+  void _joined() {
+    _showSymbols = true;
+    _reload();
+  }
+
+  // Le chargement est lancé hors de setState : setState n'accepte qu'une mise à jour synchrone.
+  void _reload() {
+    final next = widget.couple.load();
+    setState(() => _state = next);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,17 +63,21 @@ class _CoupleGateState extends State<CoupleGate> {
         }
         final s = snap.data;
         if (s == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        if (!s.hasCouple) return ChoiceScreen(couple: widget.couple, onDone: _reload, auth: widget.auth);
+        if (!s.hasCouple) return ChoiceScreen(couple: widget.couple, onDone: _reload, onJoined: _joined, auth: widget.auth);
         if (!s.complete || s.partnerIdentity == null) return InviteScreen(couple: widget.couple, onPartner: _reload);
-        if (!s.verified) {
+        if (!s.verified || _showSymbols) {
           return VerifyScreen(
             couple: widget.couple,
             partnerId: s.partnerId!,
             partnerIdentity: s.partnerIdentity!,
-            onVerified: _reload,
+            alreadyVerified: s.verified,
+            onVerified: () {
+              _showSymbols = false;
+              _reload();
+            },
           );
         }
-        return GardenHome(auth: widget.auth);
+        return GardenHome(auth: widget.auth, onShowSymbols: () => setState(() => _showSymbols = true));
       },
     );
   }
@@ -97,10 +113,11 @@ class _Message extends StatelessWidget {
 // ===================================================================== choix
 
 class ChoiceScreen extends StatefulWidget {
-  const ChoiceScreen({super.key, required this.couple, required this.onDone, required this.auth});
+  const ChoiceScreen({super.key, required this.couple, required this.onDone, required this.onJoined, required this.auth});
 
   final CoupleService couple;
   final VoidCallback onDone;
+  final VoidCallback onJoined;
   final AuthService auth;
 
   @override
@@ -167,7 +184,7 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
                       builder: (_) => JoinScreen(couple: widget.couple, onJoined: () {
                         Navigator.of(context).pop();
-                        widget.onDone();
+                        widget.onJoined();
                       }),
                     )),
                   ),
@@ -203,15 +220,29 @@ class _InviteScreenState extends State<InviteScreen> {
     super.initState();
     _newCode();
     // Toutes les 3 secondes : Malik a-t-il rejoint ?
-    _poll = Timer.periodic(const Duration(seconds: 3), (_) async {
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) => _check());
+  }
+
+  bool _checking = false;
+
+  /// Une seule vérification à la fois : une requête lente ne doit pas en lancer une seconde en parallèle.
+  Future<void> _check() async {
+    if (_checking) return;
+    _checking = true;
+    try {
       final s = await widget.couple.load();
       if (s.complete && s.partnerIdentity != null) {
         _poll?.cancel();
         await widget.couple.receiveHello(s.partnerId!);
         HapticFeedback.heavyImpact();
-        widget.onPartner();
+        if (mounted) widget.onPartner();
       }
-    });
+    } catch (e) {
+      // Réseau momentané : on réessaie au passage suivant.
+      if (kDebugMode) debugPrint('[FOULOVE] attente du partenaire : $e');
+    } finally {
+      _checking = false;
+    }
   }
 
   Future<void> _newCode({bool forceNew = false}) async {
@@ -334,14 +365,36 @@ class JoinScreen extends StatefulWidget {
 
 class _JoinScreenState extends State<JoinScreen> {
   final _code = TextEditingController();
+  // Créé une seule fois : le recréer à chaque reconstruction relancerait la caméra.
+  final _camera = MobileScannerController(formats: const [BarcodeFormat.qrCode]);
   bool _scan = true;
   bool _busy = false;
+  // Le scanner signale le même QR code plusieurs fois par seconde : on ne le traite qu'une fois.
+  // Après un échec, il faut appuyer sur « Scanner à nouveau » (chaque essai compte dans la limite de 10 par heure).
+  String? _scanned;
   String? _error;
 
   @override
   void dispose() {
     _code.dispose();
+    _camera.dispose();
     super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture cap) {
+    final v = cap.barcodes.firstOrNull?.rawValue;
+    if (v == null || !v.startsWith(CoupleService.qrPrefix) || _scanned != null) return;
+    _scanned = v;
+    _camera.stop();
+    _submit(v);
+  }
+
+  void _rescan() {
+    setState(() {
+      _scanned = null;
+      _error = null;
+    });
+    _camera.start();
   }
 
   Future<void> _submit(String input) async {
@@ -366,9 +419,14 @@ class _JoinScreenState extends State<JoinScreen> {
     } catch (e) {
       if (kDebugMode) debugPrint('[FOULOVE] rejoindre : $e');
       final m = e.toString();
+      if (m.contains('déjà dans un couple')) {
+        // Ce compte a déjà un espace : l'aiguillage affiche le bon écran.
+        widget.onJoined();
+        return;
+      }
       _error = m.contains('trop de tentatives')
           ? 'Trop de tentatives. Patiente une heure avant de réessayer.'
-          : 'Impossible de rejoindre pour le moment. Réessaie dans un instant.';
+          : 'Impossible de rejoindre pour le moment. Vérifie ta connexion puis réessaie.';
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -400,13 +458,7 @@ class _JoinScreenState extends State<JoinScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(28),
                       child: Stack(fit: StackFit.expand, children: [
-                        MobileScanner(
-                          controller: MobileScannerController(formats: const [BarcodeFormat.qrCode]),
-                          onDetect: (cap) {
-                            final v = cap.barcodes.firstOrNull?.rawValue;
-                            if (v != null && v.startsWith(CoupleService.qrPrefix)) _submit(v);
-                          },
-                        ),
+                        MobileScanner(controller: _camera, onDetect: _onDetect),
                         IgnorePointer(
                           child: Center(
                             child: Container(
@@ -444,6 +496,12 @@ class _JoinScreenState extends State<JoinScreen> {
                 const SizedBox(height: 14),
                 if (_busy)
                   const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()))
+                else if (_scan && _scanned != null)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scanner à nouveau'),
+                    onPressed: _rescan,
+                  )
                 else if (!_scan)
                   FilledButton(onPressed: normalized.length == 10 ? () => _submit(normalized) : null, child: const Text('Rejoindre')),
               ],
@@ -458,12 +516,22 @@ class _JoinScreenState extends State<JoinScreen> {
 // ===================================================================== vérification des 7 symboles
 
 class VerifyScreen extends StatefulWidget {
-  const VerifyScreen({super.key, required this.couple, required this.partnerId, required this.partnerIdentity, required this.onVerified});
+  const VerifyScreen({
+    super.key,
+    required this.couple,
+    required this.partnerId,
+    required this.partnerIdentity,
+    required this.onVerified,
+    this.alreadyVerified = false,
+  });
 
   final CoupleService couple;
   final String partnerId;
   final Uint8List partnerIdentity;
   final VoidCallback onVerified;
+
+  /// Vrai si ce téléphone a déjà vérifié la clé du partenaire grâce au QR code.
+  final bool alreadyVerified;
 
   @override
   State<VerifyScreen> createState() => _VerifyScreenState();
@@ -508,6 +576,20 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
                   'Vos deux téléphones affichent ces 7 symboles. Lisez-les ensemble, à voix haute ou en appel vidéo.',
                   style: _soft(context),
                 ),
+                if (widget.alreadyVerified) ...[
+                  const SizedBox(height: 14),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Icon(Icons.verified_outlined, size: 18, color: cs.secondary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Le QR code a déjà confirmé la clé de ton amour sur ce téléphone. Montre-lui ces symboles : '
+                        'ils doivent être identiques sur son écran.',
+                        style: _soft(context)?.copyWith(fontSize: 14),
+                      ),
+                    ),
+                  ]),
+                ],
                 const SizedBox(height: 26),
                 FutureBuilder<List<SasSymbol>>(
                   future: _symbols,
@@ -617,9 +699,12 @@ class CelebrationScreen extends StatelessWidget {
 // ===================================================================== accueil (provisoire)
 
 class GardenHome extends StatelessWidget {
-  const GardenHome({super.key, required this.auth});
+  const GardenHome({super.key, required this.auth, required this.onShowSymbols});
 
   final AuthService auth;
+
+  /// Revoir les 7 symboles à tout moment, par exemple pour que le partenaire vérifie de son côté.
+  final VoidCallback onShowSymbols;
 
   @override
   Widget build(BuildContext context) {
@@ -642,6 +727,11 @@ class GardenHome extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text('Votre jardin vient d\'être planté. Les messages arrivent bientôt.', style: _soft(context), textAlign: TextAlign.center),
                 const Spacer(),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.verified_user_outlined),
+                  label: const Text('Nos 7 symboles'),
+                  onPressed: onShowSymbols,
+                ),
               ],
             ),
           ),
