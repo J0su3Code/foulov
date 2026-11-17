@@ -48,9 +48,7 @@ class _PetalBackgroundState extends State<PetalBackground> with SingleTickerProv
         fit: StackFit.expand,
         children: [
           IgnorePointer(
-            child: RepaintBoundary(
-              child: CustomPaint(painter: _PetalsPainter(_c, widget.count, cs.secondary, dark)),
-            ),
+            child: RepaintBoundary(child: CustomPaint(painter: _PetalsPainter(_c, widget.count, cs.secondary, dark))),
           ),
           widget.child,
         ],
@@ -110,7 +108,8 @@ class BeatingHeart extends StatefulWidget {
 }
 
 class _BeatingHeartState extends State<BeatingHeart> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))
+    ..repeat();
 
   @override
   void dispose() {
@@ -139,22 +138,27 @@ class _BeatingHeartState extends State<BeatingHeart> with SingleTickerProviderSt
             alignment: Alignment.center,
             children: [
               for (var k = 0; k < 2; k++)
-                Builder(builder: (context) {
-                  final rt = (t + k * .5) % 1.0;
-                  return Container(
-                    width: widget.size * (1 + rt * 1.3),
-                    height: widget.size * (1 + rt * 1.3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: color.withValues(alpha: (1 - rt) * .45), width: 2),
-                    ),
-                  );
-                }),
+                Builder(
+                  builder: (context) {
+                    final rt = (t + k * .5) % 1.0;
+                    return Container(
+                      width: widget.size * (1 + rt * 1.3),
+                      height: widget.size * (1 + rt * 1.3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: color.withValues(alpha: (1 - rt) * .45), width: 2),
+                      ),
+                    );
+                  },
+                ),
               Transform.scale(
                 scale: _beat(t),
-                child: Icon(Icons.favorite_rounded, size: widget.size, color: color, shadows: [
-                  Shadow(color: color.withValues(alpha: .5), blurRadius: 24),
-                ]),
+                child: Icon(
+                  Icons.favorite_rounded,
+                  size: widget.size,
+                  color: color,
+                  shadows: [Shadow(color: color.withValues(alpha: .5), blurRadius: 24)],
+                ),
               ),
             ],
           );
@@ -178,8 +182,10 @@ class EntwinedHeart extends StatefulWidget {
 }
 
 class _EntwinedHeartState extends State<EntwinedHeart> with TickerProviderStateMixin {
-  late final AnimationController _grow = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..forward();
-  late final AnimationController _sway = AnimationController(vsync: this, duration: const Duration(seconds: 5))..repeat(reverse: true);
+  late final AnimationController _grow = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))
+    ..forward();
+  late final AnimationController _sway = AnimationController(vsync: this, duration: const Duration(seconds: 5))
+    ..repeat(reverse: true);
 
   @override
   void dispose() {
@@ -214,8 +220,15 @@ class _EntwinedHeartState extends State<EntwinedHeart> with TickerProviderStateM
 }
 
 class _EntwinedPainter extends CustomPainter {
-  _EntwinedPainter(Listenable l, this.grow, this.sway, {required this.stemA, required this.stemB, required this.petal, required this.core})
-      : super(repaint: l);
+  _EntwinedPainter(
+    Listenable l,
+    this.grow,
+    this.sway, {
+    required this.stemA,
+    required this.stemB,
+    required this.petal,
+    required this.core,
+  }) : super(repaint: l);
 
   final double Function() grow;
   final double Function() sway;
@@ -302,7 +315,8 @@ class PetalBurst extends StatefulWidget {
 }
 
 class _PetalBurstState extends State<PetalBurst> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 4200))..forward();
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 4200))
+    ..forward();
 
   @override
   void dispose() {
@@ -341,9 +355,12 @@ class _BurstPainter extends CustomPainter {
       final drift = (r.nextDouble() - .5) * 60;
       final tt = t * 3.2;
       // Projection puis chute ralentie, comme des pétales légers.
-      final p = origin +
-          Offset(cos(ang) * v * (1 - exp(-tt * 1.6)) / 1.6 + sin(tt * 2 + i) * drift,
-              sin(ang) * v * (1 - exp(-tt * 1.6)) / 1.6 + 70 * tt * tt);
+      final p =
+          origin +
+          Offset(
+            cos(ang) * v * (1 - exp(-tt * 1.6)) / 1.6 + sin(tt * 2 + i) * drift,
+            sin(ang) * v * (1 - exp(-tt * 1.6)) / 1.6 + 70 * tt * tt,
+          );
       final a = (1 - t).clamp(0.0, 1.0);
       if (a <= 0) continue;
       canvas.save();

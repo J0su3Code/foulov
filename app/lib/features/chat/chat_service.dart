@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -29,6 +28,9 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Du plus récent au plus ancien (liste affichée à l'envers).
   final List<ChatMessage> messages = [];
+
+  /// Profil du couple (prénoms, surnom, date « ensemble depuis »), lu dans la base locale chiffrée.
+  CoupleProfile profile = const CoupleProfile();
   final Map<String, ChatMessage> _byId = {};
   bool hasMore = true;
   bool _loadingMore = false;
@@ -51,6 +53,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> start() async {
     WidgetsBinding.instance.addObserver(this);
+    profile = await chatProfile();
     await _loadPage();
     _channel = _db
         .channel('enveloppes-$_me')
@@ -62,9 +65,9 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
           callback: (_) => pull(),
         )
         .subscribe((status, error) {
-      // À chaque (re)connexion, on rattrape ce qui est arrivé pendant la coupure.
-      if (status == RealtimeSubscribeStatus.subscribed) pull();
-    });
+          // À chaque (re)connexion, on rattrape ce qui est arrivé pendant la coupure.
+          if (status == RealtimeSubscribeStatus.subscribed) pull();
+        });
     unawaited(pull());
     unawaited(flush());
     unawaited(chatPurge().catchError((_) {}));
@@ -148,6 +151,33 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       final m = await chatMessage(id: id);
       if (m != null) _upsert(m);
     }
+  }
+
+  // ------------------------------------------------------------------ profil
+
+  /// Nom affiché pour le partenaire : ton surnom pour lui, sinon son prénom.
+  String get partnerLabel => profile.partnerNickname ?? profile.partnerName ?? 'Ton amour';
+
+  Future<void> setMyName(String name) async {
+    await chatSetMyName(partner: partnerId, name: name);
+    await _reloadProfile();
+  }
+
+  Future<void> setPartnerNickname(String nickname) async {
+    await chatSetPartnerNickname(nickname: nickname);
+    await _reloadProfile();
+  }
+
+  /// `date` : « AAAA-MM-JJ », ou vide pour retirer.
+  Future<void> setTogetherSince(String date) async {
+    await chatSetTogetherSince(partner: partnerId, date: date);
+    await _reloadProfile();
+  }
+
+  Future<void> _reloadProfile() async {
+    profile = await chatProfile();
+    _notify();
+    unawaited(flush());
   }
 
   // ------------------------------------------------------------------ envoi
@@ -258,6 +288,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
               fresh.add(m.id);
             }
             if (res.updated.isNotEmpty) await _refresh(res.updated);
+            if (res.profileChanged) profile = await chatProfile();
           } catch (e) {
             if (e.toString().contains('clé de ton partenaire a changé')) {
               partnerKeyChanged = true;

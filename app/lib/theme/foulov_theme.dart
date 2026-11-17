@@ -83,7 +83,10 @@ abstract final class FouLovTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: scheme.onSurface,
-          minimumSize: const Size(64, 44), // hauteur confortable, largeur selon le contexte (une colonne étirée l'élargit)
+          minimumSize: const Size(
+            64,
+            44,
+          ), // hauteur confortable, largeur selon le contexte (une colonne étirée l'élargit)
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),

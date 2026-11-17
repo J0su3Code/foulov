@@ -283,3 +283,35 @@ fn une_base_de_la_version_precedente_est_mise_a_niveau() {
     assert_eq!(pending.len(), 1);
     assert!(pending[0].urgent, "les enveloppes existantes restent notifiées");
 }
+
+#[test]
+fn profil_du_couple_chiffre_et_synchronise() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    // Prénom : envoyé chiffré, sans notification.
+    let o = malik.set_my_name(INES, "  Malik  ").unwrap();
+    assert!(!o.urgent, "un changement de profil ne réveille pas le téléphone");
+    assert_eq!(recv(&mut ines, MALIK, &o), Received::Profile);
+    assert_eq!(ines.profile().unwrap().partner_name.as_deref(), Some("Malik"));
+    assert_eq!(malik.profile().unwrap().my_name.as_deref(), Some("Malik"));
+
+    // Surnom : uniquement local, rien n'est chiffré ni envoyé.
+    ines.set_partner_nickname("Mon soleil ☀️").unwrap();
+    assert!(ines.outbox().unwrap().is_empty());
+    assert_eq!(ines.profile().unwrap().partner_nickname.as_deref(), Some("Mon soleil ☀️"));
+    ines.set_partner_nickname("  ").unwrap();
+    assert_eq!(ines.profile().unwrap().partner_nickname, None);
+
+    // Date partagée : la modification la plus récente l'emporte, même arrivée en retard.
+    let old = ines.set_together_since(MALIK, "2022-03-12").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(5));
+    let new = malik.set_together_since(INES, "2022-03-11").unwrap();
+    recv(&mut ines, MALIK, &new);
+    assert_eq!(ines.profile().unwrap().together_since.as_deref(), Some("2022-03-11"));
+    assert_eq!(recv(&mut malik, INES, &old), Received::Nothing, "plus ancienne : ignorée");
+    assert_eq!(malik.profile().unwrap().together_since.as_deref(), Some("2022-03-11"));
+
+    assert!(malik.set_together_since(INES, "2022-02-30").is_err());
+    assert!(malik.set_my_name(INES, "").is_err());
+    assert!(malik.set_my_name(INES, &"x".repeat(41)).is_err());
+}

@@ -33,7 +33,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5")]
         pub body: Option<Body>,
     }
 
@@ -45,6 +45,29 @@ pub mod pb {
         Receipt(Receipt),
         #[prost(message, tag = "3")]
         Reaction(Reaction),
+        #[prost(message, tag = "4")]
+        Profile(Profile),
+        #[prost(message, tag = "5")]
+        Couple(Couple),
+    }
+
+    /// Le prénom que l'expéditeur se donne (affiché chez le partenaire, sauf s'il lui a choisi un surnom).
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Profile {
+        #[prost(string, tag = "1")]
+        pub name: String,
+        #[prost(uint64, tag = "2")]
+        pub updated_at: u64,
+    }
+
+    /// Informations communes au couple. La modification la plus récente l'emporte, des deux côtés.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Couple {
+        /// « AAAA-MM-JJ », vide si non renseignée.
+        #[prost(string, tag = "1")]
+        pub together_since: String,
+        #[prost(uint64, tag = "2")]
+        pub updated_at: u64,
     }
 
     #[derive(Clone, PartialEq, prost::Message)]
@@ -109,6 +132,39 @@ pub struct Outgoing {
     pub urgent: bool,
 }
 
+/// Profil du couple, tel que vu par ce téléphone. Rien de tout cela n'est visible du serveur.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CoupleProfile {
+    pub my_name: Option<String>,
+    /// Prénom envoyé par le partenaire.
+    pub partner_name: Option<String>,
+    /// Surnom donné au partenaire : reste sur ce téléphone, jamais envoyé.
+    pub partner_nickname: Option<String>,
+    /// « AAAA-MM-JJ ».
+    pub together_since: Option<String>,
+}
+
+const MAX_NAME_CHARS: usize = 40;
+
+fn clean_name(s: &str) -> Option<String> {
+    let t: String = s.trim().chars().filter(|c| !c.is_control()).collect();
+    (!t.is_empty() && t.chars().count() <= MAX_NAME_CHARS).then_some(t)
+}
+
+/// Date « AAAA-MM-JJ » plausible (de 1900 à aujourd'hui + 1 an), vérifiée sans dépendance.
+fn valid_date(s: &str) -> bool {
+    let b = s.as_bytes();
+    if b.len() != 10 || b[4] != b'-' || b[7] != b'-' {
+        return false;
+    }
+    let (Ok(y), Ok(m), Ok(d)) = (s[0..4].parse::<u32>(), s[5..7].parse::<u32>(), s[8..10].parse::<u32>()) else {
+        return false;
+    };
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let days = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    (1900..=2200).contains(&y) && (1..=12).contains(&m) && d >= 1 && d <= days[(m - 1) as usize]
+}
+
 /// Ce que la réception d'une enveloppe a changé.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Received {
@@ -116,6 +172,8 @@ pub enum Received {
     Message(ChatMessage),
     /// Messages dont le statut ou les réactions ont changé.
     Updated(Vec<String>),
+    /// Le profil du couple a changé (prénom du partenaire, date « ensemble depuis »).
+    Profile,
     /// Rien à afficher : doublon, message d'appairage, contenu d'une version future.
     Nothing,
     /// Enveloppe illisible (altérée ou corrompue) : écartée, jamais affichée.
@@ -196,11 +254,35 @@ fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMessage> {
     })
 }
 
+// ------------------------------------------------------------------ petites valeurs du profil (table kv)
+
+fn kv_get(c: &rusqlite::Connection, k: &str) -> R<Option<String>> {
+    c.query_row("SELECT v FROM kv WHERE k = ?1", params![k], |r| r.get::<_, Option<String>>(0))
+        .optional()
+        .map(Option::flatten)
+        .map_err(db)
+}
+
+fn kv_newer(c: &rusqlite::Connection, k: &str, at: u64) -> R<bool> {
+    let cur: Option<i64> = c.query_row("SELECT at FROM kv WHERE k = ?1", params![k], |r| r.get(0)).optional().map_err(db)?;
+    Ok(cur.is_none_or(|cur| (at as i64) > cur))
+}
+
+fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64) -> R<()> {
+    c.execute(
+        "INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT (k) DO UPDATE SET v = excluded.v, at = excluded.at",
+        params![k, v, at as i64],
+    )
+    .map_err(db)?;
+    Ok(())
+}
+
 const COLS: &str = "id, from_me, body, reply_to, sent_at, status, my_reaction, their_reaction";
 
 impl Device {
     fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
-        let urgent = !matches!(body, pb::Body::Receipt(_));
+        // Accusés et profil : rien qui mérite de réveiller le téléphone du partenaire.
+        let urgent = matches!(body, pb::Body::Text(_) | pb::Body::Reaction(_));
         let envelope = self.encrypt(partner, &encode(body))?;
         let envelope_id = uuid_v4();
         self.store
@@ -440,8 +522,73 @@ impl Device {
                     .map_err(db)?;
                 Ok(Received::Updated(if n > 0 { vec![id] } else { vec![] }))
             }
+            Some(pb::Body::Profile(p)) => {
+                let Some(name) = clean_name(&p.name) else { return Err(DeviceError::BadMessage) };
+                let newer = kv_newer(&c, "partner_name", p.updated_at)?;
+                if newer {
+                    kv_set(&c, "partner_name", Some(&name), p.updated_at)?;
+                }
+                Ok(if newer { Received::Profile } else { Received::Nothing })
+            }
+            Some(pb::Body::Couple(k)) => {
+                let date = (!k.together_since.is_empty()).then_some(k.together_since.as_str());
+                if date.is_some_and(|d| !valid_date(d)) {
+                    return Err(DeviceError::BadMessage);
+                }
+                let newer = kv_newer(&c, "together_since", k.updated_at)?;
+                if newer {
+                    kv_set(&c, "together_since", date, k.updated_at)?;
+                }
+                Ok(if newer { Received::Profile } else { Received::Nothing })
+            }
             None => Ok(Received::Nothing),
         }
+    }
+
+    /// Profil du couple vu par ce téléphone.
+    pub fn profile(&self) -> R<CoupleProfile> {
+        let c = self.store.conn.lock();
+        Ok(CoupleProfile {
+            my_name: kv_get(&c, "my_name")?,
+            partner_name: kv_get(&c, "partner_name")?,
+            partner_nickname: kv_get(&c, "partner_nickname")?,
+            together_since: kv_get(&c, "together_since")?,
+        })
+    }
+
+    /// Ton prénom : enregistré ici et envoyé, chiffré, au partenaire.
+    pub fn set_my_name(&mut self, partner: &str, name: &str) -> R<Outgoing> {
+        let name = clean_name(name).ok_or_else(|| DeviceError::Protocol("prénom vide ou trop long".into()))?;
+        let at = now_ms() as u64;
+        let tx = self.store.conn.clone();
+        tx.atomically(|| {
+            kv_set(&self.store.conn.lock(), "my_name", Some(&name), at)?;
+            self.enqueue(partner, pb::Body::Profile(pb::Profile { name: name.clone(), updated_at: at }), None)
+        })
+    }
+
+    /// Surnom donné au partenaire : uniquement sur ce téléphone (vide = retirer).
+    pub fn set_partner_nickname(&self, nickname: &str) -> R<()> {
+        let nick = if nickname.trim().is_empty() {
+            None
+        } else {
+            Some(clean_name(nickname).ok_or_else(|| DeviceError::Protocol("surnom trop long".into()))?)
+        };
+        kv_set(&self.store.conn.lock(), "partner_nickname", nick.as_deref(), now_ms() as u64)
+    }
+
+    /// Date « ensemble depuis » (« AAAA-MM-JJ », vide = retirer), partagée avec le partenaire.
+    pub fn set_together_since(&mut self, partner: &str, date: &str) -> R<Outgoing> {
+        let date = date.trim();
+        if !date.is_empty() && !valid_date(date) {
+            return Err(DeviceError::Protocol("date invalide".into()));
+        }
+        let at = now_ms() as u64;
+        let tx = self.store.conn.clone();
+        tx.atomically(|| {
+            kv_set(&self.store.conn.lock(), "together_since", (!date.is_empty()).then_some(date), at)?;
+            self.enqueue(partner, pb::Body::Couple(pb::Couple { together_since: date.to_owned(), updated_at: at }), None)
+        })
     }
 
     /// Historique, du plus récent au plus ancien. `before` : (sent_at, id) du dernier message déjà chargé.
@@ -500,6 +647,17 @@ mod tests {
         }
         assert!(unpad(&[1, 2, 3, 0, 0]).is_none(), "sans 0x80 final : refusé");
         assert!(unpad(&[0, 0, 0]).is_none());
+    }
+
+    #[test]
+    fn dates_validees() {
+        assert!(valid_date("2022-03-12"));
+        assert!(valid_date("2024-02-29"));
+        assert!(!valid_date("2023-02-29"), "pas d'année bissextile");
+        assert!(!valid_date("2022-13-01"));
+        assert!(!valid_date("2022-3-12"));
+        assert!(!valid_date("1899-12-31"));
+        assert!(!valid_date("abcd-ef-gh"));
     }
 
     #[test]

@@ -52,8 +52,7 @@ class AuthService {
   }
 
   /// Envoie un code à usage unique (8 chiffres, valable 10 minutes) à l'adresse indiquée.
-  Future<void> sendEmailCode(String email) =>
-      _supabase.auth.signInWithOtp(email: email.trim(), shouldCreateUser: true);
+  Future<void> sendEmailCode(String email) => _supabase.auth.signInWithOtp(email: email.trim(), shouldCreateUser: true);
 
   /// Vérifie le code reçu par e-mail et ouvre la session.
   Future<User?> verifyEmailCode(String email, String code) async {

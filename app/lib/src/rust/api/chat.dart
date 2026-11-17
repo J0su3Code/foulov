@@ -9,70 +9,43 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`
 
-Future<SentText> chatSendText({
-  required String partner,
-  required String body,
-  String? replyTo,
-}) => RustLib.instance.api.crateApiChatChatSendText(
-  partner: partner,
-  body: body,
-  replyTo: replyTo,
-);
+Future<CoupleProfile> chatProfile() => RustLib.instance.api.crateApiChatChatProfile();
 
-Future<Outgoing> chatSendReaction({
-  required String partner,
-  required String target,
-  required String emoji,
-}) => RustLib.instance.api.crateApiChatChatSendReaction(
-  partner: partner,
-  target: target,
-  emoji: emoji,
-);
+Future<Outgoing> chatSetMyName({required String partner, required String name}) =>
+    RustLib.instance.api.crateApiChatChatSetMyName(partner: partner, name: name);
+
+Future<void> chatSetPartnerNickname({required String nickname}) =>
+    RustLib.instance.api.crateApiChatChatSetPartnerNickname(nickname: nickname);
+
+Future<Outgoing> chatSetTogetherSince({required String partner, required String date}) =>
+    RustLib.instance.api.crateApiChatChatSetTogetherSince(partner: partner, date: date);
+
+Future<SentText> chatSendText({required String partner, required String body, String? replyTo}) =>
+    RustLib.instance.api.crateApiChatChatSendText(partner: partner, body: body, replyTo: replyTo);
+
+Future<Outgoing> chatSendReaction({required String partner, required String target, required String emoji}) =>
+    RustLib.instance.api.crateApiChatChatSendReaction(partner: partner, target: target, emoji: emoji);
 
 /// `kind` : 2 = distribué, 3 = lu.
-Future<Outgoing?> chatSendReceipt({
-  required String partner,
-  required List<String> ids,
-  required int kind,
-}) => RustLib.instance.api.crateApiChatChatSendReceipt(
-  partner: partner,
-  ids: ids,
-  kind: kind,
-);
+Future<Outgoing?> chatSendReceipt({required String partner, required List<String> ids, required int kind}) =>
+    RustLib.instance.api.crateApiChatChatSendReceipt(partner: partner, ids: ids, kind: kind);
 
-Future<List<Outgoing>> chatOutbox() =>
-    RustLib.instance.api.crateApiChatChatOutbox();
+Future<List<Outgoing>> chatOutbox() => RustLib.instance.api.crateApiChatChatOutbox();
 
 /// Le serveur a accepté l'enveloppe ; renvoie le message passé à « envoyé », s'il y en a un.
 Future<String?> chatOutboxSent({required String envelopeId}) =>
     RustLib.instance.api.crateApiChatChatOutboxSent(envelopeId: envelopeId);
 
-Future<Received> chatReceive({
-  required String partner,
-  required String envelopeId,
-  required Envelope envelope,
-}) => RustLib.instance.api.crateApiChatChatReceive(
-  partner: partner,
-  envelopeId: envelopeId,
-  envelope: envelope,
-);
+Future<Received> chatReceive({required String partner, required String envelopeId, required Envelope envelope}) =>
+    RustLib.instance.api.crateApiChatChatReceive(partner: partner, envelopeId: envelopeId, envelope: envelope);
 
 /// Historique du plus récent au plus ancien ; `before_*` : dernier message déjà affiché.
-Future<List<ChatMessage>> chatMessages({
-  PlatformInt64? beforeSentAt,
-  String? beforeId,
-  required int limit,
-}) => RustLib.instance.api.crateApiChatChatMessages(
-  beforeSentAt: beforeSentAt,
-  beforeId: beforeId,
-  limit: limit,
-);
+Future<List<ChatMessage>> chatMessages({PlatformInt64? beforeSentAt, String? beforeId, required int limit}) =>
+    RustLib.instance.api.crateApiChatChatMessages(beforeSentAt: beforeSentAt, beforeId: beforeId, limit: limit);
 
-Future<ChatMessage?> chatMessage({required String id}) =>
-    RustLib.instance.api.crateApiChatChatMessage(id: id);
+Future<ChatMessage?> chatMessage({required String id}) => RustLib.instance.api.crateApiChatChatMessage(id: id);
 
-Future<List<String>> chatUnread() =>
-    RustLib.instance.api.crateApiChatChatUnread();
+Future<List<String>> chatUnread() => RustLib.instance.api.crateApiChatChatUnread();
 
 Future<void> chatPurge() => RustLib.instance.api.crateApiChatChatPurge();
 
@@ -125,6 +98,33 @@ class ChatMessage {
           theirReaction == other.theirReaction;
 }
 
+/// Profil du couple, jamais visible du serveur.
+class CoupleProfile {
+  final String? myName;
+  final String? partnerName;
+
+  /// Surnom donné au partenaire : reste sur ce téléphone.
+  final String? partnerNickname;
+
+  /// « AAAA-MM-JJ ».
+  final String? togetherSince;
+
+  const CoupleProfile({this.myName, this.partnerName, this.partnerNickname, this.togetherSince});
+
+  @override
+  int get hashCode => myName.hashCode ^ partnerName.hashCode ^ partnerNickname.hashCode ^ togetherSince.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoupleProfile &&
+          runtimeType == other.runtimeType &&
+          myName == other.myName &&
+          partnerName == other.partnerName &&
+          partnerNickname == other.partnerNickname &&
+          togetherSince == other.togetherSince;
+}
+
 /// Enveloppe à déposer dans la table `envelopes` (l'identifiant sert de clé primaire : renvoi sans doublon).
 class Outgoing {
   final String envelopeId;
@@ -134,16 +134,10 @@ class Outgoing {
   /// Mérite une notification (message, réaction) ; faux pour les accusés de réception.
   final bool urgent;
 
-  const Outgoing({
-    required this.envelopeId,
-    required this.kind,
-    required this.body,
-    required this.urgent,
-  });
+  const Outgoing({required this.envelopeId, required this.kind, required this.body, required this.urgent});
 
   @override
-  int get hashCode =>
-      envelopeId.hashCode ^ kind.hashCode ^ body.hashCode ^ urgent.hashCode;
+  int get hashCode => envelopeId.hashCode ^ kind.hashCode ^ body.hashCode ^ urgent.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -164,10 +158,13 @@ class Received {
   /// Enveloppe illisible (altérée ou corrompue), écartée définitivement.
   final bool rejected;
 
-  const Received({this.message, required this.updated, required this.rejected});
+  /// Le profil du couple a changé (prénom du partenaire, date « ensemble depuis »).
+  final bool profileChanged;
+
+  const Received({this.message, required this.updated, required this.rejected, required this.profileChanged});
 
   @override
-  int get hashCode => message.hashCode ^ updated.hashCode ^ rejected.hashCode;
+  int get hashCode => message.hashCode ^ updated.hashCode ^ rejected.hashCode ^ profileChanged.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -176,7 +173,8 @@ class Received {
           runtimeType == other.runtimeType &&
           message == other.message &&
           updated == other.updated &&
-          rejected == other.rejected;
+          rejected == other.rejected &&
+          profileChanged == other.profileChanged;
 }
 
 class SentText {
@@ -191,8 +189,5 @@ class SentText {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SentText &&
-          runtimeType == other.runtimeType &&
-          message == other.message &&
-          outgoing == other.outgoing;
+      other is SentText && runtimeType == other.runtimeType && message == other.message && outgoing == other.outgoing;
 }

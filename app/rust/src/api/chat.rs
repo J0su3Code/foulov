@@ -59,6 +59,42 @@ pub struct Received {
     pub updated: Vec<String>,
     /// Enveloppe illisible (altérée ou corrompue), écartée définitivement.
     pub rejected: bool,
+    /// Le profil du couple a changé (prénom du partenaire, date « ensemble depuis »).
+    pub profile_changed: bool,
+}
+
+/// Profil du couple, jamais visible du serveur.
+pub struct CoupleProfile {
+    pub my_name: Option<String>,
+    pub partner_name: Option<String>,
+    /// Surnom donné au partenaire : reste sur ce téléphone.
+    pub partner_nickname: Option<String>,
+    /// « AAAA-MM-JJ ».
+    pub together_since: Option<String>,
+}
+
+pub fn chat_profile() -> anyhow::Result<CoupleProfile> {
+    with_device(|d| {
+        let p = d.profile()?;
+        Ok(CoupleProfile {
+            my_name: p.my_name,
+            partner_name: p.partner_name,
+            partner_nickname: p.partner_nickname,
+            together_since: p.together_since,
+        })
+    })
+}
+
+pub fn chat_set_my_name(partner: String, name: String) -> anyhow::Result<Outgoing> {
+    with_device(|d| Ok(d.set_my_name(&partner, &name)?.into()))
+}
+
+pub fn chat_set_partner_nickname(nickname: String) -> anyhow::Result<()> {
+    with_device(|d| Ok(d.set_partner_nickname(&nickname)?))
+}
+
+pub fn chat_set_together_since(partner: String, date: String) -> anyhow::Result<Outgoing> {
+    with_device(|d| Ok(d.set_together_since(&partner, &date)?.into()))
 }
 
 pub fn chat_send_text(partner: String, body: String, reply_to: Option<String>) -> anyhow::Result<SentText> {
@@ -88,10 +124,11 @@ pub fn chat_outbox_sent(envelope_id: String) -> anyhow::Result<Option<String>> {
 
 pub fn chat_receive(partner: String, envelope_id: String, envelope: Envelope) -> anyhow::Result<Received> {
     with_device(|d| {
-        let none = Received { message: None, updated: vec![], rejected: false };
+        let none = Received { message: None, updated: vec![], rejected: false, profile_changed: false };
         Ok(match d.receive(&partner, &envelope_id, &CoreEnvelope { kind: envelope.kind, body: envelope.body })? {
             core::Received::Message(m) => Received { message: Some(m.into()), ..none },
             core::Received::Updated(ids) => Received { updated: ids, ..none },
+            core::Received::Profile => Received { profile_changed: true, ..none },
             core::Received::Nothing => none,
             core::Received::Rejected => Received { rejected: true, ..none },
         })

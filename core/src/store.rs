@@ -113,6 +113,8 @@ CREATE TABLE IF NOT EXISTS outbox (
   urgent INTEGER NOT NULL DEFAULT 1);
 -- Enveloppes déjà traitées : une enveloppe livrée deux fois n'est jamais appliquée deux fois.
 CREATE TABLE IF NOT EXISTS seen_envelopes (id TEXT PRIMARY KEY, at INTEGER NOT NULL);
+-- Profil du couple (prénoms, surnom, date « ensemble depuis ») : petites valeurs horodatées.
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT, at INTEGER NOT NULL);
 ";
 
 /// Mises à niveau des bases créées par une version précédente (CREATE IF NOT EXISTS n'ajoute pas de colonne).

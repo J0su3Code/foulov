@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config.dart';
@@ -42,6 +43,10 @@ class FouLovApp extends StatelessWidget {
       theme: FouLovTheme.jour,
       darkTheme: FouLovTheme.nuit,
       themeMode: ThemeMode.system,
+      // Composants système en français (calendrier, menus Copier/Coller…).
+      locale: const Locale('fr'),
+      supportedLocales: const [Locale('fr')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       // Le verrou recouvre tout l'écran (navigation comprise), seulement quand quelqu'un est connecté.
       builder: (context, child) => LockGate(active: auth.session != null, child: child ?? const SizedBox()),
       home: _AuthGate(auth: auth),
@@ -63,8 +68,10 @@ class _AuthGate extends StatelessWidget {
         if (auth.session == null) {
           return Builder(
             builder: (context) => IntroScreen(
-              onStart: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LoginScreen(auth: auth))),
-              onJoin: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LoginScreen(auth: auth))),
+              onStart: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LoginScreen(auth: auth))),
+              onJoin: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LoginScreen(auth: auth))),
             ),
           );
         }
