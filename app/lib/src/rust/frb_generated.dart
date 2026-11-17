@@ -1226,12 +1226,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Outgoing dco_decode_outgoing(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return Outgoing(
       envelopeId: dco_decode_String(arr[0]),
       kind: dco_decode_u_8(arr[1]),
       body: dco_decode_list_prim_u_8_strict(arr[2]),
+      urgent: dco_decode_bool(arr[3]),
     );
   }
 
@@ -1555,7 +1556,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_envelopeId = sse_decode_String(deserializer);
     var var_kind = sse_decode_u_8(deserializer);
     var var_body = sse_decode_list_prim_u_8_strict(deserializer);
-    return Outgoing(envelopeId: var_envelopeId, kind: var_kind, body: var_body);
+    var var_urgent = sse_decode_bool(deserializer);
+    return Outgoing(
+      envelopeId: var_envelopeId,
+      kind: var_kind,
+      body: var_body,
+      urgent: var_urgent,
+    );
   }
 
   @protected
@@ -1869,6 +1876,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.envelopeId, serializer);
     sse_encode_u_8(self.kind, serializer);
     sse_encode_list_prim_u_8_strict(self.body, serializer);
+    sse_encode_bool(self.urgent, serializer);
   }
 
   @protected

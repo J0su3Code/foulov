@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Android 13+ : afficher les notifications « Nouveau message ». -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="FouLove"
         android:name="${applicationName}"
@@ -30,6 +32,20 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Notifications : cible d'envoi = identifiant d'installation Firebase (FID), recommandé par FCM. -->
+        <meta-data
+            android:name="firebase_messaging_installation_id_enabled"
+            android:value="true" />
+        <!-- Notifications : canal, icône et couleur par défaut (texte fixe envoyé par le serveur). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="messages" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

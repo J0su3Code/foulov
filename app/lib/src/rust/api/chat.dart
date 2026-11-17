@@ -131,14 +131,19 @@ class Outgoing {
   final int kind;
   final Uint8List body;
 
+  /// Mérite une notification (message, réaction) ; faux pour les accusés de réception.
+  final bool urgent;
+
   const Outgoing({
     required this.envelopeId,
     required this.kind,
     required this.body,
+    required this.urgent,
   });
 
   @override
-  int get hashCode => envelopeId.hashCode ^ kind.hashCode ^ body.hashCode;
+  int get hashCode =>
+      envelopeId.hashCode ^ kind.hashCode ^ body.hashCode ^ urgent.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -147,7 +152,8 @@ class Outgoing {
           runtimeType == other.runtimeType &&
           envelopeId == other.envelopeId &&
           kind == other.kind &&
-          body == other.body;
+          body == other.body &&
+          urgent == other.urgent;
 }
 
 /// Effet d'une enveloppe reçue : un nouveau message, des messages modifiés (statut, réaction), ou rien.

@@ -61,6 +61,7 @@ fn conversation_complete_avec_accuses_et_reactions() {
     assert_eq!(m1.body, "Bonjour mon cœur 🌱", "espaces en trop retirés");
     assert_eq!(get(&malik, &m1.id).status, STATUS_PENDING);
     assert_eq!(malik.outbox().unwrap().len(), 1);
+    assert!(o1.urgent, "un message réveille le téléphone du partenaire");
     deliver(&mut malik, o1, &mut server);
     assert_eq!(get(&malik, &m1.id).status, STATUS_SENT);
     assert!(malik.outbox().unwrap().is_empty());
@@ -70,6 +71,8 @@ fn conversation_complete_avec_accuses_et_reactions() {
     assert_eq!((r1.id.as_str(), r1.body.as_str(), r1.from_me), (m1.id.as_str(), "Bonjour mon cœur 🌱", false));
     assert_eq!(ines.unread().unwrap(), vec![m1.id.clone()]);
     let d = ines.send_receipt(MALIK, &[m1.id.clone()], STATUS_DELIVERED).unwrap().unwrap();
+    assert!(!d.urgent, "un accusé ne réveille pas le téléphone");
+    assert!(!ines.outbox().unwrap()[0].urgent, "information conservée dans la boîte d'envoi");
     deliver(&mut ines, d, &mut server);
     assert_eq!(recv(&mut malik, INES, &server.pop_front().unwrap()), Received::Updated(vec![m1.id.clone()]));
     assert_eq!(get(&malik, &m1.id).status, STATUS_DELIVERED);
@@ -176,7 +179,11 @@ fn une_enveloppe_alteree_est_ecartee_sans_bloquer_la_suite() {
     let (_, o) = malik.send_text(INES, "suivant", None).unwrap();
     let Received::Message(r) = recv(&mut ines, MALIK, &o) else { panic!("la suite doit passer") };
     assert_eq!(r.body, "suivant");
-    let junk = Outgoing { envelope_id: "00000000-0000-4000-8000-000000000000".into(), envelope: Envelope { kind: 2, body: vec![1, 2, 3] } };
+    let junk = Outgoing {
+        envelope_id: "00000000-0000-4000-8000-000000000000".into(),
+        envelope: Envelope { kind: 2, body: vec![1, 2, 3] },
+        urgent: true,
+    };
     assert_eq!(recv(&mut ines, MALIK, &junk), Received::Rejected);
 }
 
@@ -254,4 +261,25 @@ fn analyse_alteration_octet_par_octet() {
         // pré-clés) et, quand la session existe déjà, le chiffré ML-KEM devenu inutile. Le contenu, lui, est intact.
         println!("cas {case} : {} octets, altérations sans effet sur le contenu : {ranges:?}", o.envelope.body.len());
     }
+}
+
+#[test]
+fn une_base_de_la_version_precedente_est_mise_a_niveau() {
+    // Base créée par la version 2 (boîte d'envoi sans colonne `urgent`), comme sur les téléphones de test.
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path().join("v2.db");
+    {
+        let (_, mut malik) = couple(dir.path());
+        malik.send_text(INES, "avant la mise à jour", None).unwrap();
+        drop(malik);
+        std::fs::copy(dir.path().join("malik.db"), &p).unwrap();
+        let _ = std::fs::copy(dir.path().join("malik.db-wal"), dir.path().join("v2.db-wal"));
+        let c = rusqlite::Connection::open(&p).unwrap();
+        c.execute_batch(&format!("PRAGMA key = \"x'{}'\";", "02".repeat(32))).unwrap();
+        c.execute_batch("ALTER TABLE outbox DROP COLUMN urgent").unwrap();
+    }
+    let malik = Device::open(&p, &[2; 32]).unwrap();
+    let pending = malik.outbox().unwrap();
+    assert_eq!(pending.len(), 1);
+    assert!(pending[0].urgent, "les enveloppes existantes restent notifiées");
 }

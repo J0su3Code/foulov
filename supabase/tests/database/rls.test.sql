@@ -1,7 +1,7 @@
 -- Tests des règles d'accès (docs/SECURITY.md §8) : Inès et Malik forment un couple, Zoé est une intruse.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(47);
 
 -- ------------------------------------------------------------ préparation
 insert into auth.users (id, email) values
@@ -130,6 +130,26 @@ select throws_ok($$ select public.create_couple() $$, '42501', null, 'un visiteu
 reset role;
 select is(public.normalize_invitation_code(' k7q4m-9xhpt '), 'K7Q4M9XHPT', 'espaces, tiret et minuscules tolérés');
 select is(public.normalize_invitation_code('ILO'), '110', 'I, L et O sont lus comme 1, 1 et 0');
+
+-- ------------------------------------------------------------ notifications
+select pg_temp.as_admin();
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select lives_ok($$ select public.register_push_token('jeton-de-test-ines-0123456789', 'android') $$, 'Inès enregistre le jeton de son téléphone');
+select throws_ok($$ select * from public.push_tokens $$, '42501', null, 'les jetons ne sont lisibles par aucun client');
+select pg_temp.as_admin();
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.unregister_push_token('jeton-de-test-ines-0123456789');
+select pg_temp.as_admin();
+select is((select count(*)::int from public.push_tokens where user_id = '11111111-1111-1111-1111-111111111111'), 1,
+  'Zoé ne peut pas désinscrire le téléphone d''Inès');
+select pg_temp.as_user('22222222-2222-2222-2222-222222222222');
+select public.register_push_token('jeton-de-test-ines-0123456789', 'android');
+select pg_temp.as_admin();
+select is((select user_id from public.push_tokens where token = 'jeton-de-test-ines-0123456789'), '22222222-2222-2222-2222-222222222222'::uuid,
+  'un téléphone qui change de compte ne notifie plus l''ancien');
+select is((select column_default from information_schema.columns where table_name = 'envelopes' and column_name = 'urgent'), 'true',
+  'une enveloppe est urgente par défaut (message, réaction)');
+select ok(exists (select 1 from pg_trigger where tgname = 'envelopes_notify'), 'chaque enveloppe urgente déclenche la notification');
 
 -- ------------------------------------------------------------ temps réel
 select ok(

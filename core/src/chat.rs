@@ -104,6 +104,9 @@ pub struct ChatMessage {
 pub struct Outgoing {
     pub envelope_id: String,
     pub envelope: Envelope,
+    /// Mérite une notification (message, réaction). Les accusés de réception ne réveillent pas le téléphone :
+    /// le serveur apprend seulement « notifier ou non », comme avec l'indicateur `urgent` de Signal.
+    pub urgent: bool,
 }
 
 /// Ce que la réception d'une enveloppe a changé.
@@ -197,17 +200,18 @@ const COLS: &str = "id, from_me, body, reply_to, sent_at, status, my_reaction, t
 
 impl Device {
     fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
+        let urgent = !matches!(body, pb::Body::Receipt(_));
         let envelope = self.encrypt(partner, &encode(body))?;
         let envelope_id = uuid_v4();
         self.store
             .conn
             .lock()
             .execute(
-                "INSERT INTO outbox (envelope_id, kind, body, message_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![envelope_id, envelope.kind as i64, envelope.body, message_id, now_ms()],
+                "INSERT INTO outbox (envelope_id, kind, body, message_id, created_at, urgent) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![envelope_id, envelope.kind as i64, envelope.body, message_id, now_ms(), urgent as i64],
             )
             .map_err(db)?;
-        Ok(Outgoing { envelope_id, envelope })
+        Ok(Outgoing { envelope_id, envelope, urgent })
     }
 
     /// Chiffre un message texte, l'ajoute à l'historique (« en attente ») et à la boîte d'envoi.
@@ -294,12 +298,13 @@ impl Device {
     /// Enveloppes encore à déposer, dans l'ordre de création.
     pub fn outbox(&self) -> R<Vec<Outgoing>> {
         let c = self.store.conn.lock();
-        let mut st = c.prepare("SELECT envelope_id, kind, body FROM outbox ORDER BY created_at, rowid").map_err(db)?;
+        let mut st = c.prepare("SELECT envelope_id, kind, body, urgent FROM outbox ORDER BY created_at, rowid").map_err(db)?;
         let rows = st
             .query_map([], |r| {
                 Ok(Outgoing {
                     envelope_id: r.get(0)?,
                     envelope: Envelope { kind: r.get::<_, i64>(1)? as u8, body: r.get(2)? },
+                    urgent: r.get::<_, i64>(3)? == 1,
                 })
             })
             .map_err(db)?;
