@@ -565,6 +565,7 @@ dependencies = [
  "async-trait",
  "futures-util",
  "libsignal-protocol",
+ "prost",
  "rand 0.9.5",
  "rusqlite",
  "sha2",

@@ -28,10 +28,30 @@ type SResult<T> = Result<T, SignalProtocolError>;
 pub(crate) struct Db(Arc<Mutex<Connection>>);
 
 impl Db {
-    fn lock(&self) -> MutexGuard<'_, Connection> {
+    pub(crate) fn lock(&self) -> MutexGuard<'_, Connection> {
         // Un fil qui a paniqué ne doit pas rendre la base inutilisable : la connexion reste cohérente
         // (chaque écriture est atomique côté SQLite).
         self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Exécute `f` dans une transaction : tout ou rien (avancée du ratchet + message enregistré, par exemple).
+    /// Les magasins libsignal écrivent sur la même connexion, donc dans cette même transaction.
+    /// Les appels arrivent un par un (verrou du pont Flutter), il n'y a pas de transactions concurrentes.
+    pub(crate) fn atomically<T, E: From<StoreError>>(&self, f: impl FnOnce() -> Result<T, E>) -> Result<T, E> {
+        self.lock().execute_batch("BEGIN IMMEDIATE").map_err(StoreError::from)?;
+        match f() {
+            Ok(v) => match self.lock().execute_batch("COMMIT") {
+                Ok(()) => Ok(v),
+                Err(e) => {
+                    let _ = self.lock().execute_batch("ROLLBACK");
+                    Err(StoreError::from(e).into())
+                }
+            },
+            Err(e) => {
+                let _ = self.lock().execute_batch("ROLLBACK");
+                Err(e)
+            }
+        }
     }
 }
 
@@ -66,7 +86,7 @@ fn addr_key(a: &ProtocolAddress) -> String {
     format!("{}.{}", a.name(), u32::from(a.device_id()))
 }
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v BLOB NOT NULL);
@@ -80,11 +100,23 @@ CREATE TABLE IF NOT EXISTS kyber_prekeys (id INTEGER PRIMARY KEY, record BLOB NO
 CREATE TABLE IF NOT EXISTS kyber_base_keys_seen (
   kyber_id INTEGER NOT NULL, signed_id INTEGER NOT NULL, base_key BLOB NOT NULL,
   PRIMARY KEY (kyber_id, signed_id, base_key));
+-- Messagerie (version 2). L'historique ne vit que sur le téléphone, dans cette base chiffrée.
+-- status : messages envoyés 0 en attente, 1 envoyé, 2 distribué, 3 lu ; messages reçus 0 non lu, 3 lu.
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY, from_me INTEGER NOT NULL, body TEXT NOT NULL, reply_to TEXT,
+  sent_at INTEGER NOT NULL, received_at INTEGER NOT NULL, status INTEGER NOT NULL,
+  my_reaction TEXT, their_reaction TEXT);
+CREATE INDEX IF NOT EXISTS messages_order ON messages (sent_at, id);
+-- Enveloppes chiffrées pas encore déposées sur le serveur : renvoyées telles quelles, jamais rechiffrées.
+CREATE TABLE IF NOT EXISTS outbox (
+  envelope_id TEXT PRIMARY KEY, kind INTEGER NOT NULL, body BLOB NOT NULL, message_id TEXT, created_at INTEGER NOT NULL);
+-- Enveloppes déjà traitées : une enveloppe livrée deux fois n'est jamais appliquée deux fois.
+CREATE TABLE IF NOT EXISTS seen_envelopes (id TEXT PRIMARY KEY, at INTEGER NOT NULL);
 ";
 
 /// Base locale chiffrée et ses magasins libsignal (une poignée par magasin, connexion partagée).
 pub struct Store {
-    conn: Db,
+    pub(crate) conn: Db,
     pub identity: IdentityHandle,
     pub sessions: SessionHandle,
     pub prekeys: PreKeyHandle,
@@ -113,7 +145,10 @@ impl Store {
             "PRAGMA cipher_memory_security = ON; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON;",
         )?;
         conn.execute_batch(SCHEMA)?;
-        conn.execute("INSERT OR IGNORE INTO meta (k, v) VALUES ('schema_version', ?1)", params![SCHEMA_VERSION.to_be_bytes().to_vec()])?;
+        conn.execute(
+            "INSERT INTO meta (k, v) VALUES ('schema_version', ?1) ON CONFLICT (k) DO UPDATE SET v = excluded.v",
+            params![SCHEMA_VERSION.to_be_bytes().to_vec()],
+        )?;
         let conn = Db(Arc::new(Mutex::new(conn)));
         Ok(Store {
             identity: IdentityHandle(conn.clone()),

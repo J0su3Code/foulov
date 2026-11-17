@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'crypto.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `with`
+// These functions are ignored because they are not marked as `pub`: `with_device`
 
 /// Ouvre la base chiffrée du téléphone (crée l'identité à la première ouverture).
 /// `db_key` : 32 octets aléatoires conservés dans le Keystore / Keychain par l'app.

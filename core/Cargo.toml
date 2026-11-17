@@ -14,6 +14,7 @@ aes-gcm = { version = "0.10", features = ["stream"] }
 async-trait = "0.1"
 futures-util = "0.3"
 # Version épinglée : ne mettre à jour qu'après lecture du changelog et passage de tous les tests.
+prost = "0.14"
 libsignal-protocol = { git = "https://github.com/signalapp/libsignal", tag = "v0.106.1" }
 rand = "0.9.4"
 rusqlite = { version = "0.37", features = ["bundled-sqlcipher-vendored-openssl"] }

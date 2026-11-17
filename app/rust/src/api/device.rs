@@ -8,7 +8,7 @@ use foulov_core::device::{self as core, Device};
 
 static DEVICE: Mutex<Option<Device>> = Mutex::new(None);
 
-fn with<T>(f: impl FnOnce(&mut Device) -> anyhow::Result<T>) -> anyhow::Result<T> {
+pub(crate) fn with_device<T>(f: impl FnOnce(&mut Device) -> anyhow::Result<T>) -> anyhow::Result<T> {
     let mut g = DEVICE.lock().unwrap_or_else(|e| e.into_inner());
     let d = g.as_mut().ok_or_else(|| anyhow::anyhow!("base locale non ouverte"))?;
     f(d)
@@ -24,12 +24,12 @@ pub fn device_open(path: String, db_key: Vec<u8>) -> anyhow::Result<()> {
 }
 
 pub fn device_identity_key() -> anyhow::Result<Vec<u8>> {
-    with(|d| Ok(d.identity_key()?))
+    with_device(|d| Ok(d.identity_key()?))
 }
 
 /// Empreinte de la clé d'identité, placée dans le QR code d'invitation.
 pub fn device_fingerprint() -> anyhow::Result<Vec<u8>> {
-    with(|d| Ok(d.fingerprint()?.to_vec()))
+    with_device(|d| Ok(d.fingerprint()?.to_vec()))
 }
 
 /// Empreinte d'une clé d'identité reçue du serveur, à comparer avec celle du QR code.
@@ -58,7 +58,7 @@ pub struct KeyBundle {
 
 /// Génère de nouvelles clés et renvoie la partie publique à publier sur le serveur.
 pub fn device_generate_bundle(one_time: u32) -> anyhow::Result<KeyBundle> {
-    with(|d| {
+    with_device(|d| {
         let b = d.generate_bundle(one_time)?;
         Ok(KeyBundle {
             registration_id: b.registration_id,
@@ -77,7 +77,7 @@ pub fn device_generate_bundle(one_time: u32) -> anyhow::Result<KeyBundle> {
 
 /// Ouvre la session à partir des clés du partenaire (`one_time_prekeys` : zéro ou une pré-clé).
 pub fn device_start_session(partner: String, bundle: KeyBundle) -> anyhow::Result<()> {
-    with(|d| {
+    with_device(|d| {
         Ok(d.start_session(
             &partner,
             &core::PartnerBundle {
@@ -97,7 +97,7 @@ pub fn device_start_session(partner: String, bundle: KeyBundle) -> anyhow::Resul
 }
 
 pub fn device_has_session(partner: String) -> anyhow::Result<bool> {
-    with(|d| Ok(d.has_session(&partner)?))
+    with_device(|d| Ok(d.has_session(&partner)?))
 }
 
 pub struct Envelope {
@@ -106,19 +106,19 @@ pub struct Envelope {
 }
 
 pub fn device_encrypt(partner: String, plaintext: Vec<u8>) -> anyhow::Result<Envelope> {
-    with(|d| {
+    with_device(|d| {
         let e = d.encrypt(&partner, &plaintext)?;
         Ok(Envelope { kind: e.kind, body: e.body })
     })
 }
 
 pub fn device_decrypt(partner: String, envelope: Envelope) -> anyhow::Result<Vec<u8>> {
-    with(|d| Ok(d.decrypt(&partner, &core::Envelope { kind: envelope.kind, body: envelope.body })?))
+    with_device(|d| Ok(d.decrypt(&partner, &core::Envelope { kind: envelope.kind, body: envelope.body })?))
 }
 
 /// Les 7 symboles à comparer avec le partenaire.
 pub fn device_sas_with(partner_identity: Vec<u8>) -> anyhow::Result<Vec<crate::api::crypto::SasSymbol>> {
-    with(|d| {
+    with_device(|d| {
         Ok(d.sas_with(&partner_identity)?
             .iter()
             .map(|s| crate::api::crypto::SasSymbol { emoji: s.emoji.to_string(), name: s.name_fr.to_string() })
@@ -127,9 +127,9 @@ pub fn device_sas_with(partner_identity: Vec<u8>) -> anyhow::Result<Vec<crate::a
 }
 
 pub fn device_mark_verified(partner: String) -> anyhow::Result<()> {
-    with(|d| Ok(d.mark_verified(&partner)?))
+    with_device(|d| Ok(d.mark_verified(&partner)?))
 }
 
 pub fn device_is_verified(partner: String) -> anyhow::Result<bool> {
-    with(|d| Ok(d.is_verified(&partner)?))
+    with_device(|d| Ok(d.is_verified(&partner)?))
 }
