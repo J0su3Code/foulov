@@ -38,11 +38,13 @@ pub struct Outgoing {
     pub envelope_id: String,
     pub kind: u8,
     pub body: Vec<u8>,
+    /// Mérite une notification (message, réaction) ; faux pour les accusés de réception.
+    pub urgent: bool,
 }
 
 impl From<core::Outgoing> for Outgoing {
     fn from(o: core::Outgoing) -> Self {
-        Outgoing { envelope_id: o.envelope_id, kind: o.envelope.kind, body: o.envelope.body }
+        Outgoing { envelope_id: o.envelope_id, kind: o.envelope.kind, body: o.envelope.body, urgent: o.urgent }
     }
 }
 

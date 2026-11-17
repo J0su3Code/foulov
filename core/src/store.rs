@@ -86,7 +86,7 @@ fn addr_key(a: &ProtocolAddress) -> String {
     format!("{}.{}", a.name(), u32::from(a.device_id()))
 }
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v BLOB NOT NULL);
@@ -109,10 +109,23 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS messages_order ON messages (sent_at, id);
 -- Enveloppes chiffrées pas encore déposées sur le serveur : renvoyées telles quelles, jamais rechiffrées.
 CREATE TABLE IF NOT EXISTS outbox (
-  envelope_id TEXT PRIMARY KEY, kind INTEGER NOT NULL, body BLOB NOT NULL, message_id TEXT, created_at INTEGER NOT NULL);
+  envelope_id TEXT PRIMARY KEY, kind INTEGER NOT NULL, body BLOB NOT NULL, message_id TEXT, created_at INTEGER NOT NULL,
+  urgent INTEGER NOT NULL DEFAULT 1);
 -- Enveloppes déjà traitées : une enveloppe livrée deux fois n'est jamais appliquée deux fois.
 CREATE TABLE IF NOT EXISTS seen_envelopes (id TEXT PRIMARY KEY, at INTEGER NOT NULL);
 ";
+
+/// Mises à niveau des bases créées par une version précédente (CREATE IF NOT EXISTS n'ajoute pas de colonne).
+fn migrate(conn: &Connection) -> Result<(), StoreError> {
+    let has_urgent: bool = conn
+        .prepare("SELECT 1 FROM pragma_table_info('outbox') WHERE name = 'urgent'")?
+        .exists([])?;
+    if !has_urgent {
+        // Version 3 : les accusés de réception ne réveillent pas le téléphone du partenaire.
+        conn.execute_batch("ALTER TABLE outbox ADD COLUMN urgent INTEGER NOT NULL DEFAULT 1")?;
+    }
+    Ok(())
+}
 
 /// Base locale chiffrée et ses magasins libsignal (une poignée par magasin, connexion partagée).
 pub struct Store {
@@ -145,6 +158,7 @@ impl Store {
             "PRAGMA cipher_memory_security = ON; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON;",
         )?;
         conn.execute_batch(SCHEMA)?;
+        migrate(&conn)?;
         conn.execute(
             "INSERT INTO meta (k, v) VALUES ('schema_version', ?1) ON CONFLICT (k) DO UPDATE SET v = excluded.v",
             params![SCHEMA_VERSION.to_be_bytes().to_vec()],

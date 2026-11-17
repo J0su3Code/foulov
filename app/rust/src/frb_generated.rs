@@ -1256,10 +1256,12 @@ impl SseDecode for crate::api::chat::Outgoing {
         let mut var_envelopeId = <String>::sse_decode(deserializer);
         let mut var_kind = <u8>::sse_decode(deserializer);
         let mut var_body = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_urgent = <bool>::sse_decode(deserializer);
         return crate::api::chat::Outgoing {
             envelope_id: var_envelopeId,
             kind: var_kind,
             body: var_body,
+            urgent: var_urgent,
         };
     }
 }
@@ -1506,6 +1508,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::chat::Outgoing {
             self.envelope_id.into_into_dart().into_dart(),
             self.kind.into_into_dart().into_dart(),
             self.body.into_into_dart().into_dart(),
+            self.urgent.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1757,6 +1760,7 @@ impl SseEncode for crate::api::chat::Outgoing {
         <String>::sse_encode(self.envelope_id, serializer);
         <u8>::sse_encode(self.kind, serializer);
         <Vec<u8>>::sse_encode(self.body, serializer);
+        <bool>::sse_encode(self.urgent, serializer);
     }
 }
 

@@ -1,6 +1,8 @@
 analyzer:
   exclude:
     - rust_builder/cargokit/**
+    # Copies de paquets tiers générées par la compilation (exemples, tests).
+    - build/**
 
 # This file configures the analyzer, which statically analyzes Dart code to
 # check for errors, warnings, and lints.

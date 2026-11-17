@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/bytea.dart';
 import '../../src/rust/api/chat.dart';
 import '../../src/rust/api/device.dart';
+import 'push_service.dart';
 
 /// Messagerie du couple : transporte les enveloppes chiffrées entre le cœur Rust et Supabase.
 ///
@@ -66,6 +68,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(pull());
     unawaited(flush());
     unawaited(chatPurge().catchError((_) {}));
+    unawaited(PushService.register(_db));
   }
 
   @override
@@ -200,6 +203,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
         'recipient_id': partnerId,
         'kind': o.kind,
         'ciphertext': toBytea(o.body),
+        // Accusés de réception : pas de notification chez le partenaire.
+        'urgent': o.urgent,
       });
     } on PostgrestException catch (e) {
       // Déjà déposée lors d'une tentative précédente (la réponse s'était perdue) : c'est un succès.
@@ -288,8 +293,11 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     if (v) unawaited(_readVisible());
   }
 
+  bool get _onScreen => _visible && _foreground;
+
   Future<void> _readVisible() async {
-    if (!_visible || !_foreground) return;
+    if (!_onScreen) return;
+    unawaited(PushService.clear());
     try {
       final ids = await chatUnread();
       if (ids.isEmpty) return;
