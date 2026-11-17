@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../src/rust/api/chat.dart';
 import '../../theme/foulov_theme.dart';
@@ -108,6 +110,56 @@ class _ChatScreenState extends State<ChatScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Ce message n\'a pas pu être préparé. Réessaie.')));
+    }
+  }
+
+  /// Galerie (plusieurs photos) ou appareil photo. Le texte en cours devient la légende de la première photo.
+  Future<void> _pickPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galerie'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Appareil photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picker = ImagePicker();
+    final files = source == ImageSource.camera
+        ? [?await picker.pickImage(source: ImageSource.camera, requestFullMetadata: false)]
+        : await picker.pickMultiImage(limit: 10, requestFullMetadata: false);
+    if (files.isEmpty) return;
+    var caption = _input.text.trim();
+    final reply = _replyTo?.id;
+    _input.clear();
+    setState(() => _replyTo = null);
+    HapticFeedback.lightImpact();
+    for (final (i, f) in files.indexed) {
+      try {
+        await _s.sendPhoto(f.path, caption: caption, replyTo: i == 0 ? reply : null);
+        caption = '';
+        _toBottom();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Cette photo n\'a pas pu être préparée.')));
+        }
+      }
     }
   }
 
@@ -252,6 +304,7 @@ class _ChatScreenState extends State<ChatScreen> {
               replyTo: _replyTo,
               onCancelReply: () => setState(() => _replyTo = null),
               onSend: _send,
+              onPhoto: _pickPhoto,
             ),
           ],
         ),
@@ -593,41 +646,43 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
     final fg = mine ? (night ? const Color(0xFF2A0B16) : cs.onPrimary) : cs.onSurface;
     final reaction = [m.theirReaction, m.myReaction].whereType<String>().toSet();
 
-    Widget bubble = Container(
-      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 7),
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        color: mine ? (night ? null : cs.primary) : (night ? FouLovColors.velours2 : cs.surfaceContainer),
-        gradient: mine && night ? const LinearGradient(colors: [Color(0xFFFFB08A), Color(0xFFFF7895)]) : null,
-        border: mine ? null : Border.all(color: cs.outline),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (m.replyTo != null) _Quote(id: m.replyTo!, service: widget.service, mine: mine, fg: fg),
-          Wrap(
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            spacing: 8,
-            children: [
-              Text(m.body, style: TextStyle(color: fg, fontSize: 15.5, height: 1.32)),
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+    Widget bubble = m.media != null
+        ? _MediaBubble(m: m, service: widget.service, radius: radius, fg: fg, mine: mine, night: night)
+        : Container(
+            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 7),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              color: mine ? (night ? null : cs.primary) : (night ? FouLovColors.velours2 : cs.surfaceContainer),
+              gradient: mine && night ? const LinearGradient(colors: [Color(0xFFFFB08A), Color(0xFFFF7895)]) : null,
+              border: mine ? null : Border.all(color: cs.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (m.replyTo != null) _Quote(id: m.replyTo!, service: widget.service, mine: mine, fg: fg),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  spacing: 8,
                   children: [
-                    Text(_time(m.sentAt), style: TextStyle(fontSize: 11, color: fg.withValues(alpha: .62))),
-                    if (mine) ...[const SizedBox(width: 3), _Status(m.status, fg)],
+                    Text(m.body, style: TextStyle(color: fg, fontSize: 15.5, height: 1.32)),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_time(m.sentAt), style: TextStyle(fontSize: 11, color: fg.withValues(alpha: .62))),
+                          if (mine) ...[const SizedBox(width: 3), _Status(m.status, fg)],
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+              ],
+            ),
+          );
 
     if (reaction.isNotEmpty) {
       bubble = Stack(
@@ -694,6 +749,7 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
       label: semantics,
       child: GestureDetector(
         onDoubleTap: _love,
+        onTap: m.media?.state == 1 || (m.fromMe && m.media != null) ? () => _openViewer(context, m) : null,
         onLongPress: widget.onActions,
         onHorizontalDragUpdate: (d) {
           setState(() => _drag = (_drag + d.delta.dx).clamp(0, 80));
@@ -836,6 +892,7 @@ class _Composer extends StatelessWidget {
     required this.replyTo,
     required this.onCancelReply,
     required this.onSend,
+    required this.onPhoto,
   });
 
   final TextEditingController controller;
@@ -843,6 +900,7 @@ class _Composer extends StatelessWidget {
   final ChatMessage? replyTo;
   final VoidCallback onCancelReply;
   final VoidCallback onSend;
+  final VoidCallback onPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -905,25 +963,38 @@ class _Composer extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: cs.outline),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focus,
-                    minLines: 1,
-                    maxLines: 6,
-                    textCapitalization: TextCapitalization.sentences,
-                    keyboardType: TextInputType.multiline,
-                    inputFormatters: [LengthLimitingTextInputFormatter(4000)],
-                    style: const TextStyle(fontSize: 16, height: 1.3),
-                    decoration: const InputDecoration(
-                      hintText: 'Message',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 12),
-                    ),
+                  padding: const EdgeInsets.only(left: 16, right: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: controller,
+                          focusNode: focus,
+                          minLines: 1,
+                          maxLines: 6,
+                          textCapitalization: TextCapitalization.sentences,
+                          keyboardType: TextInputType.multiline,
+                          inputFormatters: [LengthLimitingTextInputFormatter(4000)],
+                          style: const TextStyle(fontSize: 16, height: 1.3),
+                          decoration: const InputDecoration(
+                            hintText: 'Message',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
+                        tooltip: 'Photo',
+                        color: cs.onSurfaceVariant,
+                        onPressed: onPhoto,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -951,6 +1022,255 @@ class _Composer extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===================================================================== photos
+
+void _openViewer(BuildContext context, ChatMessage m) {
+  final service = context.findAncestorStateOfType<_ChatScreenState>()?._s;
+  if (service == null) return;
+  Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      opaque: false,
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (_, a, _) => FadeTransition(
+        opacity: a,
+        child: _PhotoViewer(m: m, service: service),
+      ),
+    ),
+  );
+}
+
+/// Photo dans la conversation : la miniature d'abord (floutée), puis la photo déchiffrée en mémoire.
+class _MediaBubble extends StatelessWidget {
+  const _MediaBubble({
+    required this.m,
+    required this.service,
+    required this.radius,
+    required this.fg,
+    required this.mine,
+    required this.night,
+  });
+
+  final ChatMessage m;
+  final ChatService service;
+  final BorderRadius radius;
+  final Color fg;
+  final bool mine, night;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final md = m.media!;
+    final width = min(MediaQuery.sizeOf(context).width * .68, 280.0);
+    final aspect = md.width > 0 && md.height > 0 ? (md.width / md.height).clamp(.62, 1.8) : 1.0;
+    final caption = m.body.isNotEmpty;
+    final time = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _time(m.sentAt),
+          style: TextStyle(fontSize: 11, color: caption ? fg.withValues(alpha: .62) : Colors.white),
+        ),
+        if (mine) ...[const SizedBox(width: 3), _Status(m.status, caption ? fg : Colors.white)],
+      ],
+    );
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        color: mine ? (night ? null : cs.primary) : (night ? FouLovColors.velours2 : cs.surfaceContainer),
+        gradient: mine && night ? const LinearGradient(colors: [Color(0xFFFFB08A), Color(0xFFFF7895)]) : null,
+        border: mine ? null : Border.all(color: cs.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (m.replyTo != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
+              child: _Quote(id: m.replyTo!, service: service, mine: mine, fg: fg),
+            ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(radius.topLeft.x - 3),
+            child: AspectRatio(
+              aspectRatio: aspect,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: 'photo-${m.id}',
+                    child: _Photo(m: m, service: service),
+                  ),
+                  if (md.state == 0 || md.state == 2)
+                    const Center(
+                      child: SizedBox.square(
+                        dimension: 34,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      ),
+                    ),
+                  if (md.state == 3)
+                    Container(
+                      color: Colors.black45,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(12),
+                      child: const Text(
+                        'Photo illisible : elle a été altérée en route.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  if (!caption)
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(10)),
+                        child: time,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (caption)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(9, 6, 9, 4),
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.end,
+                spacing: 8,
+                children: [
+                  Text(m.body, style: TextStyle(color: fg, fontSize: 15.5, height: 1.32)),
+                  time,
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Photo extends StatefulWidget {
+  const _Photo({required this.m, required this.service});
+
+  final ChatMessage m;
+  final ChatService service;
+
+  @override
+  State<_Photo> createState() => _PhotoState();
+}
+
+class _PhotoState extends State<_Photo> {
+  Future<Uint8List?>? _full;
+
+  bool get _available => widget.m.media!.state == 1 || (widget.m.fromMe && widget.m.media!.state == 0);
+
+  @override
+  void didUpdateWidget(_Photo old) {
+    super.didUpdateWidget(old);
+    if (old.m.media?.state != widget.m.media?.state) _full = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final thumb = Image.memory(widget.m.media!.thumb, fit: BoxFit.cover, gaplessPlayback: true);
+    if (!_available) {
+      return ImageFiltered(imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6), child: thumb);
+    }
+    _full ??= widget.service.photo(widget.m.id);
+    return FutureBuilder<Uint8List?>(
+      future: _full,
+      builder: (context, snap) {
+        final b = snap.data;
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: b == null
+              ? KeyedSubtree(key: const ValueKey('t'), child: thumb)
+              : Image.memory(
+                  b,
+                  key: const ValueKey('f'),
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  cacheWidth: 900,
+                  width: double.infinity,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Plein écran : zoom au pincement, fermeture par glissement vers le bas ou bouton.
+class _PhotoViewer extends StatelessWidget {
+  const _PhotoViewer({required this.m, required this.service});
+
+  final ChatMessage m;
+  final ChatService service;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Dismissible(
+              key: ValueKey('v-${m.id}'),
+              direction: DismissDirection.down,
+              onDismissed: (_) => Navigator.of(context).pop(),
+              child: InteractiveViewer(
+                maxScale: 5,
+                child: Center(
+                  child: Hero(
+                    tag: 'photo-${m.id}',
+                    child: FutureBuilder<Uint8List?>(
+                      future: service.photo(m.id),
+                      builder: (context, snap) => snap.data == null
+                          ? Image.memory(m.media!.thumb, fit: BoxFit.contain)
+                          : Image.memory(snap.data!, fit: BoxFit.contain, gaplessPlayback: true),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
+                tooltip: 'Fermer',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+          if (m.body.isNotEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + MediaQuery.paddingOf(context).bottom),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black87, Colors.transparent],
+                  ),
+                ),
+                child: Text(m.body, style: const TextStyle(color: Colors.white, fontSize: 16)),
+              ),
+            ),
         ],
       ),
     );

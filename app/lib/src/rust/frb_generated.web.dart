@@ -44,6 +44,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyBundle dco_decode_box_autoadd_key_bundle(dynamic raw);
 
   @protected
+  MediaInfo dco_decode_box_autoadd_media_info(dynamic raw);
+
+  @protected
   Outgoing dco_decode_box_autoadd_outgoing(dynamic raw);
 
   @protected
@@ -51,6 +54,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoupleProfile dco_decode_couple_profile(dynamic raw);
+
+  @protected
+  CreatedMedia dco_decode_created_media(dynamic raw);
 
   @protected
   EncryptedMedia dco_decode_encrypted_media(dynamic raw);
@@ -77,6 +83,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Outgoing> dco_decode_list_outgoing(dynamic raw);
 
   @protected
+  List<PendingDownload> dco_decode_list_pending_download(dynamic raw);
+
+  @protected
+  List<PendingUpload> dco_decode_list_pending_upload(dynamic raw);
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
@@ -84,6 +96,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<SasSymbol> dco_decode_list_sas_symbol(dynamic raw);
+
+  @protected
+  MediaInfo dco_decode_media_info(dynamic raw);
 
   @protected
   OneTimePreKey dco_decode_one_time_pre_key(dynamic raw);
@@ -98,10 +113,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
+  MediaInfo? dco_decode_opt_box_autoadd_media_info(dynamic raw);
+
+  @protected
   Outgoing? dco_decode_opt_box_autoadd_outgoing(dynamic raw);
 
   @protected
   Outgoing dco_decode_outgoing(dynamic raw);
+
+  @protected
+  PendingDownload dco_decode_pending_download(dynamic raw);
+
+  @protected
+  PendingUpload dco_decode_pending_upload(dynamic raw);
 
   @protected
   Received dco_decode_received(dynamic raw);
@@ -114,6 +138,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int dco_decode_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -143,6 +170,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyBundle sse_decode_box_autoadd_key_bundle(SseDeserializer deserializer);
 
   @protected
+  MediaInfo sse_decode_box_autoadd_media_info(SseDeserializer deserializer);
+
+  @protected
   Outgoing sse_decode_box_autoadd_outgoing(SseDeserializer deserializer);
 
   @protected
@@ -150,6 +180,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoupleProfile sse_decode_couple_profile(SseDeserializer deserializer);
+
+  @protected
+  CreatedMedia sse_decode_created_media(SseDeserializer deserializer);
 
   @protected
   EncryptedMedia sse_decode_encrypted_media(SseDeserializer deserializer);
@@ -178,6 +211,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Outgoing> sse_decode_list_outgoing(SseDeserializer deserializer);
 
   @protected
+  List<PendingDownload> sse_decode_list_pending_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<PendingUpload> sse_decode_list_pending_upload(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
@@ -185,6 +228,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<SasSymbol> sse_decode_list_sas_symbol(SseDeserializer deserializer);
+
+  @protected
+  MediaInfo sse_decode_media_info(SseDeserializer deserializer);
 
   @protected
   OneTimePreKey sse_decode_one_time_pre_key(SseDeserializer deserializer);
@@ -201,10 +247,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
+  MediaInfo? sse_decode_opt_box_autoadd_media_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Outgoing? sse_decode_opt_box_autoadd_outgoing(SseDeserializer deserializer);
 
   @protected
   Outgoing sse_decode_outgoing(SseDeserializer deserializer);
+
+  @protected
+  PendingDownload sse_decode_pending_download(SseDeserializer deserializer);
+
+  @protected
+  PendingUpload sse_decode_pending_upload(SseDeserializer deserializer);
 
   @protected
   Received sse_decode_received(SseDeserializer deserializer);
@@ -217,6 +274,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -261,6 +321,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_media_info(
+    MediaInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_outgoing(Outgoing self, SseSerializer serializer);
 
   @protected
@@ -268,6 +334,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_couple_profile(CoupleProfile self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_created_media(CreatedMedia self, SseSerializer serializer);
 
   @protected
   void sse_encode_encrypted_media(
@@ -303,6 +372,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_outgoing(List<Outgoing> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_pending_download(
+    List<PendingDownload> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_pending_upload(
+    List<PendingUpload> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
@@ -316,6 +397,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<SasSymbol> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_media_info(MediaInfo self, SseSerializer serializer);
 
   @protected
   void sse_encode_one_time_pre_key(
@@ -339,6 +423,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_media_info(
+    MediaInfo? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_outgoing(
     Outgoing? self,
     SseSerializer serializer,
@@ -346,6 +436,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_outgoing(Outgoing self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_pending_download(
+    PendingDownload self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_pending_upload(PendingUpload self, SseSerializer serializer);
 
   @protected
   void sse_encode_received(Received self, SseSerializer serializer);
@@ -358,6 +457,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
