@@ -235,3 +235,42 @@ fn supprimer_pour_nous_deux_et_pour_moi() {
     malik.delete_for_me(&t2.id).unwrap();
     assert_eq!(malik.outbox().unwrap().len(), before - 1);
 }
+
+#[test]
+fn message_vocal_envoye_recu_et_lu_par_morceaux() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    let voice: Vec<u8> = (0..90_000u32).map(|i| (i % 241) as u8).collect();
+    let src = dir.path().join("vocal.m4a");
+    fs::write(&src, &voice).unwrap();
+    let wave: Vec<u8> = (0..64).map(|i| (i * 4) as u8).collect();
+    let mut v = photo("");
+    v.kind = foulov_core::chat_media::KIND_VOICE;
+    v.mime = "audio/mp4";
+    v.width = 0;
+    v.height = 0;
+    v.duration_ms = 7_300;
+    v.thumb = &wave;
+    let (msg, up) = malik.create_media_file(&dir.path().join("m"), &src, v).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    assert!(o.urgent, "un vocal réveille le téléphone");
+    let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
+    let md = r.media.unwrap();
+    assert_eq!((md.kind, md.duration_ms, md.thumb.len()), (3, 7_300, 64), "forme d'onde reçue");
+    let dl = dir.path().join("dl.part");
+    fs::copy(&up.path, &dl).unwrap();
+    assert!(ines.media_downloaded(&r.id, &dl, &dir.path().join("i")).unwrap());
+    assert_eq!(ines.media_read(&r.id, 0, 100_000).unwrap(), voice);
+    assert!(ines.media_gallery(None, 10, None).unwrap().is_empty(), "les vocaux ne vont pas dans les Saisons");
+
+    // Une « forme d'onde » trop longue ou un type incohérent sont refusés.
+    let big = vec![1u8; 65];
+    let mut bad = photo("");
+    bad.kind = foulov_core::chat_media::KIND_VOICE;
+    bad.mime = "audio/mp4";
+    bad.thumb = &big;
+    assert!(malik.create_media_file(&dir.path().join("m"), &src, bad).is_err());
+    let mut bad = photo("");
+    bad.kind = foulov_core::chat_media::KIND_VOICE;
+    assert!(malik.create_media_file(&dir.path().join("m"), &src, bad).is_err(), "image déclarée en vocal");
+}

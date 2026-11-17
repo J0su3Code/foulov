@@ -11,6 +11,7 @@ import '../../theme/foulov_theme.dart';
 import '../../ui/love.dart';
 import 'chat_service.dart';
 import 'space_screen.dart';
+import 'voice.dart';
 import 'media_viewer.dart';
 
 /// La conversation du couple : le cœur de l'app.
@@ -74,6 +75,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _recorder.dispose();
+    unawaited(VoicePlayback.instance.stop());
     _s.visible = false;
     _s.removeListener(_changed);
     _input.dispose();
@@ -222,6 +225,34 @@ class _ChatScreenState extends State<ChatScreen> {
     if (t != null) return t.startsWith('video/');
     final p = f.path.toLowerCase();
     return ['.mp4', '.mov', '.3gp', '.webm', '.mkv'].any(p.endsWith);
+  }
+
+  final _recorder = VoiceRecorder();
+
+  Future<void> _startVoice() async {
+    HapticFeedback.mediumImpact();
+    await VoicePlayback.instance.stop();
+    if (!await _recorder.start() && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Autorise le micro dans les réglages du téléphone pour envoyer des vocaux.')),
+      );
+    }
+  }
+
+  Future<void> _sendVoice() async {
+    final r = await _recorder.stop();
+    if (r == null) return;
+    HapticFeedback.lightImpact();
+    final reply = _replyTo?.id;
+    setState(() => _replyTo = null);
+    try {
+      await _s.sendVoice(r.$1, r.$2, r.$3, replyTo: reply);
+      _toBottom();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ce vocal n\'a pas pu être envoyé.')));
+      }
+    }
   }
 
   void _reply(ChatMessage m) {
@@ -404,13 +435,20 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-            _Composer(
-              controller: _input,
-              focus: _focus,
-              replyTo: _replyTo,
-              onCancelReply: () => setState(() => _replyTo = null),
-              onSend: _send,
-              onPhoto: _pickPhoto,
+            ListenableBuilder(
+              listenable: _recorder,
+              builder: (context, _) => _Composer(
+                recorder: _recorder,
+                onMic: _startVoice,
+                onVoiceSend: _sendVoice,
+                onVoiceCancel: _recorder.cancel,
+                controller: _input,
+                focus: _focus,
+                replyTo: _replyTo,
+                onCancelReply: () => setState(() => _replyTo = null),
+                onSend: _send,
+                onPhoto: _pickPhoto,
+              ),
             ),
           ],
         ),
@@ -780,7 +818,9 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
     final fg = mine ? (night ? const Color(0xFF2A0B16) : cs.onPrimary) : cs.onSurface;
     final reaction = [m.theirReaction, m.myReaction].whereType<String>().toSet();
 
-    Widget bubble = m.media != null
+    Widget bubble = m.media?.kind == 3
+        ? _VoiceBubble(m: m, radius: radius, fg: fg, mine: mine, night: night)
+        : m.media != null
         ? _MediaBubble(m: m, service: widget.service, radius: radius, fg: fg, mine: mine, night: night)
         : Container(
             constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
@@ -1033,8 +1073,14 @@ class _Composer extends StatelessWidget {
     required this.onCancelReply,
     required this.onSend,
     required this.onPhoto,
+    required this.recorder,
+    required this.onMic,
+    required this.onVoiceSend,
+    required this.onVoiceCancel,
   });
 
+  final VoiceRecorder recorder;
+  final VoidCallback onMic, onVoiceSend, onVoiceCancel;
   final TextEditingController controller;
   final FocusNode focus;
   final ChatMessage? replyTo;
@@ -1046,6 +1092,9 @@ class _Composer extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final canSend = controller.text.trim().isNotEmpty;
+    if (recorder.recording) {
+      return _RecordingBar(recorder: recorder, onSend: onVoiceSend, onCancel: onVoiceCancel);
+    }
     return Container(
       color: cs.surface,
       padding: EdgeInsets.fromLTRB(10, 6, 10, 8 + MediaQuery.paddingOf(context).bottom),
@@ -1144,17 +1193,23 @@ class _Composer extends StatelessWidget {
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutBack,
                 child: Material(
-                  color: canSend ? cs.primary : cs.surfaceContainer,
+                  color: cs.primary,
                   shape: const CircleBorder(),
                   child: InkWell(
                     customBorder: const CircleBorder(),
-                    onTap: canSend ? onSend : null,
+                    // Rien à envoyer : le bouton devient le micro des messages vocaux.
+                    onTap: canSend ? onSend : onMic,
                     child: SizedBox.square(
                       dimension: 48,
-                      child: Icon(
-                        Icons.arrow_upward_rounded,
-                        color: canSend ? cs.onPrimary : cs.onSurfaceVariant,
-                        semanticLabel: 'Envoyer',
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 160),
+                        transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+                        child: Icon(
+                          canSend ? Icons.arrow_upward_rounded : Icons.mic_rounded,
+                          key: ValueKey(canSend),
+                          color: cs.onPrimary,
+                          semanticLabel: canSend ? 'Envoyer' : 'Enregistrer un message vocal',
+                        ),
                       ),
                     ),
                   ),
@@ -1474,6 +1529,181 @@ class _TypingBubbleState extends State<_TypingBubble> with SingleTickerProviderS
           ),
         ),
       ),
+    );
+  }
+}
+
+// ===================================================================== messages vocaux
+
+/// Barre d'enregistrement : point rouge qui pulse, durée, onde en direct, annuler ou envoyer.
+class _RecordingBar extends StatelessWidget {
+  const _RecordingBar({required this.recorder, required this.onSend, required this.onCancel});
+
+  final VoiceRecorder recorder;
+  final VoidCallback onSend, onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (recorder.elapsed >= VoiceRecorder.maxDuration) WidgetsBinding.instance.addPostFrameCallback((_) => onSend());
+
+    return Container(
+      color: cs.surface,
+      padding: EdgeInsets.fromLTRB(6, 6, 10, 8 + MediaQuery.paddingOf(context).bottom),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.delete_outline_rounded, color: cs.error),
+            tooltip: 'Annuler le vocal',
+            onPressed: onCancel,
+          ),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: .3, end: 1),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeInOut,
+            builder: (_, v, _) => Opacity(
+              opacity: v,
+              child: const Icon(Icons.fiber_manual_record_rounded, color: Color(0xFFE5484D), size: 14),
+            ),
+            onEnd: () {},
+          ),
+          const SizedBox(width: 6),
+          Text(
+            formatDuration(recorder.elapsed.inMilliseconds),
+            style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+          ),
+          const SizedBox(width: 12),
+          // Autant de barres que la place le permet (5 px chacune), les plus récentes à droite.
+          Expanded(
+            child: SizedBox(
+              height: 32,
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final n = (box.maxWidth / 5).floor();
+                  final l = recorder.levels;
+                  final recent = l.length > n ? l.sublist(l.length - n) : l;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      for (final v in recent)
+                        Container(
+                          width: 3,
+                          height: 4 + 26 * v,
+                          margin: const EdgeInsets.symmetric(horizontal: 1),
+                          decoration: BoxDecoration(color: cs.secondary, borderRadius: BorderRadius.circular(2)),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Material(
+            color: cs.primary,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onSend,
+              child: SizedBox.square(
+                dimension: 48,
+                child: Icon(Icons.arrow_upward_rounded, color: cs.onPrimary, semanticLabel: 'Envoyer le vocal'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bulle d'un message vocal : lecture / pause, onde qui se remplit, durée.
+class _VoiceBubble extends StatelessWidget {
+  const _VoiceBubble({
+    required this.m,
+    required this.radius,
+    required this.fg,
+    required this.mine,
+    required this.night,
+  });
+
+  final ChatMessage m;
+  final BorderRadius radius;
+  final Color fg;
+  final bool mine, night;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final md = m.media!;
+    final ready = md.state == 1 || (mine && md.state == 0);
+    final p = VoicePlayback.instance;
+    return ListenableBuilder(
+      listenable: p,
+      builder: (context, _) {
+        final playing = p.isPlaying(m.id);
+        final progress = p.progress(m.id);
+        final shown = p.current == m.id ? p.position(m.id).inMilliseconds : md.durationMs;
+        return Container(
+          width: min(MediaQuery.sizeOf(context).width * .72, 300.0),
+          padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: mine ? (night ? null : cs.primary) : (night ? FouLovColors.velours2 : cs.surfaceContainer),
+            gradient: mine && night ? const LinearGradient(colors: [Color(0xFFFFB08A), Color(0xFFFF7895)]) : null,
+            border: mine ? null : Border.all(color: cs.outline),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: ready ? () => p.toggle(m) : null,
+                icon: ready
+                    ? Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, color: fg, size: 30)
+                    : SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2, color: fg)),
+                tooltip: playing ? 'Pause' : 'Écouter',
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 30,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          for (final (i, v) in md.thumb.indexed)
+                            Expanded(
+                              child: Container(
+                                height: 3 + 24 * v / 255,
+                                margin: const EdgeInsets.symmetric(horizontal: .7),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(2),
+                                  color: i / md.thumb.length <= progress && progress > 0
+                                      ? (mine ? fg : cs.secondary)
+                                      : fg.withValues(alpha: .32),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(formatDuration(shown), style: TextStyle(fontSize: 11.5, color: fg.withValues(alpha: .7))),
+                        const Spacer(),
+                        Text(_time(m.sentAt), style: TextStyle(fontSize: 11, color: fg.withValues(alpha: .62))),
+                        if (mine) ...[const SizedBox(width: 3), _Status(m.status, fg)],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
