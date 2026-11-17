@@ -268,3 +268,49 @@ pub fn chat_media_downloaded(message_id: String, downloaded: String, dir: String
 pub fn chat_open_media(message_id: String) -> anyhow::Result<Vec<u8>> {
     with_device(|d| Ok(d.open_media(&message_id)?))
 }
+
+/// Comme `chat_create_media`, mais chiffre directement depuis un fichier (vidéos), sans tout charger en mémoire.
+#[allow(clippy::too_many_arguments)]
+pub fn chat_create_media_file(
+    dir: String,
+    src: String,
+    kind: u8,
+    mime: String,
+    width: u32,
+    height: u32,
+    duration_ms: u32,
+    thumb: Vec<u8>,
+    caption: String,
+    reply_to: Option<String>,
+) -> anyhow::Result<CreatedMedia> {
+    with_device(|d| {
+        let (m, u) = d.create_media_file(
+            std::path::Path::new(&dir),
+            std::path::Path::new(&src),
+            foulov_core::chat_media::NewMedia {
+                kind,
+                mime: &mime,
+                width,
+                height,
+                duration_ms,
+                thumb: &thumb,
+                caption: &caption,
+                reply_to: reply_to.as_deref(),
+            },
+        )?;
+        Ok(CreatedMedia {
+            message: m.into(),
+            upload: PendingUpload { message_id: u.message_id, path: u.path, size: u.size },
+        })
+    })
+}
+
+/// Taille réelle (déchiffrée) d'une photo ou vidéo.
+pub fn chat_media_len(message_id: String) -> anyhow::Result<u64> {
+    with_device(|d| Ok(d.media_len(&message_id)?))
+}
+
+/// Morceau déchiffré (au plus 4 Mio) : lecture vidéo sans fichier en clair.
+pub fn chat_media_read(message_id: String, offset: u64, len: u32) -> anyhow::Result<Vec<u8>> {
+    with_device(|d| Ok(d.media_read(&message_id, offset, len)?))
+}

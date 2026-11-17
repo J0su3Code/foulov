@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:video_compress/video_compress.dart' as vc;
 import 'package:flutter/widgets.dart';
 import 'dart:ui' show ImageDescriptor, ImmutableBuffer;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -298,6 +299,53 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     _upsert(created.message);
     _notify();
     unawaited(_transfer());
+  }
+
+  /// Prépare et envoie une vidéo : réencodée en MP4 720p (bien plus légère, et sans ses métadonnées,
+  /// position GPS comprise), puis chiffrée par blocs depuis le fichier, sans jamais tout charger en mémoire.
+  /// `onProgress` reçoit l'avancement du réencodage (0 → 1).
+  Future<void> sendVideo(String path, {String caption = '', String? replyTo, void Function(double)? onProgress}) async {
+    final sub = vc.VideoCompress.compressProgress$.subscribe((p) => onProgress?.call(p / 100));
+    vc.MediaInfo? info;
+    try {
+      info = await vc.VideoCompress.compressVideo(
+        path,
+        quality: vc.VideoQuality.Res1280x720Quality,
+        includeAudio: true,
+        deleteOrigin: false,
+      );
+      final out = info?.path;
+      if (out == null) throw StateError('vidéo illisible');
+      final frame = await vc.VideoCompress.getByteThumbnail(out, quality: 80, position: -1);
+      if (frame == null) throw StateError('miniature impossible');
+      final thumb = await _thumbnail(frame);
+      final size = await _imageSize(thumb); // proportions telles qu'affichées (rotation comprise)
+      final created = await chatCreateMediaFile(
+        dir: _mediaDir,
+        src: out,
+        kind: 2,
+        mime: 'video/mp4',
+        width: size.$1,
+        height: size.$2,
+        durationMs: (info!.duration ?? 0).round(),
+        thumb: thumb,
+        caption: caption,
+        replyTo: replyTo,
+      );
+      _upsert(created.message);
+      _notify();
+      unawaited(_transfer());
+    } finally {
+      sub.unsubscribe();
+      // Les copies en clair (réencodage, copie faite par le sélecteur) sont effacées aussitôt le chiffrement fait.
+      // (deleteAllCache de video_compress plante sous Android : on efface nous-mêmes, fichier par fichier.)
+      for (final f in [info?.path, if (path.contains('/cache/')) path]) {
+        if (f == null) continue;
+        try {
+          await File(f).delete();
+        } catch (_) {}
+      }
+    }
   }
 
   static Future<(int, int)> _imageSize(Uint8List jpeg) async {
