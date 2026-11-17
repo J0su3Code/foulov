@@ -53,8 +53,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String _authMessage(AuthException e) {
     final m = e.message.toLowerCase();
-    if (m.contains('expired') || m.contains('invalid')) return 'Ce code est incorrect ou a expiré. Demande un nouveau code.';
-    if (m.contains('rate') || e.statusCode == '429') return 'Trop de demandes. Patiente une minute avant de redemander un code.';
+    if (m.contains('expired') || m.contains('invalid')) {
+      return 'Ce code est incorrect ou a expiré. Demande un nouveau code.';
+    }
+    if (m.contains('rate') || e.statusCode == '429') {
+      return 'Trop de demandes. Patiente une minute avant de redemander un code.';
+    }
     return 'La connexion a échoué. Réessaie dans un instant.';
   }
 
@@ -72,7 +76,9 @@ class _LoginScreenState extends State<LoginScreen> {
             : IconButton(
                 tooltip: 'Retour',
                 icon: const Icon(Icons.arrow_back),
-                onPressed: _busy ? null : () => setState(() => _step = _step == _Step.code ? _Step.email : _Step.choose),
+                onPressed: _busy
+                    ? null
+                    : () => setState(() => _step = _step == _Step.code ? _Step.email : _Step.choose),
               ),
       ),
       body: SafeArea(
@@ -83,23 +89,17 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Icon(Icons.local_florist_outlined, size: 44, color: c.secondary),
               const SizedBox(height: 16),
-              Text(
-                switch (_step) {
-                  _Step.choose => 'Entrons dans\nvotre jardin.',
-                  _Step.email => 'Ton adresse\ne-mail',
-                  _Step.code => 'Vérifie\ntes e-mails',
-                },
-                style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.1),
-              ),
+              Text(switch (_step) {
+                _Step.choose => 'Entrons dans\nvotre jardin.',
+                _Step.email => 'Ton adresse\ne-mail',
+                _Step.code => 'Vérifie\ntes e-mails',
+              }, style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.1)),
               const SizedBox(height: 10),
-              Text(
-                switch (_step) {
-                  _Step.choose => 'Aucun mot de passe à retenir. Ensuite, ton empreinte suffira sur ce téléphone.',
-                  _Step.email => 'On t\'envoie un code à usage unique, valable 10 minutes.',
-                  _Step.code => 'Saisis le code à 8 chiffres envoyé à ${_email.text.trim()}.',
-                },
-                style: t.textTheme.bodyLarge?.copyWith(color: c.onSurfaceVariant),
-              ),
+              Text(switch (_step) {
+                _Step.choose => 'Aucun mot de passe à retenir. Ensuite, ton empreinte suffira sur ce téléphone.',
+                _Step.email => 'On t\'envoie un code à usage unique, valable 10 minutes.',
+                _Step.code => 'Saisis le code à 8 chiffres envoyé à ${_email.text.trim()}.',
+              }, style: t.textTheme.bodyLarge?.copyWith(color: c.onSurfaceVariant)),
               const SizedBox(height: 28),
               if (_step == _Step.email)
                 TextField(
@@ -119,19 +119,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.number,
                   autofillHints: const [AutofillHints.oneTimeCode],
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(8)],
-                  style: t.textTheme.headlineSmall?.copyWith(letterSpacing: 8, fontFeatures: const [FontFeature.tabularFigures()]),
+                  style: t.textTheme.headlineSmall?.copyWith(
+                    letterSpacing: 8,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                   decoration: const InputDecoration(labelText: 'Code', border: OutlineInputBorder()),
                   onChanged: (v) {
                     setState(() {});
                     if (v.length == 8) _verifyCode();
                   },
                 ),
-              if (_error != null) ...[
-                const SizedBox(height: 14),
-                Text(_error!, style: TextStyle(color: c.error)),
-              ],
+              if (_error != null) ...[const SizedBox(height: 14), Text(_error!, style: TextStyle(color: c.error))],
               const Spacer(),
-              if (_busy) const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator())),
+              if (_busy)
+                const Center(
+                  child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()),
+                ),
               if (!_busy && _step == _Step.choose) ...[
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: const StadiumBorder()),
@@ -160,10 +163,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _sendCode() => _run(() async {
-        await widget.auth.sendEmailCode(_email.text);
-        _code.clear();
-        _step = _Step.code;
-      });
+    await widget.auth.sendEmailCode(_email.text);
+    _code.clear();
+    _step = _Step.code;
+  });
 
   void _verifyCode() => _run(() async => widget.auth.verifyEmailCode(_email.text, _code.text));
 }

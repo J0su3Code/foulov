@@ -15,6 +15,7 @@ class CoupleState {
   const CoupleState({this.coupleId, this.partnerId, this.partnerIdentity, this.verified = false, this.since});
 
   final String? coupleId;
+
   /// Création de l'espace (« Jour N »).
   final DateTime? since;
   final String? partnerId;
@@ -178,11 +179,19 @@ class CoupleService {
   /// premier mot doux arrivé avec le message d'appairage est conservé dans l'historique.
   Future<bool> receiveHello(String partner) async {
     if (await deviceHasSession(partner: partner)) return true;
-    final rows = await _db.from('envelopes').select('id, kind, ciphertext').eq('sender_id', partner).order('created_at');
+    final rows = await _db
+        .from('envelopes')
+        .select('id, kind, ciphertext')
+        .eq('sender_id', partner)
+        .order('created_at');
     final done = <String>[];
     for (final row in rows) {
       final id = row['id'] as String;
-      await chatReceive(partner: partner, envelopeId: id, envelope: Envelope(kind: row['kind'] as int, body: _bytes(row['ciphertext'])));
+      await chatReceive(
+        partner: partner,
+        envelopeId: id,
+        envelope: Envelope(kind: row['kind'] as int, body: _bytes(row['ciphertext'])),
+      );
       done.add(id);
     }
     if (done.isNotEmpty) await _db.from('envelopes').delete().inFilter('id', done);

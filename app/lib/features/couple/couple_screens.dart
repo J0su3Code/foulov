@@ -67,7 +67,9 @@ class _CoupleGateState extends State<CoupleGate> {
         }
         final s = snap.data;
         if (s == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        if (!s.hasCouple) return ChoiceScreen(couple: widget.couple, onDone: _reload, onJoined: _joined, auth: widget.auth);
+        if (!s.hasCouple) {
+          return ChoiceScreen(couple: widget.couple, onDone: _reload, onJoined: _joined, auth: widget.auth);
+        }
         if (!s.complete || s.partnerIdentity == null) return InviteScreen(couple: widget.couple, onPartner: _reload);
         if (!s.verified || _showSymbols) {
           return VerifyScreen(
@@ -120,16 +122,16 @@ class _ChatHostState extends State<_ChatHost> {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
-        future: _ready,
-        builder: (context, snap) => snap.connectionState != ConnectionState.done
-            ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-            : ChatScreen(
-                service: _service,
-                since: widget.state.since,
-                onShowSymbols: widget.onShowSymbols,
-                onSignOut: widget.auth.signOut,
-              ),
-      );
+    future: _ready,
+    builder: (context, snap) => snap.connectionState != ConnectionState.done
+        ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+        : ChatScreen(
+            service: _service,
+            since: widget.state.since,
+            onShowSymbols: widget.onShowSymbols,
+            onSignOut: widget.auth.signOut,
+          ),
+  );
 }
 
 class _Message extends StatelessWidget {
@@ -141,28 +143,37 @@ class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: PetalBackground(
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const Spacer(),
-                Text(title, style: _title(context)),
-                const SizedBox(height: 10),
-                Text(body, style: _soft(context)),
-                const Spacer(),
-                FilledButton(onPressed: action.$2, child: Text(action.$1)),
-              ]),
-            ),
+    body: PetalBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              Text(title, style: _title(context)),
+              const SizedBox(height: 10),
+              Text(body, style: _soft(context)),
+              const Spacer(),
+              FilledButton(onPressed: action.$2, child: Text(action.$1)),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 // ===================================================================== choix
 
 class ChoiceScreen extends StatefulWidget {
-  const ChoiceScreen({super.key, required this.couple, required this.onDone, required this.onJoined, required this.auth});
+  const ChoiceScreen({
+    super.key,
+    required this.couple,
+    required this.onDone,
+    required this.onJoined,
+    required this.auth,
+  });
 
   final CoupleService couple;
   final VoidCallback onDone;
@@ -230,12 +241,17 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
                   TextButton.icon(
                     icon: const Icon(Icons.favorite_border),
                     label: const Text('J\'ai reçu une invitation'),
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                      builder: (_) => JoinScreen(couple: widget.couple, onJoined: () {
-                        Navigator.of(context).pop();
-                        widget.onJoined();
-                      }),
-                    )),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => JoinScreen(
+                          couple: widget.couple,
+                          onJoined: () {
+                            Navigator.of(context).pop();
+                            widget.onJoined();
+                          },
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -341,7 +357,10 @@ class _InviteScreenState extends State<InviteScreen> {
                           size: 220,
                           backgroundColor: cs.surfaceContainer,
                           eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.circle, color: cs.primary),
-                          dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.circle, color: cs.onSurface),
+                          dataModuleStyle: QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.circle,
+                            color: cs.onSurface,
+                          ),
                           semanticsLabel: 'QR code d\'invitation',
                         ),
                 ),
@@ -352,10 +371,10 @@ class _InviteScreenState extends State<InviteScreen> {
                   child: SelectableText(
                     _pretty(_code!),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 3,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 3,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -382,9 +401,9 @@ class _InviteScreenState extends State<InviteScreen> {
                     OutlinedButton.icon(
                       icon: const Icon(Icons.ios_share_rounded, size: 18),
                       label: const Text('Envoyer'),
-                      onPressed: () => SharePlus.instance.share(ShareParams(
-                        text: 'Rejoins-moi sur FouLove 💞\nCode d\'invitation : ${_pretty(_code!)}',
-                      )),
+                      onPressed: () => SharePlus.instance.share(
+                        ShareParams(text: 'Rejoins-moi sur FouLove 💞\nCode d\'invitation : ${_pretty(_code!)}'),
+                      ),
                     ),
                   ],
                 ),
@@ -462,7 +481,8 @@ class _JoinScreenState extends State<JoinScreen> {
         case JoinResult.invalidCode:
           _error = 'Ce code ne fonctionne pas. Il a peut-être expiré ou déjà servi : demande un nouveau code.';
         case JoinResult.keyMismatch:
-          _error = 'Les clés reçues ne correspondent pas au QR code. Par sécurité, l\'appairage est arrêté. '
+          _error =
+              'Les clés reçues ne correspondent pas au QR code. Par sécurité, l\'appairage est arrêté. '
               'Recommencez ensemble avec un nouveau code.';
       }
     } catch (e) {
@@ -506,21 +526,24 @@ class _JoinScreenState extends State<JoinScreen> {
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(28),
-                      child: Stack(fit: StackFit.expand, children: [
-                        MobileScanner(controller: _camera, onDetect: _onDetect),
-                        IgnorePointer(
-                          child: Center(
-                            child: Container(
-                              width: 230,
-                              height: 230,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(32),
-                                border: Border.all(color: cs.secondary, width: 3),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          MobileScanner(controller: _camera, onDetect: _onDetect),
+                          IgnorePointer(
+                            child: Center(
+                              child: Container(
+                                width: 230,
+                                height: 230,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(32),
+                                  border: Border.all(color: cs.secondary, width: 3),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ]),
+                        ],
+                      ),
                     ),
                   )
                 else ...[
@@ -531,20 +554,25 @@ class _JoinScreenState extends State<JoinScreen> {
                     autofocus: true,
                     textCapitalization: TextCapitalization.characters,
                     maxLength: 11,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(letterSpacing: 4, fontWeight: FontWeight.w600),
-                    decoration: const InputDecoration(hintText: 'K7Q4M-9XHPT', border: OutlineInputBorder(), counterText: ''),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineSmall?.copyWith(letterSpacing: 4, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: 'K7Q4M-9XHPT',
+                      border: OutlineInputBorder(),
+                      counterText: '',
+                    ),
                     onChanged: (_) => setState(() {}),
                     onSubmitted: (_) => normalized.length == 10 ? _submit(normalized) : null,
                   ),
                   const Spacer(),
                 ],
-                if (_error != null) ...[
-                  const SizedBox(height: 14),
-                  Text(_error!, style: TextStyle(color: cs.error)),
-                ],
+                if (_error != null) ...[const SizedBox(height: 14), Text(_error!, style: TextStyle(color: cs.error))],
                 const SizedBox(height: 14),
                 if (_busy)
-                  const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()))
+                  const Center(
+                    child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()),
+                  )
                 else if (_scan && _scanned != null)
                   OutlinedButton.icon(
                     icon: const Icon(Icons.qr_code_scanner),
@@ -552,7 +580,10 @@ class _JoinScreenState extends State<JoinScreen> {
                     onPressed: _rescan,
                   )
                 else if (!_scan)
-                  FilledButton(onPressed: normalized.length == 10 ? () => _submit(normalized) : null, child: const Text('Rejoindre')),
+                  FilledButton(
+                    onPressed: normalized.length == 10 ? () => _submit(normalized) : null,
+                    child: const Text('Rejoindre'),
+                  ),
               ],
             ),
           ),
@@ -588,7 +619,8 @@ class VerifyScreen extends StatefulWidget {
 
 class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderStateMixin {
   late final Future<List<SasSymbol>> _symbols = widget.couple.symbols(widget.partnerIdentity);
-  late final AnimationController _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..forward();
+  late final AnimationController _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+    ..forward();
   bool _mismatch = false;
 
   @override
@@ -601,10 +633,12 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
     await widget.couple.confirmSymbols(widget.partnerId);
     HapticFeedback.heavyImpact();
     if (!mounted) return;
-    await Navigator.of(context).push(PageRouteBuilder<void>(
-      transitionDuration: const Duration(milliseconds: 700),
-      pageBuilder: (_, a, _) => FadeTransition(opacity: a, child: const CelebrationScreen()),
-    ));
+    await Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 700),
+        pageBuilder: (_, a, _) => FadeTransition(opacity: a, child: const CelebrationScreen()),
+      ),
+    );
     widget.onVerified();
   }
 
@@ -627,17 +661,20 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
                 ),
                 if (widget.alreadyVerified) ...[
                   const SizedBox(height: 14),
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Icon(Icons.verified_outlined, size: 18, color: cs.secondary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Le QR code a déjà confirmé la clé de ton amour sur ce téléphone. Montre-lui ces symboles : '
-                        'ils doivent être identiques sur son écran.',
-                        style: _soft(context)?.copyWith(fontSize: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.verified_outlined, size: 18, color: cs.secondary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Le QR code a déjà confirmé la clé de ton amour sur ce téléphone. Montre-lui ces symboles : '
+                          'ils doivent être identiques sur son écran.',
+                          style: _soft(context)?.copyWith(fontSize: 14),
+                        ),
                       ),
-                    ),
-                  ]),
+                    ],
+                  ),
                 ],
                 const SizedBox(height: 26),
                 FutureBuilder<List<SasSymbol>>(
@@ -655,7 +692,10 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
                             animation: _in,
                             builder: (context, child) {
                               final t = Curves.easeOutBack.transform(((_in.value - i * .08) / .44).clamp(0.0, 1.0));
-                              return Opacity(opacity: t.clamp(0.0, 1.0), child: Transform.scale(scale: .6 + .4 * t, child: child));
+                              return Opacity(
+                                opacity: t.clamp(0.0, 1.0),
+                                child: Transform.scale(scale: .6 + .4 * t, child: child),
+                              );
                             },
                             child: Container(
                               width: 92,
@@ -665,11 +705,13 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
                                 borderRadius: BorderRadius.circular(22),
                                 boxShadow: [BoxShadow(color: cs.secondary.withValues(alpha: .15), blurRadius: 18)],
                               ),
-                              child: Column(children: [
-                                Text(s[i].emoji, style: const TextStyle(fontSize: 38)),
-                                const SizedBox(height: 4),
-                                Text(s[i].name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                              ]),
+                              child: Column(
+                                children: [
+                                  Text(s[i].emoji, style: const TextStyle(fontSize: 38)),
+                                  const SizedBox(height: 4),
+                                  Text(s[i].name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
                             ),
                           ),
                       ],
@@ -684,17 +726,28 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
                     style: TextStyle(color: cs.error),
                   )
                 else ...[
-                  Row(children: [
-                    Icon(Icons.lock_outline, size: 16, color: cs.onSurfaceVariant),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text('Ils prouvent que personne ne s\'est glissé entre vous.',
-                          style: _soft(context)?.copyWith(fontSize: 13)),
-                    ),
-                  ]),
+                  Row(
+                    children: [
+                      Icon(Icons.lock_outline, size: 16, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Ils prouvent que personne ne s\'est glissé entre vous.',
+                          style: _soft(context)?.copyWith(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 14),
-                  FilledButton.icon(icon: const Icon(Icons.favorite), label: const Text('Ce sont les mêmes'), onPressed: _same),
-                  TextButton(onPressed: () => setState(() => _mismatch = true), child: const Text('Un symbole est différent')),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.favorite),
+                    label: const Text('Ce sont les mêmes'),
+                    onPressed: _same,
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _mismatch = true),
+                    child: const Text('Un symbole est différent'),
+                  ),
                 ],
               ],
             ),
@@ -715,31 +768,36 @@ class CelebrationScreen extends StatelessWidget {
     return Scaffold(
       body: PetalBackground(
         count: 24,
-        child: Stack(children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(),
-                  const Center(child: EntwinedHeart(size: 240)),
-                  const SizedBox(height: 18),
-                  Text('Votre jardin est né.', style: _title(context), textAlign: TextAlign.center),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Désormais, tout ce que vous vous envoyez est chiffré sur vos deux téléphones. Rien que vous deux.',
-                    style: _soft(context),
-                    textAlign: TextAlign.center,
-                  ),
-                  const Spacer(),
-                  FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Entrer dans notre jardin')),
-                ],
+        child: Stack(
+          children: [
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Spacer(),
+                    const Center(child: EntwinedHeart(size: 240)),
+                    const SizedBox(height: 18),
+                    Text('Votre jardin est né.', style: _title(context), textAlign: TextAlign.center),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Désormais, tout ce que vous vous envoyez est chiffré sur vos deux téléphones. Rien que vous deux.',
+                      style: _soft(context),
+                      textAlign: TextAlign.center,
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Entrer dans notre jardin'),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const Positioned.fill(child: PetalBurst()),
-        ]),
+            const Positioned.fill(child: PetalBurst()),
+          ],
+        ),
       ),
     );
   }

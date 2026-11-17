@@ -7,8 +7,8 @@ import 'package:flutter/services.dart';
 import '../../src/rust/api/chat.dart';
 import '../../theme/foulov_theme.dart';
 import '../../ui/love.dart';
-import '../lock/app_lock.dart';
 import 'chat_service.dart';
+import 'space_screen.dart';
 
 /// La conversation du couple : le cœur de l'app.
 class ChatScreen extends StatefulWidget {
@@ -184,7 +184,9 @@ class _ChatScreenState extends State<ChatScreen> {
         bottom: false,
         child: Column(
           children: [
-            _Header(since: widget.since, onShowSymbols: widget.onShowSymbols, onSignOut: widget.onSignOut),
+            _Header(service: _s, since: widget.since, onShowSymbols: widget.onShowSymbols, onSignOut: widget.onSignOut),
+            if (_s.profile.myName == null)
+              _NameNudge(service: _s, onShowSymbols: widget.onShowSymbols, onSignOut: widget.onSignOut),
             if (_s.partnerKeyChanged) _KeyChanged(onVerify: widget.onShowSymbols),
             Expanded(
               child: Stack(
@@ -288,75 +290,101 @@ String _time(int ms) {
 // ===================================================================== en-tête
 
 class _Header extends StatelessWidget {
-  const _Header({required this.since, required this.onShowSymbols, required this.onSignOut});
+  const _Header({required this.service, required this.since, required this.onShowSymbols, required this.onSignOut});
 
+  final ChatService service;
   final DateTime? since;
   final VoidCallback onShowSymbols;
   final VoidCallback onSignOut;
 
+  void _open(BuildContext context) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => SpaceScreen(service: service, onShowSymbols: onShowSymbols, onSignOut: onSignOut),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final day = since == null ? null : DateTime.now().difference(since!).inDays + 1;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 4, 10),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: cs.outline)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [cs.secondary.withValues(alpha: .35), cs.secondary]),
-            ),
-            child: const Center(child: Text('💞', style: TextStyle(fontSize: 20))),
+    final together = daysTogether(service.profile.togetherSince);
+    final garden = since == null ? null : DateTime.now().difference(since!).inDays + 1;
+    final subtitle = together != null
+        ? (together == 1 ? 'Premier jour ensemble' : '$together jours ensemble')
+        : (garden == null ? null : 'Jour $garden de votre jardin');
+    return Material(
+      color: cs.surface,
+      child: InkWell(
+        onTap: () => _open(context),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 4, 10),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: cs.outline)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Ton amour',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [cs.secondary.withValues(alpha: .35), cs.secondary]),
                 ),
-                if (day != null)
-                  Text(
-                    day == 1 ? 'Jour 1 de votre jardin' : 'Jour $day de votre jardin',
-                    style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
-                  ),
-              ],
-            ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (v) async {
-              if (v == 'sas') onShowSymbols();
-              if (v == 'out') onSignOut();
-              if (v == 'lock') await AppLock.instance.setEnabled(!AppLock.instance.enabled);
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'sas',
-                child: ListTile(leading: Icon(Icons.verified_user_outlined), title: Text('Nos 7 symboles')),
+                child: const Center(child: Text('💞', style: TextStyle(fontSize: 20))),
               ),
-              if (AppLock.instance.supported)
-                PopupMenuItem(
-                  value: 'lock',
-                  child: ListTile(
-                    leading: Icon(AppLock.instance.enabled ? Icons.lock_rounded : Icons.lock_open_rounded),
-                    title: const Text('Verrouillage'),
-                    subtitle: Text(AppLock.instance.enabled ? 'Activé' : 'Désactivé'),
-                  ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      service.partnerLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    if (subtitle != null) Text(subtitle, style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant)),
+                  ],
                 ),
-              const PopupMenuItem(
-                value: 'out',
-                child: ListTile(leading: Icon(Icons.logout_rounded), title: Text('Se déconnecter')),
+              ),
+              IconButton(
+                icon: const Icon(Icons.tune_rounded),
+                tooltip: 'Notre espace',
+                onPressed: () => _open(context),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Invite douce, tant que tu n'as pas donné ton prénom à ton amour.
+class _NameNudge extends StatelessWidget {
+  const _NameNudge({required this.service, required this.onShowSymbols, required this.onSignOut});
+
+  final ChatService service;
+  final VoidCallback onShowSymbols, onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+      decoration: BoxDecoration(color: cs.secondary.withValues(alpha: .14), borderRadius: BorderRadius.circular(16)),
+      child: Row(
+        children: [
+          const Text('🌷', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          const Expanded(child: Text('Dis à ton amour comment tu t\'appelles : ton prénom lui arrivera chiffré.')),
+          TextButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => SpaceScreen(service: service, onShowSymbols: onShowSymbols, onSignOut: onSignOut),
+              ),
+            ),
+            child: const Text('Ajouter'),
           ),
         ],
       ),

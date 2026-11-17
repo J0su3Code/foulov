@@ -35,9 +35,11 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     try {
       supported = await _auth.isDeviceSupported();
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FOULOVE] verrouillage indisponible : $e');
       supported = false;
     }
+    if (kDebugMode) debugPrint('[FOULOVE] verrouillage : appareil compatible = $supported');
     // Activé par défaut dès que le téléphone a un verrouillage d'écran.
     enabled = supported && (await _store.read(key: _pref)) != 'off';
     locked = enabled;

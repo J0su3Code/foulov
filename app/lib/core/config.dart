@@ -17,8 +17,10 @@ abstract final class AppConfig {
       if (googleWebClientId.isEmpty) 'GOOGLE_WEB_CLIENT_ID',
     ];
     if (missing.isNotEmpty) {
-      throw StateError('Configuration manquante : ${missing.join(', ')}. '
-          'Lance l\'app avec --dart-define-from-file=dart_defines.local.json.');
+      throw StateError(
+        'Configuration manquante : ${missing.join(', ')}. '
+        'Lance l\'app avec --dart-define-from-file=dart_defines.local.json.',
+      );
     }
   }
 }
