@@ -67,6 +67,20 @@ class SpaceScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              const _Section('Confidentialité'),
+              _Card(
+                children: [
+                  SwitchListTile(
+                    secondary: const Icon(Icons.wifi_tethering_rounded),
+                    title: const Text('« En ligne » et « écrit… »'),
+                    subtitle: const Text(
+                      'Montre quand tu es là et quand tu écris (jamais quoi). Désactivé, tu ne vois plus non plus ceux de ton amour.',
+                    ),
+                    value: service.showActivity,
+                    onChanged: service.setShowActivity,
+                  ),
+                ],
+              ),
               const _Section('Sécurité'),
               _Card(
                 children: [
