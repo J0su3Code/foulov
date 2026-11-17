@@ -138,3 +138,30 @@ fn contenus_suspects_refuses() {
     let (msg, _) = malik.create_media(&m, &[1, 2, 3], photo("")).unwrap();
     assert!(malik.media_uploaded(INES, &msg.id, "c/../../secret").is_err(), "nom d'objet suspect");
 }
+
+#[test]
+fn video_chiffree_depuis_un_fichier_puis_lue_par_morceaux() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    let plain: Vec<u8> = (0..1_000_000u32).map(|i| (i % 249) as u8).collect();
+    let src = dir.path().join("video.mp4");
+    fs::write(&src, &plain).unwrap();
+    let mut v = photo("Notre balade");
+    v.kind = foulov_core::chat_media::KIND_VIDEO;
+    v.mime = "video/mp4";
+    v.duration_ms = 12_000;
+    let (msg, up) = malik.create_media_file(&dir.path().join("m"), &src, v).unwrap();
+    assert_eq!(malik.media_len(&msg.id).unwrap(), plain.len() as u64);
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+
+    let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
+    assert_eq!(r.media.as_ref().unwrap().duration_ms, 12_000);
+    let dl = dir.path().join("dl.part");
+    fs::copy(&up.path, &dl).unwrap();
+    assert!(ines.media_downloaded(&r.id, &dl, &dir.path().join("i")).unwrap());
+    // Lecture à la manière d'un lecteur vidéo : des plages successives et des sauts.
+    assert_eq!(ines.media_read(&r.id, 0, 4096).unwrap(), &plain[..4096]);
+    assert_eq!(ines.media_read(&r.id, 700_000, 300_000).unwrap(), &plain[700_000..]);
+    assert_eq!(ines.media_read(&r.id, 123_457, 65_536).unwrap(), &plain[123_457..123_457 + 65_536]);
+    assert!(ines.media_read(&r.id, 2_000_000, 10).unwrap().is_empty());
+}

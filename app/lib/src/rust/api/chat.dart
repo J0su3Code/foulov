@@ -159,6 +159,46 @@ Future<bool> chatMediaDownloaded({
 Future<Uint8List> chatOpenMedia({required String messageId}) =>
     RustLib.instance.api.crateApiChatChatOpenMedia(messageId: messageId);
 
+/// Comme `chat_create_media`, mais chiffre directement depuis un fichier (vidéos), sans tout charger en mémoire.
+Future<CreatedMedia> chatCreateMediaFile({
+  required String dir,
+  required String src,
+  required int kind,
+  required String mime,
+  required int width,
+  required int height,
+  required int durationMs,
+  required List<int> thumb,
+  required String caption,
+  String? replyTo,
+}) => RustLib.instance.api.crateApiChatChatCreateMediaFile(
+  dir: dir,
+  src: src,
+  kind: kind,
+  mime: mime,
+  width: width,
+  height: height,
+  durationMs: durationMs,
+  thumb: thumb,
+  caption: caption,
+  replyTo: replyTo,
+);
+
+/// Taille réelle (déchiffrée) d'une photo ou vidéo.
+Future<BigInt> chatMediaLen({required String messageId}) =>
+    RustLib.instance.api.crateApiChatChatMediaLen(messageId: messageId);
+
+/// Morceau déchiffré (au plus 4 Mio) : lecture vidéo sans fichier en clair.
+Future<Uint8List> chatMediaRead({
+  required String messageId,
+  required BigInt offset,
+  required int len,
+}) => RustLib.instance.api.crateApiChatChatMediaRead(
+  messageId: messageId,
+  offset: offset,
+  len: len,
+);
+
 class ChatMessage {
   final String id;
   final bool fromMe;

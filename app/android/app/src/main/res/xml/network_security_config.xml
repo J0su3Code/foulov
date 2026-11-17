@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tout le trafic réseau est chiffré (TLS), sauf la lecture des vidéos par le serveur interne de l'app,
+     joignable uniquement depuis ce téléphone (127.0.0.1) et protégé par un jeton aléatoire (video_proxy.dart). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

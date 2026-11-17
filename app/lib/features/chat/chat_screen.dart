@@ -5,12 +5,14 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../src/rust/api/chat.dart';
 import '../../theme/foulov_theme.dart';
 import '../../ui/love.dart';
 import 'chat_service.dart';
 import 'space_screen.dart';
+import 'video_proxy.dart';
 
 /// La conversation du couple : le cœur de l'app.
 class ChatScreen extends StatefulWidget {
@@ -113,9 +115,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  /// Galerie (plusieurs photos) ou appareil photo. Le texte en cours devient la légende de la première photo.
+  /// Pièce jointe : galerie (photos et vidéos, 10 au plus), photo ou vidéo prise sur le moment.
+  /// Le texte en cours devient la légende du premier élément.
   Future<void> _pickPhoto() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final choice = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -125,42 +128,88 @@ class _ChatScreenState extends State<ChatScreen> {
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Galerie'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
+              subtitle: const Text('Photos et vidéos'),
+              onTap: () => Navigator.pop(context, 'gallery'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Appareil photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
+              title: const Text('Prendre une photo'),
+              onTap: () => Navigator.pop(context, 'photo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: const Text('Filmer'),
+              onTap: () => Navigator.pop(context, 'video'),
             ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
-    if (source == null) return;
+    if (choice == null) return;
     final picker = ImagePicker();
-    final files = source == ImageSource.camera
-        ? [?await picker.pickImage(source: ImageSource.camera, requestFullMetadata: false)]
-        : await picker.pickMultiImage(limit: 10, requestFullMetadata: false);
-    if (files.isEmpty) return;
+    final files = switch (choice) {
+      'photo' => [?await picker.pickImage(source: ImageSource.camera, requestFullMetadata: false)],
+      'video' => [?await picker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(minutes: 5))],
+      _ => await picker.pickMultipleMedia(limit: 10, requestFullMetadata: false),
+    };
+    if (files.isEmpty || !mounted) return;
     var caption = _input.text.trim();
     final reply = _replyTo?.id;
     _input.clear();
     setState(() => _replyTo = null);
     HapticFeedback.lightImpact();
+    final messenger = ScaffoldMessenger.of(context);
     for (final (i, f) in files.indexed) {
+      final video = choice == 'video' || _isVideo(f);
+      final progress = ValueNotifier<double>(0);
+      if (video) {
+        messenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(minutes: 10),
+            content: ValueListenableBuilder<double>(
+              valueListenable: progress,
+              builder: (_, p, _) => Row(
+                children: [
+                  const Expanded(child: Text('Préparation de la vidéo…')),
+                  SizedBox(width: 90, child: LinearProgressIndicator(value: p > 0 ? p : null)),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
       try {
-        await _s.sendPhoto(f.path, caption: caption, replyTo: i == 0 ? reply : null);
+        if (video) {
+          await _s.sendVideo(
+            f.path,
+            caption: caption,
+            replyTo: i == 0 ? reply : null,
+            onProgress: (p) => progress.value = p,
+          );
+        } else {
+          await _s.sendPhoto(f.path, caption: caption, replyTo: i == 0 ? reply : null);
+        }
         caption = '';
         _toBottom();
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Cette photo n\'a pas pu être préparée.')));
-        }
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(video ? 'Cette vidéo n\'a pas pu être préparée.' : 'Cette photo n\'a pas pu être préparée.'),
+          ),
+        );
+      } finally {
+        if (video) messenger.hideCurrentSnackBar();
+        progress.dispose();
       }
     }
+  }
+
+  static bool _isVideo(XFile f) {
+    final t = f.mimeType;
+    if (t != null) return t.startsWith('video/');
+    final p = f.path.toLowerCase();
+    return ['.mp4', '.mov', '.3gp', '.webm', '.mkv'].any(p.endsWith);
   }
 
   void _reply(ChatMessage m) {
@@ -1033,6 +1082,10 @@ class _Composer extends StatelessWidget {
 void _openViewer(BuildContext context, ChatMessage m) {
   final service = context.findAncestorStateOfType<_ChatScreenState>()?._s;
   if (service == null) return;
+  if (m.media!.kind == 2) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _VideoViewer(m: m)));
+    return;
+  }
   Navigator.of(context).push(
     PageRouteBuilder<void>(
       opaque: false,
@@ -1109,6 +1162,32 @@ class _MediaBubble extends StatelessWidget {
                     tag: 'photo-${m.id}',
                     child: _Photo(m: m, service: service),
                   ),
+                  if (md.kind == 2 && (md.state == 1 || (mine && md.state != 3)))
+                    Center(
+                      child: Container(
+                        width: 54,
+                        height: 54,
+                        decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                        child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 36),
+                      ),
+                    ),
+                  if (md.kind == 2)
+                    Positioned(
+                      left: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(8)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.videocam_rounded, color: Colors.white, size: 14),
+                            const SizedBox(width: 4),
+                            Text(_duration(md.durationMs), style: const TextStyle(color: Colors.white, fontSize: 11.5)),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (md.state == 0 || md.state == 2)
                     const Center(
                       child: SizedBox.square(
@@ -1186,6 +1265,10 @@ class _PhotoState extends State<_Photo> {
     final thumb = Image.memory(widget.m.media!.thumb, fit: BoxFit.cover, gaplessPlayback: true);
     if (!_available) {
       return ImageFiltered(imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6), child: thumb);
+    }
+    // Vidéo : la bulle montre sa miniature ; la vidéo elle-même se lit dans le lecteur.
+    if (widget.m.media!.kind == 2) {
+      return thumb;
     }
     _full ??= widget.service.photo(widget.m.id);
     return FutureBuilder<Uint8List?>(
@@ -1287,6 +1370,181 @@ class _PhotoViewerState extends State<_PhotoViewer> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+String _duration(int ms) {
+  final t = Duration(milliseconds: ms);
+  return '${t.inMinutes}:${(t.inSeconds % 60).toString().padLeft(2, '0')}';
+}
+
+/// Lecteur plein écran. La vidéo est lue depuis le serveur local qui la déchiffre à la volée :
+/// elle n'est jamais écrite en clair sur le téléphone.
+class _VideoViewer extends StatefulWidget {
+  const _VideoViewer({required this.m});
+
+  final ChatMessage m;
+
+  @override
+  State<_VideoViewer> createState() => _VideoViewerState();
+}
+
+class _VideoViewerState extends State<_VideoViewer> {
+  VideoPlayerController? _c;
+  bool _failed = false;
+  bool _controls = true;
+  Timer? _hide;
+
+  @override
+  void initState() {
+    super.initState();
+    _open();
+  }
+
+  Future<void> _open() async {
+    try {
+      final c = VideoPlayerController.networkUrl(await VideoProxy.url(widget.m.id));
+      await c.initialize();
+      if (!mounted) {
+        await c.dispose();
+        return;
+      }
+      c.addListener(() {
+        if (mounted) setState(() {});
+      });
+      setState(() => _c = c);
+      await c.play();
+      _hideSoon();
+    } catch (e) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  void _hideSoon() {
+    _hide?.cancel();
+    _hide = Timer(const Duration(seconds: 3), () {
+      if (mounted && (_c?.value.isPlaying ?? false)) setState(() => _controls = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _hide?.cancel();
+    _c?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _c;
+    final ready = c != null && c.value.isInitialized;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          setState(() => _controls = !_controls);
+          if (_controls) _hideSoon();
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (ready)
+              Center(
+                child: AspectRatio(aspectRatio: c.value.aspectRatio, child: VideoPlayer(c)),
+              )
+            else
+              Center(
+                child: _failed
+                    ? const Text('Cette vidéo ne peut pas être lue.', style: TextStyle(color: Colors.white))
+                    : Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Image.memory(widget.m.media!.thumb, fit: BoxFit.contain),
+                          const CircularProgressIndicator(color: Colors.white),
+                        ],
+                      ),
+              ),
+            AnimatedOpacity(
+              opacity: _controls ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: IgnorePointer(
+                ignoring: !_controls,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: SafeArea(
+                        child: IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white),
+                          tooltip: 'Fermer',
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                    ),
+                    if (ready) ...[
+                      Center(
+                        child: IconButton(
+                          iconSize: 64,
+                          icon: Icon(
+                            c.value.isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            c.value.isPlaying ? c.pause() : c.play();
+                            _hideSoon();
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 16 + MediaQuery.paddingOf(context).bottom,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.m.body.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Text(widget.m.body, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                              ),
+                            VideoProgressIndicator(
+                              c,
+                              allowScrubbing: true,
+                              colors: VideoProgressColors(
+                                playedColor: Theme.of(context).colorScheme.secondary,
+                                bufferedColor: Colors.white38,
+                                backgroundColor: Colors.white12,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Text(
+                                  _duration(c.value.position.inMilliseconds),
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  _duration(c.value.duration.inMilliseconds),
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

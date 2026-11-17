@@ -102,7 +102,9 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
 6. Les miniatures sont des fichiers à part, chiffrés de la même façon.
 7. Le bucket public `foulovmedia` n'est pas utilisé pour les contenus des couples.
 8. **Réception** : la miniature (dans le message chiffré) s'affiche aussitôt ; le fichier est téléchargé, sa taille et son empreinte SHA-256 vérifiées, sinon il est effacé et marqué illisible.
-9. **Sur le téléphone, les fichiers restent chiffrés** ; leur clé ne quitte jamais la base SQLCipher. Une photo n'est déchiffrée qu'**en mémoire**, pour l'affichage : rien n'est jamais écrit en clair, et les photos n'apparaissent pas dans la galerie du téléphone.
+9. **Vidéos** : réencodées en MP4 720p sur le téléphone (ce qui retire aussi leurs métadonnées, position comprise), puis chiffrées par blocs depuis le fichier, sans jamais être chargées entières en mémoire. Les copies en clair créées par le réencodage et par le sélecteur sont effacées dès le chiffrement terminé. Chaque bloc STREAM s'authentifie seul (numéro de bloc et drapeau « dernier bloc » dans le nonce) : on peut lire n'importe quelle plage, et une altération ou une troncature est détectée.
+10. **Lecture des vidéos sans fichier en clair** : le lecteur du système lit une adresse locale (`video_proxy.dart`). Ce serveur interne n'écoute que sur 127.0.0.1, exige un jeton aléatoire de 128 bits propre à chaque lancement de l'app, et déchiffre à la volée les plages demandées. Android n'autorise le HTTP non chiffré que vers 127.0.0.1 (`network_security_config.xml`) ; tout le reste passe par TLS.
+11. **Sur le téléphone, les fichiers restent chiffrés** ; leur clé ne quitte jamais la base SQLCipher. Une photo n'est déchiffrée qu'**en mémoire**, pour l'affichage : rien n'est jamais écrit en clair, et les photos n'apparaissent pas dans la galerie du téléphone.
 
 ## 7. Stockage local, verrouillage et récupération
 

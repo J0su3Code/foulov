@@ -148,7 +148,42 @@ impl Device {
         fs::create_dir_all(dir).map_err(io)?;
         let path: PathBuf = dir.join(format!("{id}.flm"));
         write_atomic(&path, &enc.ciphertext).map_err(io)?;
-        let size = enc.ciphertext.len() as u64;
+        self.record_created(&id, &path, &enc.key, &enc.sha256, enc.ciphertext.len() as u64, &m, caption, reply)
+    }
+
+    /// Comme [`create_media`], mais chiffre directement depuis un fichier (vidéos) : jamais tout en mémoire.
+    pub fn create_media_file(&mut self, dir: &Path, src: &Path, m: NewMedia<'_>) -> R<(ChatMessage, PendingUpload)> {
+        let caption = m.caption.trim();
+        let len = fs::metadata(src).map_err(io)?.len();
+        if len == 0 || !check_meta(m.kind, m.mime, m.thumb, caption, m.width, m.height) {
+            return Err(invalid("type, taille ou légende"));
+        }
+        if media::ciphertext_len(len) > MAX_MEDIA_BYTES {
+            return Err(invalid("fichier trop volumineux"));
+        }
+        let reply = match m.reply_to {
+            Some(r) => Some(unhex(r).filter(|b| b.len() == 16).map(|_| r.to_owned()).ok_or(DeviceError::BadMessage)?),
+            None => None,
+        };
+        let id = hex(&random16());
+        fs::create_dir_all(dir).map_err(io)?;
+        let path: PathBuf = dir.join(format!("{id}.flm"));
+        let enc = media::encrypt_file(src, &path).map_err(|e| invalid(&e.to_string()))?;
+        self.record_created(&id, &path, &enc.key, &enc.sha256, enc.size, &m, caption, reply)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn record_created(
+        &mut self,
+        id: &str,
+        path: &Path,
+        key: &[u8; 32],
+        sha256: &[u8; 32],
+        size: u64,
+        m: &NewMedia<'_>,
+        caption: &str,
+        reply: Option<String>,
+    ) -> R<(ChatMessage, PendingUpload)> {
         let path_s = path.to_string_lossy().into_owned();
 
         let last: Option<i64> = self
@@ -169,15 +204,15 @@ impl Device {
             c.execute(
                 "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state)
                  VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 0)",
-                params![id, m.kind, enc.key.to_vec(), enc.sha256.to_vec(), size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb, path_s],
+                params![id, m.kind, key.to_vec(), sha256.to_vec(), size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb, path_s],
             )
             .map_err(db)?;
             c.query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message).map_err(db)
         });
         match res {
-            Ok(msg) => Ok((msg, PendingUpload { message_id: id, path: path_s, size })),
+            Ok(msg) => Ok((msg, PendingUpload { message_id: id.to_owned(), path: path_s, size })),
             Err(e) => {
-                let _ = fs::remove_file(&path);
+                let _ = fs::remove_file(path);
                 Err(e)
             }
         }
@@ -266,9 +301,12 @@ impl Device {
             .optional()
             .map_err(db)?;
         let Some((size, sha)) = row else { return Ok(false) };
-        let data = fs::read(downloaded).map_err(io)?;
         let expected: [u8; 32] = sha.try_into().map_err(|_| DeviceError::BadMessage)?;
-        if data.len() as i64 != size || !media::verify_sha256(&data, &expected) {
+        // Empreinte calculée par blocs : une vidéo n'est jamais chargée entière en mémoire.
+        let len = fs::metadata(downloaded).map_err(io)?.len();
+        let ok = len as i64 == size
+            && media::sha256_file(downloaded).map(|h| h.iter().zip(&expected).fold(0u8, |a, (x, y)| a | (x ^ y)) == 0).unwrap_or(false);
+        if !ok {
             let _ = fs::remove_file(downloaded);
             // Altéré ou substitué : on ne réessaie pas indéfiniment, la photo est marquée illisible.
             self.store
@@ -280,7 +318,8 @@ impl Device {
         }
         fs::create_dir_all(dir).map_err(io)?;
         let path = dir.join(format!("{message_id}.flm"));
-        fs::rename(downloaded, &path).or_else(|_| write_atomic(&path, &data)).map_err(io)?;
+        fs::rename(downloaded, &path).or_else(|_| fs::copy(downloaded, &path).map(|_| ())).map_err(io)?;
+        let _ = fs::remove_file(downloaded);
         self.store
             .conn
             .lock()
@@ -290,6 +329,32 @@ impl Device {
             )
             .map_err(db)?;
         Ok(true)
+    }
+
+    fn reader(&self, message_id: &str) -> R<media::MediaReader> {
+        let row: Option<(Option<String>, Vec<u8>)> = self
+            .store
+            .conn
+            .lock()
+            .query_row("SELECT path, file_key FROM media WHERE message_id = ?1 AND state IN (0, 1)", params![message_id], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .optional()
+            .map_err(db)?;
+        let Some((Some(path), key)) = row else { return Err(invalid("pas encore disponible")) };
+        let key: [u8; 32] = key.try_into().map_err(|_| DeviceError::BadMessage)?;
+        media::MediaReader::open(&key, Path::new(&path)).map_err(|_| DeviceError::BadMessage)
+    }
+
+    /// Taille réelle (déchiffrée) d'une photo ou vidéo.
+    pub fn media_len(&self, message_id: &str) -> R<u64> {
+        Ok(self.reader(message_id)?.len)
+    }
+
+    /// Lit `len` octets déchiffrés à partir de `offset` : la lecture vidéo se fait ainsi, morceau par morceau,
+    /// sans jamais écrire la vidéo en clair. Chaque bloc lu est authentifié.
+    pub fn media_read(&self, message_id: &str, offset: u64, len: u32) -> R<Vec<u8>> {
+        self.reader(message_id)?.read_at(offset, len.min(4 * 1024 * 1024) as usize).map_err(|_| DeviceError::BadMessage)
     }
 
     /// Déchiffre la photo ou vidéo en mémoire, pour l'affichage. Rien n'est écrit en clair.
