@@ -1210,18 +1210,33 @@ class _PhotoState extends State<_Photo> {
   }
 }
 
-/// Plein écran : zoom au pincement, fermeture par glissement vers le bas ou bouton.
-class _PhotoViewer extends StatelessWidget {
+/// Plein écran : la photo occupe tout l'écran (proportions gardées), zoom au pincement jusqu'à ×5,
+/// fermeture par glissement vers le bas ou par le bouton.
+class _PhotoViewer extends StatefulWidget {
   const _PhotoViewer({required this.m, required this.service});
 
   final ChatMessage m;
   final ChatService service;
 
   @override
+  State<_PhotoViewer> createState() => _PhotoViewerState();
+}
+
+class _PhotoViewerState extends State<_PhotoViewer> {
+  // Chargée une seule fois : la visionneuse ne redéchiffre pas la photo à chaque reconstruction.
+  late final Future<Uint8List?> _photo = widget.service.photo(widget.m.id);
+
+  @override
   Widget build(BuildContext context) {
+    final m = widget.m;
+    Widget fill(Uint8List bytes) => SizedBox.expand(
+      child: Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true, filterQuality: FilterQuality.medium),
+    );
     return Scaffold(
       backgroundColor: Colors.black,
+      // expand : sans cela, la pile prend la taille du bouton Fermer, et la photo avec.
       body: Stack(
+        fit: StackFit.expand,
         children: [
           Positioned.fill(
             child: Dismissible(
@@ -1230,27 +1245,27 @@ class _PhotoViewer extends StatelessWidget {
               onDismissed: (_) => Navigator.of(context).pop(),
               child: InteractiveViewer(
                 maxScale: 5,
-                child: Center(
-                  child: Hero(
-                    tag: 'photo-${m.id}',
-                    child: FutureBuilder<Uint8List?>(
-                      future: service.photo(m.id),
-                      builder: (context, snap) => snap.data == null
-                          ? Image.memory(m.media!.thumb, fit: BoxFit.contain)
-                          : Image.memory(snap.data!, fit: BoxFit.contain, gaplessPlayback: true),
-                    ),
+                child: Hero(
+                  tag: 'photo-${m.id}',
+                  child: FutureBuilder<Uint8List?>(
+                    future: _photo,
+                    builder: (context, snap) => fill(snap.data ?? m.media!.thumb),
                   ),
                 ),
               ),
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
-                tooltip: 'Fermer',
-                onPressed: () => Navigator.of(context).pop(),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  tooltip: 'Fermer',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
           ),
