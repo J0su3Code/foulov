@@ -85,6 +85,8 @@ pub struct Received {
     pub rejected: bool,
     /// Le profil du couple a changé (prénom du partenaire, date « ensemble depuis »).
     pub profile_changed: bool,
+    /// Les dates importantes ont changé.
+    pub dates_changed: bool,
 }
 
 /// Profil du couple, jamais visible du serveur.
@@ -148,11 +150,12 @@ pub fn chat_outbox_sent(envelope_id: String) -> anyhow::Result<Option<String>> {
 
 pub fn chat_receive(partner: String, envelope_id: String, envelope: Envelope) -> anyhow::Result<Received> {
     with_device(|d| {
-        let none = Received { message: None, updated: vec![], rejected: false, profile_changed: false };
+        let none = Received { message: None, updated: vec![], rejected: false, profile_changed: false, dates_changed: false };
         Ok(match d.receive(&partner, &envelope_id, &CoreEnvelope { kind: envelope.kind, body: envelope.body })? {
             core::Received::Message(m) => Received { message: Some(m.into()), ..none },
             core::Received::Updated(ids) => Received { updated: ids, ..none },
             core::Received::Profile => Received { profile_changed: true, ..none },
+            core::Received::Dates => Received { dates_changed: true, ..none },
             core::Received::Nothing => none,
             core::Received::Rejected => Received { rejected: true, ..none },
         })
@@ -345,4 +348,54 @@ pub fn chat_delete_for_both(partner: String, id: String) -> anyhow::Result<Delet
         let (o, k) = d.delete_for_both(&partner, &id)?;
         Ok(DeletedForBoth { outgoing: o.into(), object_key: k })
     })
+}
+
+// ------------------------------------------------------------------ dates importantes
+
+/// `remind_days` : aucun rappel (`None`) ou nombre de jours avant (0 = le jour même).
+pub struct DateEntry {
+    pub id: String,
+    pub title: String,
+    /// « AAAA-MM-JJ ».
+    pub date: String,
+    pub yearly: bool,
+    pub remind_days: Option<u8>,
+    pub updated_at: i64,
+}
+
+impl From<foulov_core::dates::DateEntry> for DateEntry {
+    fn from(e: foulov_core::dates::DateEntry) -> Self {
+        DateEntry { id: e.id, title: e.title, date: e.date, yearly: e.yearly, remind_days: e.remind_days, updated_at: e.updated_at }
+    }
+}
+
+pub struct SavedDate {
+    pub entry: DateEntry,
+    pub outgoing: Outgoing,
+}
+
+pub fn chat_dates() -> anyhow::Result<Vec<DateEntry>> {
+    with_device(|d| Ok(d.dates()?.into_iter().map(Into::into).collect()))
+}
+
+/// Crée (id vide) ou modifie une date, envoyée chiffrée au partenaire.
+pub fn chat_save_date(partner: String, entry: DateEntry) -> anyhow::Result<SavedDate> {
+    with_device(|d| {
+        let (e, o) = d.save_date(
+            &partner,
+            foulov_core::dates::DateEntry {
+                id: entry.id,
+                title: entry.title,
+                date: entry.date,
+                yearly: entry.yearly,
+                remind_days: entry.remind_days,
+                updated_at: 0,
+            },
+        )?;
+        Ok(SavedDate { entry: e.into(), outgoing: o.into() })
+    })
+}
+
+pub fn chat_delete_date(partner: String, id: String) -> anyhow::Result<Outgoing> {
+    with_device(|d| Ok(d.delete_date(&partner, &id)?.into()))
 }

@@ -17,6 +17,7 @@ import '../../core/bytea.dart';
 import '../../src/rust/api/chat.dart';
 import '../../src/rust/api/device.dart';
 import 'push_service.dart';
+import '../dates/reminders.dart';
 
 /// Messagerie du couple : transporte les enveloppes chiffrées entre le cœur Rust et Supabase.
 ///
@@ -65,6 +66,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     // Après une mise à jour : ce que l'ancienne version avait gardé sans le comprendre.
     await chatReprocessUnknown();
     profile = await chatProfile();
+    dates = await chatDates();
+    unawaited(Reminders.reschedule(dates, profile.togetherSince));
     await _loadPage();
     _channel = _db
         .channel('enveloppes-$_me')
@@ -300,8 +303,32 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     await _reloadProfile();
   }
 
+  // ------------------------------------------------------------------ dates importantes
+
+  List<DateEntry> dates = const [];
+
+  /// Crée (id vide) ou modifie une date ; elle part chiffrée chez ton amour.
+  Future<void> saveDate(DateEntry e) async {
+    await chatSaveDate(partner: partnerId, entry: e);
+    await _reloadDates();
+    unawaited(flush());
+  }
+
+  Future<void> deleteDate(String id) async {
+    await chatDeleteDate(partner: partnerId, id: id);
+    await _reloadDates();
+    unawaited(flush());
+  }
+
+  Future<void> _reloadDates() async {
+    dates = await chatDates();
+    unawaited(Reminders.reschedule(dates, profile.togetherSince));
+    _notify();
+  }
+
   Future<void> _reloadProfile() async {
     profile = await chatProfile();
+    unawaited(Reminders.reschedule(dates, profile.togetherSince));
     _notify();
     unawaited(flush());
   }
@@ -669,7 +696,11 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
               if (m.media != null) _hasDownloads = true;
             }
             if (res.updated.isNotEmpty) await _refresh(res.updated);
-            if (res.profileChanged) profile = await chatProfile();
+            if (res.profileChanged) {
+              profile = await chatProfile();
+              unawaited(Reminders.reschedule(dates, profile.togetherSince));
+            }
+            if (res.datesChanged) await _reloadDates();
           } catch (e) {
             if (e.toString().contains('clé de ton partenaire a changé')) {
               partnerKeyChanged = true;

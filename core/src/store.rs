@@ -117,6 +117,10 @@ CREATE TABLE IF NOT EXISTS seen_envelopes (id TEXT PRIMARY KEY, at INTEGER NOT N
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT, at INTEGER NOT NULL);
 -- Contenus authentiques venant d'une version plus récente de l'app : relus après la mise à jour.
 CREATE TABLE IF NOT EXISTS unknown_contents (plain BLOB NOT NULL, at INTEGER NOT NULL);
+-- Dates importantes du couple ; une suppression garde une trace datée (deleted = 1).
+CREATE TABLE IF NOT EXISTS dates (
+  id TEXT PRIMARY KEY, title TEXT NOT NULL, date TEXT NOT NULL, yearly INTEGER NOT NULL,
+  remind_days INTEGER, updated_at INTEGER NOT NULL, deleted INTEGER NOT NULL DEFAULT 0);
 -- Photos et vidéos. La clé du fichier ne quitte jamais cette base chiffrée ; le fichier lui-même reste chiffré
 -- sur le téléphone (`path`) et n'est déchiffré qu'en mémoire, à l'affichage.
 -- state : 0 à envoyer, 1 sur ce téléphone, 2 à télécharger, 3 illisible (altéré).
