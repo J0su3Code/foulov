@@ -103,8 +103,9 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
 
 ## 7. Stockage local, verrouillage et récupération
 
-- **Base locale** : SQLCipher. Sa clé de 256 bits est enveloppée par une clé matérielle du Keystore ou de la Secure Enclave, non exportable.
-- **Verrouillage** : empreinte ou visage à l'ouverture (`local_auth`). La clé matérielle peut exiger cette authentification avant d'être utilisée.
+- **Base locale** : SQLCipher. Sa clé de 256 bits est aléatoire et enveloppée par une clé matérielle non exportable : Android Keystore, ou Keychain iOS accessible seulement sur cet appareil, après le premier déverrouillage.
+- **Verrouillage de l'app** (activé par défaut dès que le téléphone a un verrouillage d'écran) : empreinte, visage ou code du téléphone à l'ouverture et après une minute en arrière-plan. Le désactiver demande de s'authentifier. Sur Android 13 et plus, la vignette des apps récentes ne montre pas la conversation, sans bloquer les captures d'écran.
+  - *Choix assumé, comme Signal* : c'est un verrou d'accès à l'interface. La clé de la base n'exige **pas** l'empreinte pour être utilisée : sur Android, une clé liée à l'authentification est détruite si l'utilisateur retire le verrouillage d'écran de son téléphone, et tout l'historique serait perdu. Une personne qui obtient le téléphone **déverrouillé** et le code de l'app pourrait donc lire la base. Ce choix sera réexaminé quand la sauvegarde chiffrée existera.
 - **Effacement à distance** du contenu local par l'utilisateur depuis un autre appareil : prévu plus tard.
 - **Sauvegarde chiffrée** (activée par défaut, désactivable) :
   - à la création du compte, l'app affiche une **phrase de récupération de 24 mots** (256 bits) à noter sur papier ;
@@ -128,7 +129,12 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
 
 ## 9. Notifications
 
-Une fonction serveur envoie une notification au texte fixe (« Nouveau message »), sans contenu, sans nom, sans aperçu. Le contenu est déchiffré seulement quand l'utilisateur ouvre l'app.
+Une fonction serveur (`supabase/functions/push`) envoie une notification au texte fixe, « FouLove · Nouveau message 💌 », sans contenu, sans nom, sans aperçu. Le contenu est déchiffré seulement quand l'utilisateur ouvre l'app.
+
+- Chaque enveloppe porte un indicateur `urgent`, comme chez Signal : vrai pour un message ou une réaction, faux pour un accusé de réception, qui ne réveille donc jamais le téléphone. C'est la seule information ajoutée pour les notifications.
+- Le déclencheur en base transmet à la fonction le seul identifiant de l'enveloppe (aléatoire). La fonction vérifie elle-même que l'enveloppe est urgente, récente et pas encore notifiée : une seule notification par enveloppe, aucun secret stocké en base.
+- La cible est l'identifiant d'installation Firebase (FID) du téléphone, gardé dans une table fermée aux clients. Il est retiré à la déconnexion.
+- Plusieurs messages d'affilée remplacent la même notification ; elle s'efface à l'ouverture de la conversation.
 
 ## 10. Métadonnées visibles du serveur
 

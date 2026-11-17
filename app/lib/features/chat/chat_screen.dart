@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../src/rust/api/chat.dart';
 import '../../theme/foulov_theme.dart';
 import '../../ui/love.dart';
+import '../lock/app_lock.dart';
 import 'chat_service.dart';
 
 /// La conversation du couple : le cœur de l'app.
@@ -332,13 +333,26 @@ class _Header extends StatelessWidget {
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (v) => v == 'sas' ? onShowSymbols() : onSignOut(),
-            itemBuilder: (_) => const [
-              PopupMenuItem(
+            onSelected: (v) async {
+              if (v == 'sas') onShowSymbols();
+              if (v == 'out') onSignOut();
+              if (v == 'lock') await AppLock.instance.setEnabled(!AppLock.instance.enabled);
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
                 value: 'sas',
                 child: ListTile(leading: Icon(Icons.verified_user_outlined), title: Text('Nos 7 symboles')),
               ),
-              PopupMenuItem(
+              if (AppLock.instance.supported)
+                PopupMenuItem(
+                  value: 'lock',
+                  child: ListTile(
+                    leading: Icon(AppLock.instance.enabled ? Icons.lock_rounded : Icons.lock_open_rounded),
+                    title: const Text('Verrouillage'),
+                    subtitle: Text(AppLock.instance.enabled ? 'Activé' : 'Désactivé'),
+                  ),
+                ),
+              const PopupMenuItem(
                 value: 'out',
                 child: ListTile(leading: Icon(Icons.logout_rounded), title: Text('Se déconnecter')),
               ),
