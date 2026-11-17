@@ -4,11 +4,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+// FragmentActivity : requise par la boîte de dialogue biométrique (local_auth).
+class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Canal « Messages » : la notification arrive avec le son et la vibration par défaut du téléphone.
@@ -29,6 +30,14 @@ class MainActivity : FlutterActivity() {
                 // La conversation est ouverte : les notifications déjà affichées n'ont plus lieu d'être.
                 "clear" -> {
                     getSystemService(NotificationManager::class.java).cancelAll()
+                    result.success(null)
+                }
+                // Verrouillage actif : la vignette des apps récentes ne montre pas la conversation (Android 13+).
+                // Les captures d'écran restent possibles, contrairement à FLAG_SECURE.
+                "hideInRecents" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        setRecentsScreenshotEnabled(call.arguments != true)
+                    }
                     result.success(null)
                 }
                 else -> result.notImplemented()

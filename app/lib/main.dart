@@ -9,6 +9,7 @@ import 'features/auth/login_screen.dart';
 import 'features/couple/couple_screens.dart';
 import 'features/couple/couple_service.dart';
 import 'features/intro/intro_screen.dart';
+import 'features/lock/app_lock.dart';
 import 'src/rust/frb_generated.dart';
 import 'theme/foulov_theme.dart';
 
@@ -22,6 +23,7 @@ Future<void> main() async {
     publishableKey: AppConfig.supabasePublishableKey,
     authOptions: FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
   );
+  await AppLock.instance.init();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(FouLovApp(auth: AuthService(Supabase.instance.client)));
@@ -40,6 +42,8 @@ class FouLovApp extends StatelessWidget {
       theme: FouLovTheme.jour,
       darkTheme: FouLovTheme.nuit,
       themeMode: ThemeMode.system,
+      // Le verrou recouvre tout l'écran (navigation comprise), seulement quand quelqu'un est connecté.
+      builder: (context, child) => LockGate(active: auth.session != null, child: child ?? const SizedBox()),
       home: _AuthGate(auth: auth),
     );
   }

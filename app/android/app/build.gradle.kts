@@ -45,3 +45,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Thème AppCompat de l'activité (requis par local_auth sur Android 8 et antérieurs).
+    implementation("androidx.appcompat:appcompat:1.7.0")
+}
