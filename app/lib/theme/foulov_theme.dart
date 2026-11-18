@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 /// La police est celle du système (Roboto sur Android, San Francisco sur iOS) : on ne la surcharge pas.
 abstract final class FouLovColors {
   // Splash natif et début de l'intro : doivent rester identiques à flutter_native_splash.yaml
-  // et à animation/intro_love.py.
-  static const splashDay = Color(0xFFFFF1EE);
-  static const splashNight = Color(0xFF140C14);
+  // et à animation/export_app_assets.sh (couleur du début de l'intro, mesurée sur la vidéo).
+  static const splashDay = Color(0xFFF5EEE8);
+  static const splashNight = Color(0xFF0D000E);
 
   // Jour
   static const creme = Color(0xFFFFF8F5);

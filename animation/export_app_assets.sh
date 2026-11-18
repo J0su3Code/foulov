@@ -7,7 +7,7 @@ DAY="$1"; NIGHT="$2"
 OUT="$(cd "$(dirname "$0")/.." && pwd)/app/assets/intro"
 mkdir -p "$OUT"
 # Couleurs du splash natif : elles doivent rester identiques à celles de app/flutter_native_splash.yaml et lib/theme.
-COLOR_DAY="0x0C2219"; COLOR_NIGHT="0x0A0710"
+COLOR_DAY="0xF5EEE8"; COLOR_NIGHT="0x0D000E"
 
 export_one() {
   local src="$1" name="$2" color="$3"
