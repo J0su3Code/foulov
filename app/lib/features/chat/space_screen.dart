@@ -125,6 +125,21 @@ class SpaceScreen extends StatelessWidget {
                       ),
                     ),
                   ListTile(
+                    leading: const Icon(Icons.sync_rounded),
+                    title: const Text('Renvoyer notre espace'),
+                    subtitle: const Text(
+                      'Si ton amour a changé de téléphone sans sauvegarde : prénoms, photos, dates, albums et tes lettres lui reviennent, chiffrés.',
+                    ),
+                    onTap: () async {
+                      final n = await service.resyncNow();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(n == 0 ? 'Rien à renvoyer.' : 'Envoyé ($n éléments) ♡')));
+                      }
+                    },
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.verified_user_outlined),
                     title: const Text('Nos 7 symboles'),
                     subtitle: const Text('Pour vérifier ensemble que personne ne s\'est glissé entre vous.'),

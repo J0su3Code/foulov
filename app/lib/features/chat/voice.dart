@@ -76,7 +76,8 @@ class VoiceRecorder extends ChangeNotifier {
     _path = null;
     await _amp?.cancel();
     _tick?.cancel();
-    notifyListeners();
+    // L'écran a pu être fermé entre-temps (déconnexion pendant un enregistrement).
+    if (!_disposed) notifyListeners();
   }
 
   static Future<void> _delete(String p) async {
@@ -95,10 +96,18 @@ class VoiceRecorder extends ChangeNotifier {
     });
   }
 
+  bool _disposed = false;
+
   @override
   void dispose() {
-    unawaited(cancel());
-    _rec.dispose();
+    // Fermeture pendant un enregistrement : on l'abandonne (et son fichier) avant de libérer l'enregistreur.
+    _disposed = true;
+    final path = _path;
+    _path = null;
+    unawaited(_amp?.cancel());
+    _tick?.cancel();
+    unawaited(_rec.cancel().whenComplete(_rec.dispose));
+    if (path != null) unawaited(_delete(path));
     super.dispose();
   }
 }

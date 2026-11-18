@@ -290,3 +290,13 @@ pub fn space_stats(utc_offset_min: i32) -> anyhow::Result<SpaceStats> {
         })
     })
 }
+
+/// Après avoir accepté la clé de son nouveau téléphone : renvoie l'espace commun (une fois). 0 = rien à faire.
+pub fn space_resync_if_needed(partner: String) -> anyhow::Result<u32> {
+    with_device(|d| Ok(d.resync_if_needed(&partner)?))
+}
+
+/// « Renvoyer notre espace » : à son téléphone, tout ce qui est commun (prénoms, photos, dates, albums, mes lettres).
+pub fn space_resync_now(partner: String) -> anyhow::Result<u32> {
+    with_device(|d| Ok(d.resync_now(&partner)?))
+}

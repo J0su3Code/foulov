@@ -371,6 +371,13 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(flush());
   }
 
+  /// « Renvoyer notre espace » (réglages) : tout ce qui est commun repart vers son téléphone.
+  Future<int> resyncNow() async {
+    final n = await spaceResyncNow(partner: partnerId);
+    unawaited(flush());
+    return n;
+  }
+
   /// Répond à un instant : le message cite l'instant (sa miniature et son texte restent après ses 24 h).
   Future<void> replyToMoment(String momentId, String text) async {
     final s = await spaceReplyToMoment(partner: partnerId, momentId: momentId, body: text);
@@ -786,6 +793,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
         _hasDownloads = false;
         unawaited(transfer());
       }
+      // Nouveau téléphone de ton amour (clé acceptée) : il retrouve prénoms, photos, dates, albums, lettres.
+      if (await spaceResyncIfNeeded(partner: partnerId) > 0) unawaited(flush());
     } catch (e) {
       if (kDebugMode) debugPrint('[FOULOVE] réception : $e');
       _scheduleRetry();

@@ -175,6 +175,14 @@ Future<void> spaceStarLetter({required String id, required bool on_}) =>
 Future<SpaceStats> spaceStats({required int utcOffsetMin}) =>
     RustLib.instance.api.crateApiSpaceSpaceStats(utcOffsetMin: utcOffsetMin);
 
+/// Après avoir accepté la clé de son nouveau téléphone : renvoie l'espace commun (une fois). 0 = rien à faire.
+Future<int> spaceResyncIfNeeded({required String partner}) =>
+    RustLib.instance.api.crateApiSpaceSpaceResyncIfNeeded(partner: partner);
+
+/// « Renvoyer notre espace » : à son téléphone, tout ce qui est commun (prénoms, photos, dates, albums, mes lettres).
+Future<int> spaceResyncNow({required String partner}) =>
+    RustLib.instance.api.crateApiSpaceSpaceResyncNow(partner: partner);
+
 class Album {
   final String id;
   final String title;
