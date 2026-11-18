@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../theme/foulov_theme.dart';
 import '../chat/bubble_look.dart';
 import 'space_service.dart';
+import 'crop.dart';
 import 'widgets.dart';
 
 /// Personnaliser la conversation : forme des bulles, ta couleur, le fond. Aperçu en direct.
@@ -123,9 +124,11 @@ class PersonalizeScreen extends StatelessWidget {
       return;
     }
     final f = await ImagePicker().pickImage(source: ImageSource.gallery, requestFullMetadata: false);
-    if (f == null) return;
+    if (f == null || !context.mounted) return;
+    final cropped = await cropFor(context, 'wallpaper', f.path);
+    if (cropped == null) return;
     try {
-      await space.setPicture('wallpaper', f.path);
+      await space.setPicture('wallpaper', cropped);
       await space.set('wallpaper', 'photo');
     } catch (_) {
       if (context.mounted) {

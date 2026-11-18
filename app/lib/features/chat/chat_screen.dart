@@ -27,6 +27,8 @@ class ChatScreen extends StatefulWidget {
     required this.onShowSymbols,
     required this.onSignOut,
     this.active = true,
+    this.onBack,
+    this.bottomInset = 0,
   });
 
   final ChatService service;
@@ -38,6 +40,12 @@ class ChatScreen extends StatefulWidget {
 
   /// Onglet affiché : sinon, les messages reçus ne sont pas marqués « lus ».
   final bool active;
+
+  /// Flèche de retour vers « Nous » (la conversation occupe tout l'écran, sans barre du bas).
+  final VoidCallback? onBack;
+
+  /// Marge de la barre de gestes du système, lue au-dessus du Scaffold parent (qui la retire à ses enfants).
+  final double bottomInset;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -377,6 +385,7 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Column(
             children: [
               _Header(
+                onBack: widget.onBack,
                 service: _s,
                 since: widget.since,
                 onShowSymbols: widget.onShowSymbols,
@@ -453,17 +462,23 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               ListenableBuilder(
                 listenable: _recorder,
-                builder: (context, _) => _Composer(
-                  recorder: _recorder,
-                  onMic: _startVoice,
-                  onVoiceSend: _sendVoice,
-                  onVoiceCancel: _recorder.cancel,
-                  controller: _input,
-                  focus: _focus,
-                  replyTo: _replyTo,
-                  onCancelReply: () => setState(() => _replyTo = null),
-                  onSend: _send,
-                  onPhoto: _pickPhoto,
+                // Plein écran (sans barre du bas) : la saisie reste au-dessus de la barre de gestes du système.
+                builder: (context, _) => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(context).bottom == 0 ? widget.bottomInset : 0,
+                  ),
+                  child: _Composer(
+                    recorder: _recorder,
+                    onMic: _startVoice,
+                    onVoiceSend: _sendVoice,
+                    onVoiceCancel: _recorder.cancel,
+                    controller: _input,
+                    focus: _focus,
+                    replyTo: _replyTo,
+                    onCancelReply: () => setState(() => _replyTo = null),
+                    onSend: _send,
+                    onPhoto: _pickPhoto,
+                  ),
                 ),
               ),
             ],
@@ -504,8 +519,15 @@ String _time(int ms) {
 // ===================================================================== en-tête
 
 class _Header extends StatelessWidget {
-  const _Header({required this.service, required this.since, required this.onShowSymbols, required this.onSignOut});
+  const _Header({
+    required this.service,
+    required this.since,
+    required this.onShowSymbols,
+    required this.onSignOut,
+    this.onBack,
+  });
 
+  final VoidCallback? onBack;
   final ChatService service;
   final DateTime? since;
   final VoidCallback onShowSymbols;
@@ -525,12 +547,13 @@ class _Header extends StatelessWidget {
     return Material(
       color: cs.surface,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 6, 4, 8),
+        padding: EdgeInsets.fromLTRB(onBack == null ? 12 : 0, 6, 4, 8),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: cs.outline)),
         ),
         child: Row(
           children: [
+            if (onBack != null) BackButton(onPressed: onBack),
             CoupleAvatar(
               space: space,
               size: 38,

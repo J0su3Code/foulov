@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../theme/foulov_theme.dart';
 import '../chat/chat_service.dart';
+import 'crop.dart';
 import 'widgets.dart';
 
 /// Modifier le profil du couple : photo à deux, couverture, prénoms, bio, date de rencontre, ton anniversaire.
@@ -212,7 +213,9 @@ class EditProfileScreen extends StatelessWidget {
     }
     final f = await ImagePicker().pickImage(source: ImageSource.gallery, requestFullMetadata: false);
     if (f == null || !context.mounted) return;
-    await _guard(context, () => space.setPicture(slot, f.path));
+    final cropped = await cropFor(context, slot, f.path);
+    if (cropped == null || !context.mounted) return;
+    await _guard(context, () => space.setPicture(slot, cropped));
   }
 
   Future<void> _pickTogether(BuildContext context) async {
