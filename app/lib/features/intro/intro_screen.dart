@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../theme/foulov_theme.dart';
+import '../../theme/theme_mode.dart';
 
 /// Intro cinématique de la première ouverture.
 ///
@@ -37,7 +38,10 @@ class _IntroScreenState extends State<IntroScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_video != null || _finished) return;
-    _night = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final mode = ThemeModeSetting.instance.value;
+    _night =
+        mode == ThemeMode.dark ||
+        (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
     // Précharge la dernière image pour qu'elle soit décodée avant la fin de la vidéo.
     precacheImage(AssetImage('assets/intro/${_name}_last.jpg'), context);
     if (MediaQuery.disableAnimationsOf(context)) {
@@ -94,7 +98,10 @@ class _IntroScreenState extends State<IntroScreen> {
     final theme = _night ? FouLovTheme.nuit : FouLovTheme.jour;
     final c = _video;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+      // Jour : fond crème, icônes sombres. Nuit : fond prune, icônes claires.
+      value: (_night ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark).copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: Theme(
         data: theme,
         child: Scaffold(

@@ -20,9 +20,10 @@ class DatesScreen extends StatelessWidget {
         final t = Theme.of(context);
         final cs = t.colorScheme;
         final today = DateTime.now();
-        final list = upcoming(service.dates, service.profile.togetherSince, today);
+        final list = upcoming(service.dates, service.profile.togetherSince, today, birthdays: service.birthdays);
         return Scaffold(
           backgroundColor: cs.surface,
+          appBar: AppBar(title: const Text('Nos dates')),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _edit(context, null),
             icon: const Icon(Icons.add_rounded),
@@ -31,13 +32,8 @@ class DatesScreen extends StatelessWidget {
           body: SafeArea(
             bottom: false,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text('Dates', style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
-                ),
-                const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(
@@ -69,9 +65,15 @@ class DatesScreen extends StatelessWidget {
   }
 
   void _open(BuildContext context, Upcoming u) {
-    if (u.coupleAnniversary) {
+    if (u.coupleAnniversary || u.birthday) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cette date vient de « Ensemble depuis », modifiable dans Notre espace.')),
+        SnackBar(
+          content: Text(
+            u.birthday
+                ? 'Les anniversaires se règlent dans Notre profil (chacun le sien).'
+                : 'Cette date vient de « Ensemble depuis », modifiable dans Notre profil.',
+          ),
+        ),
       );
       return;
     }
@@ -212,7 +214,7 @@ class _Row extends StatelessWidget {
       onTap: onTap,
       leading: CircleAvatar(
         backgroundColor: cs.surfaceContainer,
-        child: Text(u.coupleAnniversary ? '💞' : (u.entry!.yearly ? '🎂' : '📌')),
+        child: Text(u.coupleAnniversary ? '💞' : (u.birthday ? '🎂' : (u.entry!.yearly ? '🎉' : '📌'))),
       ),
       title: Text(u.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(_pretty(u.next) + (u.years != null && !u.coupleAnniversary ? ' · ${u.years} ans' : '')),
