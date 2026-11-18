@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config.dart';
+import '../backup/backup_service.dart';
 import '../chat/push_service.dart';
 
 /// Connexion sans mot de passe : Google ou code à usage unique par e-mail.
@@ -62,6 +63,7 @@ class AuthService {
 
   Future<void> signOut() async {
     await PushService.unregister(_supabase);
+    await BackupService.instance.forget();
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}

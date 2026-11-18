@@ -10,16 +10,28 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 String coreVersion() => RustLib.instance.api.crateApiCryptoCoreVersion();
 
 /// Les 7 symboles à comparer à voix haute, calculés à partir des deux clés d'identité publiques.
-List<SasSymbol> sasSymbols({required List<int> identityA, required List<int> identityB}) =>
-    RustLib.instance.api.crateApiCryptoSasSymbols(identityA: identityA, identityB: identityB);
+List<SasSymbol> sasSymbols({
+  required List<int> identityA,
+  required List<int> identityB,
+}) => RustLib.instance.api.crateApiCryptoSasSymbols(
+  identityA: identityA,
+  identityB: identityB,
+);
 
 /// Chiffre un fichier (exécuté hors du fil de l'interface).
 Future<EncryptedMedia> encryptMedia({required List<int> plaintext}) =>
     RustLib.instance.api.crateApiCryptoEncryptMedia(plaintext: plaintext);
 
 /// Vérifie l'empreinte puis déchiffre un fichier téléchargé.
-Future<Uint8List> decryptMedia({required List<int> key, required List<int> ciphertext, required List<int> sha256}) =>
-    RustLib.instance.api.crateApiCryptoDecryptMedia(key: key, ciphertext: ciphertext, sha256: sha256);
+Future<Uint8List> decryptMedia({
+  required List<int> key,
+  required List<int> ciphertext,
+  required List<int> sha256,
+}) => RustLib.instance.api.crateApiCryptoDecryptMedia(
+  key: key,
+  ciphertext: ciphertext,
+  sha256: sha256,
+);
 
 /// Fichier chiffré prêt à être téléversé.
 class EncryptedMedia {
@@ -28,7 +40,11 @@ class EncryptedMedia {
   final Uint8List ciphertext;
   final Uint8List sha256;
 
-  const EncryptedMedia({required this.key, required this.ciphertext, required this.sha256});
+  const EncryptedMedia({
+    required this.key,
+    required this.ciphertext,
+    required this.sha256,
+  });
 
   @override
   int get hashCode => key.hashCode ^ ciphertext.hashCode ^ sha256.hashCode;
@@ -56,5 +72,8 @@ class SasSymbol {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SasSymbol && runtimeType == other.runtimeType && emoji == other.emoji && name == other.name;
+      other is SasSymbol &&
+          runtimeType == other.runtimeType &&
+          emoji == other.emoji &&
+          name == other.name;
 }

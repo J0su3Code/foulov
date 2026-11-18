@@ -28,7 +28,7 @@ const uri = (s: string, keepSlash = false) =>
 
 export async function presign(
   r2: R2,
-  method: "PUT" | "GET" | "DELETE",
+  method: "PUT" | "GET" | "DELETE" | "HEAD",
   key: string,
   opts: { contentLength?: number; expires?: number; now?: Date } = {},
 ): Promise<string> {
