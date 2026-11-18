@@ -2,17 +2,17 @@
 # Garder ces couleurs synchronisées avec lib/theme/foulov_theme.dart et animation/export_app_assets.sh.
 # Régénérer après modification : dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#0C2219"
-  color_dark: "#0A0710"
+  color: "#F5EEE8"
+  color_dark: "#0D000E"
   image: assets/splash/transparent.png
   image_dark: assets/splash/transparent.png
   android_12:
-    color: "#0C2219"
-    color_dark: "#0A0710"
+    color: "#F5EEE8"
+    color_dark: "#0D000E"
     image: assets/splash/transparent.png
     image_dark: assets/splash/transparent.png
-    icon_background_color: "#0C2219"
-    icon_background_color_dark: "#0A0710"
+    icon_background_color: "#F5EEE8"
+    icon_background_color_dark: "#0D000E"
   android: true
   ios: true
   fullscreen: false
