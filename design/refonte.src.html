@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FouLove, refonte</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+/* Page de proposition : refonte « une bulle à deux ». Interrupteur Jour / Nuit, 8 écrans Pixel 8. */
+:root{ --pg:#F7F1EF; --pfg:#24151C; --pmut:#7A6670; --pline:#E7DCDD; --pcard:#fff; color-scheme:light;
+  --f:"Roboto",system-ui,-apple-system,sans-serif }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --pg:#100A10; --pfg:#F6EDF2; --pmut:#B3A2AE; --pline:#2B1E29; --pcard:#1B111A; color-scheme:dark } }
+:root[data-theme="dark"]{ --pg:#100A10; --pfg:#F6EDF2; --pmut:#B3A2AE; --pline:#2B1E29; --pcard:#1B111A; color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--pfg);font-family:var(--f);line-height:1.5;padding:0 16px 80px}
+header.top{max-width:1180px;margin:0 auto;padding:28px 0 8px}
+.kick{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--pmut);font-weight:500}
+h1{font-size:30px;margin:6px 0 8px;letter-spacing:-.01em}
+header.top p{margin:0 0 8px;color:var(--pmut);max-width:72ch}
+.toggle{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--pcard);border:1px solid var(--pline);margin-top:10px}
+.toggle button{font:500 14px var(--f);border:0;background:none;color:var(--pfg);padding:8px 16px;border-radius:999px;cursor:pointer}
+.toggle button[aria-pressed="true"]{background:var(--pfg);color:var(--pg)}
+.phones{display:flex;gap:28px;overflow-x:auto;scroll-snap-type:x mandatory;padding:30px 4px 20px;max-width:1180px;margin:0 auto}
+figure{margin:0;scroll-snap-align:center;flex:none;width:300px}
+figcaption{margin-top:12px;font-size:14px}
+figcaption b{display:block}
+figcaption span{color:var(--pmut);font-size:13px}
+.notes{max-width:1180px;margin:10px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.note{background:var(--pcard);border:1px solid var(--pline);border-radius:18px;padding:16px 18px;font-size:14px}
+.note h3{margin:0 0 6px;font-size:15px}
+.note ul{margin:6px 0 0;padding-left:18px;color:var(--pmut)}
+.note li{margin:3px 0}
+
+/* ---------------- téléphone */
+.phone{width:300px;height:650px;border-radius:42px;padding:9px;background:#0d0b0c;box-shadow:0 30px 60px -20px rgba(40,10,25,.45)}
+.scr{position:relative;width:100%;height:100%;border-radius:34px;overflow:hidden;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:13px}
+.sb{display:flex;justify-content:space-between;padding:10px 22px 2px;font-size:12px;font-weight:500;flex:none;position:relative;z-index:3}
+.punch{position:absolute;top:10px;left:50%;width:11px;height:11px;margin-left:-5px;border-radius:50%;background:#000;z-index:4}
+
+/* palette de l'app (jour : crème et framboise ; nuit : prune profonde, lueurs rose et or) */
+#stage{--bg:#FFF8F5;--sf:#FFFFFF;--sf2:#FBEFEE;--line:#F0E1E1;--tx:#2B1A22;--mut:#86707B;
+  --pri:#D6336C;--on-pri:#fff;--acc:#FF8FAB;--acc-sf:#FFE3EA;--gold:#E8A93A;--me1:#E8417A;--me2:#C2185B;--th:#FFFFFF;--on-th:#2B1A22;--ok:#2E9B6E}
+#stage.night{--bg:#140C14;--sf:#221520;--sf2:#1B1019;--line:#33222F;--tx:#FBEFF4;--mut:#B79FB0;
+  --pri:#FF6F9F;--on-pri:#2A0815;--acc:#FF8FAB;--acc-sf:#3A1830;--gold:#F5C26B;--me1:#FF7AA8;--me2:#E8417A;--th:#2A1A27;--on-th:#FBEFF4;--ok:#7FE0C2}
+#stage .scr{transition:background-color .4s,color .4s}
+
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.mut{color:var(--mut)}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ic.s{width:16px;height:16px}
+.av{border-radius:50%;object-fit:cover;flex:none}
+.card{background:var(--sf);border-radius:20px;box-shadow:0 0 0 1px var(--line);padding:12px 14px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:5px 10px;border-radius:999px;background:var(--acc-sf);color:var(--pri)}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:6px;font-weight:500;font-size:13px;padding:10px 16px;border-radius:999px;background:var(--pri);color:var(--on-pri)}
+.h{font-weight:700;letter-spacing:-.01em}
+.sec{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:14px 2px 8px}
+
+/* barre de navigation */
+.tabs{display:flex;justify-content:space-around;padding:8px 6px 22px;font-size:10.5px;font-weight:500;color:var(--mut);background:var(--bg);border-top:1px solid var(--line);flex:none;position:relative;z-index:3}
+.tabs div{display:grid;justify-items:center;gap:3px;position:relative}
+.tabs .pill{padding:3px 18px;border-radius:999px;display:grid;place-items:center}
+.tabs .on{color:var(--tx)}
+.tabs .on .pill{background:var(--acc-sf);color:var(--pri)}
+.badge{position:absolute;top:-2px;right:8px;background:var(--pri);color:var(--on-pri);font-size:9px;font-weight:700;border-radius:999px;padding:0 5px;line-height:15px}
+
+/* stories : anneau dégradé */
+.ring{padding:2.5px;border-radius:50%;background:conic-gradient(from 210deg,var(--gold),var(--acc),var(--pri),var(--gold))}
+.ring.seen{background:var(--line)}
+.ring > img,.ring > div{display:block;border-radius:50%;box-shadow:0 0 0 2.5px var(--bg)}
+
+/* bulles */
+.msgs{display:flex;flex-direction:column;gap:5px;flex:1;min-height:0;justify-content:flex-end;padding:0 12px 6px;position:relative;z-index:1}
+.b{max-width:78%;padding:8px 12px;font-size:13px;position:relative;line-height:1.35}
+.b .t{display:block;font-size:9.5px;opacity:.7;text-align:right;margin-top:1px}
+.me{align-self:flex-end;background:linear-gradient(135deg,var(--me1),var(--me2));color:#fff;border-radius:20px 20px 6px 20px}
+.th{align-self:flex-start;background:var(--th);color:var(--on-th);border-radius:20px 20px 20px 6px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.react{position:absolute;bottom:-10px;right:10px;font-size:11px;background:var(--sf);border-radius:10px;padding:0 5px;box-shadow:0 0 0 2px var(--bg)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="kick">FouLove · proposition de refonte</div>
+  <h1>Une bulle à deux</h1>
+  <p>Fini le jardin et les saisons. L'accueil devient <b>votre profil de couple</b> : votre photo, votre couverture, vos instants du jour,
+    votre histoire et vos prochaines dates. La conversation se personnalise (bulles, fond), les souvenirs se rangent en albums, et les
+    lettres deviennent des capsules à ouvrir plus tard. Tout reste chiffré de bout en bout.</p>
+  <div class="toggle" role="group" aria-label="Thème des maquettes">
+    <button type="button" aria-pressed="true" data-t="day">Jour · Crème</button>
+    <button type="button" aria-pressed="false" data-t="night">Nuit · Prune</button>
+  </div>
+</header>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-img" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.3 2.6a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L5.1 11a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.6h5l.3-2.6a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6a7 7 0 0 0 .1-1z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v8h14v-8M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8zm0 0s2-5 4.5-3.5S15 8 12 8z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+</svg>
+
+<main id="stage">
+<div class="phones">
+
+  <!-- 1 · Nous (accueil = profil du couple) -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="punch"></div>
+      <div style="position:absolute;inset:0 0 auto;height:200px;overflow:hidden">
+        <img src="IMG(t_815)" alt="" style="width:100%;height:100%;object-fit:cover">
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.25),transparent 35%,var(--bg) 100%)"></div>
+      </div>
+      <div class="sb" style="color:#fff"><span>8:03</span><span>●●●</span></div>
+      <div class="row" style="justify-content:flex-end;padding:4px 14px;position:relative;z-index:2;color:#fff"><svg class="ic"><use href="#i-gear"/></svg></div>
+      <div style="position:relative;z-index:2;padding:62px 16px 0;flex:1;overflow:hidden">
+        <div class="row" style="align-items:flex-end;gap:12px">
+          <div class="ring"><img class="av" src="IMG(w_129)" alt="" width="78" height="78"></div>
+          <div class="grow" style="padding-bottom:6px">
+            <div class="h" style="font-size:21px">Inès <span style="color:var(--pri)">♥</span> Malik</div>
+            <div class="mut" style="font-size:12px">« Deux cœurs, une seule bulle. »</div>
+          </div>
+        </div>
+        <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
+          <span class="chip"><svg class="ic s"><use href="#i-heart"/></svg>Ensemble depuis 1 345 jours</span>
+          <span class="chip" style="background:var(--sf2);color:var(--mut)">3 ans · 8 mois · 6 jours</span>
+        </div>
+        <div class="sec">Vos instants du jour</div>
+        <div class="row" style="gap:14px">
+          <div style="text-align:center;font-size:11px"><div style="width:56px;height:56px;border-radius:50%;border:2px dashed var(--acc);display:grid;place-items:center;color:var(--pri)"><svg class="ic"><use href="#i-plus"/></svg></div><div class="mut" style="margin-top:3px">Toi</div></div>
+          <div style="text-align:center;font-size:11px"><div class="ring"><img class="av" src="IMG(s_883)" alt="" width="51" height="51"></div><div style="margin-top:3px;font-weight:500">Malik · 2 h</div></div>
+          <div class="grow mut" style="font-size:11.5px;line-height:1.3">Visibles 24 h,<br>rien que par vous deux.</div>
+        </div>
+        <div class="card row" style="margin-top:14px;gap:12px">
+          <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--gold),var(--acc));display:grid;place-items:center;color:#fff;flex:none"><svg class="ic"><use href="#i-gift"/></svg></div>
+          <div class="grow"><div style="font-weight:600">Vos 4 ans</div><div class="mut" style="font-size:11.5px">jeudi 12 mars · dans 116 jours</div></div>
+          <span class="chip">116 j</span>
+        </div>
+        <div class="card row" style="margin-top:8px;gap:12px">
+          <img class="av" src="IMG(s_883)" alt="" width="38" height="38">
+          <div class="grow"><div style="font-weight:600">Malik</div><div class="mut" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Je pense à toi, bonne journée mon cœur 🥰</div></div>
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--pri)"></span>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="on"><span class="pill"><svg class="ic"><use href="#i-heart"/></svg></span>Nous</div>
+        <div><span class="pill"><svg class="ic"><use href="#i-chat"/></svg></span>Messages<span class="badge">2</span></div>
+        <div><span class="pill"><svg class="ic"><use href="#i-img"/></svg></span>Souvenirs</div>
+        <div><span class="pill"><svg class="ic"><use href="#i-mail"/></svg></span>Lettres</div>
+      </div>
+    </div></div>
+    <figcaption><b>Nous · l'accueil</b><span>Votre profil de couple : couverture, photo à deux, vos instants, vos jours ensemble, votre prochaine date, le dernier mot doux.</span></figcaption>
+  </figure>
+
+  <!-- 2 · Instant (story) -->
+  <figure>
+    <div class="phone"><div class="scr" style="background:#000;color:#fff">
+      <div class="punch"></div>
+      <img src="IMG(s_25)" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.45),transparent 25%,transparent 70%,rgba(0,0,0,.55))"></div>
+      <div class="sb" style="color:#fff"><span>18:42</span><span>●●●</span></div>
+      <div style="position:relative;z-index:2;padding:4px 12px 0">
+        <div class="row" style="gap:4px"><span style="flex:1;height:2.5px;border-radius:2px;background:#fff"></span><span style="flex:1;height:2.5px;border-radius:2px;background:linear-gradient(90deg,#fff 45%,rgba(255,255,255,.35) 45%)"></span></div>
+        <div class="row" style="margin-top:10px"><img class="av" src="IMG(s_883)" alt="" width="32" height="32"><div class="grow"><b>Malik</b> <span style="opacity:.8;font-size:11px">· il y a 2 h</span></div><span style="font-size:18px">✕</span></div>
+      </div>
+      <div style="position:relative;z-index:2;flex:1;display:grid;place-items:center;padding:0 24px">
+        <div style="font-size:24px;font-weight:700;text-align:center;text-shadow:0 2px 16px rgba(0,0,0,.5)">Le même ciel que toi ☀️<br><span style="font-size:15px;font-weight:500">vivement ce soir</span></div>
+      </div>
+      <div class="row" style="position:relative;z-index:2;padding:10px 12px 26px;gap:8px">
+        <div class="grow" style="border:1px solid rgba(255,255,255,.6);border-radius:24px;padding:10px 14px;font-size:13px;opacity:.9">Répondre à Malik…</div>
+        <span style="font-size:24px">❤️</span>
+      </div>
+    </div></div>
+    <figcaption><b>Un instant</b><span>Photo, vidéo ou texte, 24 h. Toucher pour passer, maintenir pour pause. La réponse arrive dans la conversation.</span></figcaption>
+  </figure>
+
+  <!-- 3 · Messages personnalisés -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="punch"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 80% 10%,var(--acc-sf),transparent 60%),radial-gradient(90% 60% at 0% 90%,var(--sf2),transparent 70%),var(--bg)"></div>
+      <div class="sb"><span>18:22</span><span>●●●</span></div>
+      <div class="row" style="padding:6px 12px 10px;position:relative;z-index:2;border-bottom:1px solid var(--line)">
+        <svg class="ic"><use href="#i-back"/></svg>
+        <div class="ring"><img class="av" src="IMG(s_883)" alt="" width="34" height="34"></div>
+        <div class="grow"><div style="font-weight:600;font-size:15px">Mon soleil ☀️</div><div style="font-size:11px;color:var(--ok)">en ligne</div></div>
+        <svg class="ic"><use href="#i-pen"/></svg>
+      </div>
+      <div class="msgs" style="padding-top:10px">
+        <div style="align-self:center;font-size:10.5px;padding:4px 10px;border-radius:8px;background:var(--sf);color:var(--mut);display:flex;gap:5px;align-items:center"><svg class="ic s"><use href="#i-lock"/></svg>Chiffré de bout en bout</div>
+        <div class="b th" style="padding:4px"><img src="IMG(s_696)" alt="" style="width:170px;height:120px;object-fit:cover;border-radius:16px;display:block"><div style="padding:5px 8px 2px">Elles ont fleuri !! 🌷</div></div>
+        <div class="b me">Noooon, enfin 🥹<span class="t">18:19 · Lu</span><span class="react">❤️</span></div>
+        <div class="b th" style="margin-top:6px">Ce soir, ciné ou balade ?</div>
+        <div class="b me" style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">▶</span><span style="display:flex;gap:2px;align-items:center">
+          <i style="width:2px;height:8px;background:#fff;border-radius:2px"></i><i style="width:2px;height:14px;background:#fff;border-radius:2px"></i><i style="width:2px;height:10px;background:#fff;border-radius:2px"></i><i style="width:2px;height:16px;background:#fff;border-radius:2px"></i><i style="width:2px;height:7px;background:rgba(255,255,255,.6);border-radius:2px"></i><i style="width:2px;height:12px;background:rgba(255,255,255,.6);border-radius:2px"></i><i style="width:2px;height:9px;background:rgba(255,255,255,.6);border-radius:2px"></i><i style="width:2px;height:13px;background:rgba(255,255,255,.6);border-radius:2px"></i><i style="width:2px;height:6px;background:rgba(255,255,255,.6);border-radius:2px"></i></span><span style="font-size:10px;opacity:.8">0:09</span></div>
+        <div class="b th" style="display:flex;gap:4px;padding:11px 14px"><i style="width:6px;height:6px;border-radius:50%;background:var(--mut)"></i><i style="width:6px;height:6px;border-radius:50%;background:var(--mut);opacity:.6"></i><i style="width:6px;height:6px;border-radius:50%;background:var(--mut);opacity:.35"></i></div>
+      </div>
+      <div class="row" style="padding:6px 10px 24px;gap:8px;position:relative;z-index:2">
+        <div class="grow row" style="background:var(--sf);box-shadow:0 0 0 1px var(--line);border-radius:24px;padding:10px 12px;color:var(--mut);gap:8px"><span class="grow">Mot doux…</span><svg class="ic"><use href="#i-img"/></svg></div>
+        <span style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--pri);color:var(--on-pri)"><svg class="ic"><use href="#i-mic"/></svg></span>
+      </div>
+    </div></div>
+    <figcaption><b>Messages</b><span>Vos bulles, votre fond, son surnom en haut. L'anneau autour de sa photo : un nouvel instant à voir.</span></figcaption>
+  </figure>
+
+  <!-- 4 · Personnaliser -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="punch"></div>
+      <div class="sb"><span>21:30</span><span>●●●</span></div>
+      <div class="row" style="padding:6px 14px 4px"><svg class="ic"><use href="#i-back"/></svg><div class="h grow" style="font-size:17px">Personnaliser</div></div>
+      <div style="padding:6px 14px;flex:1;overflow:hidden">
+        <div style="border-radius:18px;padding:12px;background:linear-gradient(160deg,#FFD6E0,#FFEBDD);display:flex;flex-direction:column;gap:5px">
+          <div class="b th" style="font-size:12px">Tu as choisi le fond ? 😍</div>
+          <div class="b me" style="font-size:12px;border-radius:16px 16px 4px 16px">Oui, « Pêche » 🍑</div>
+        </div>
+        <div class="sec">Forme des bulles</div>
+        <div class="row" style="gap:8px">
+          <span class="chip" style="background:var(--sf2);color:var(--mut);border-radius:6px">Carrées</span>
+          <span class="chip" style="background:var(--sf2);color:var(--mut)">Arrondies</span>
+          <span class="chip" style="background:var(--pri);color:var(--on-pri)">Très douces</span>
+        </div>
+        <div class="sec">Mes bulles · Ses bulles</div>
+        <div class="row" style="gap:7px">
+          <i style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#E8417A,#C2185B);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--pri)"></i>
+          <i style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#9B59B6,#6C3483)"></i>
+          <i style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#F39C6B,#E8417A)"></i>
+          <i style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#2EC4B6,#1A7F8E)"></i>
+          <span style="width:1px;height:22px;background:var(--line)"></span>
+          <i style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--line),0 0 0 3px var(--bg),0 0 0 5px var(--acc)"></i>
+          <i style="width:26px;height:26px;border-radius:50%;background:#FFF1D6;box-shadow:0 0 0 1px var(--line)"></i>
+          <i style="width:26px;height:26px;border-radius:50%;background:#E9E3FF;box-shadow:0 0 0 1px var(--line)"></i>
+        </div>
+        <div class="sec">Fond de la conversation</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+          <div style="aspect-ratio:3/4;border-radius:10px;background:linear-gradient(160deg,#FFD6E0,#FFEBDD);box-shadow:0 0 0 2px var(--pri)"></div>
+          <div style="aspect-ratio:3/4;border-radius:10px;background:linear-gradient(160deg,#2C1A3D,#7A2E5A)"></div>
+          <div style="aspect-ratio:3/4;border-radius:10px;background:linear-gradient(160deg,#0B2A3C,#2EC4B6)"></div>
+          <div style="aspect-ratio:3/4;border-radius:10px;overflow:hidden;position:relative"><img src="IMG(t_1004)" alt="" style="width:100%;height:100%;object-fit:cover;filter:blur(1.5px)"><span style="position:absolute;inset:auto 0 4px;text-align:center;font-size:9px;color:#fff;font-weight:600">Votre photo</span></div>
+        </div>
+        <div class="card" style="margin-top:12px;font-size:11.5px" ><div class="row"><svg class="ic s" style="color:var(--pri)"><use href="#i-heart"/></svg><span class="grow"><b>Pour vous deux.</b> Bulles et fond se partagent, chiffrés. Le thème jour / nuit reste à chacun.</span></div></div>
+      </div>
+    </div></div>
+    <figcaption><b>Personnaliser</b><span>Forme et couleurs des bulles (les tiennes, les siennes), fond en dégradé ou votre photo floutée. Aperçu en direct.</span></figcaption>
+  </figure>
+
+  <!-- 5 · Notre histoire -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="punch"></div>
+      <div class="sb"><span>10:12</span><span>●●●</span></div>
+      <div class="row" style="padding:6px 14px 4px"><svg class="ic"><use href="#i-back"/></svg><div class="h grow" style="font-size:17px">Notre histoire</div><svg class="ic"><use href="#i-pen"/></svg></div>
+      <div style="padding:4px 14px;flex:1;overflow:hidden">
+        <div class="card">
+          <div class="mut" style="font-size:11px">Le jour où tout a commencé</div>
+          <div class="h" style="font-size:16px;margin:2px 0 4px">12 mars 2023, au café du port</div>
+          <div style="font-size:12px;line-height:1.45">Il pleuvait, elle avait oublié son parapluie. Il a proposé le sien… et on est restés trois heures à parler de tout. ☔</div>
+        </div>
+        <div class="sec">Vos anniversaires</div>
+        <div class="row" style="gap:8px">
+          <div class="card grow row" style="gap:8px;padding:10px"><img class="av" src="IMG(s_1027)" alt="" width="30" height="30"><div><b>Inès</b><div class="mut" style="font-size:11px">12 avril · 28 ans</div></div></div>
+          <div class="card grow row" style="gap:8px;padding:10px"><img class="av" src="IMG(s_883)" alt="" width="30" height="30"><div><b>Malik</b><div class="mut" style="font-size:11px">3 sept. · 30 ans</div></div></div>
+        </div>
+        <div class="sec">Vos étapes</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;font-size:9.5px">
+          <div><div style="font-size:22px">💕</div>1 mois</div><div><div style="font-size:22px">🌸</div>6 mois</div><div><div style="font-size:22px">🎊</div>1 an</div><div><div style="font-size:22px">💎</div>2 ans</div><div style="opacity:.35"><div style="font-size:22px;filter:grayscale(1)">👑</div>5 ans</div>
+        </div>
+        <div style="height:6px;border-radius:4px;background:var(--sf2);margin-top:8px;overflow:hidden"><div style="width:62%;height:100%;background:linear-gradient(90deg,var(--gold),var(--pri))"></div></div>
+        <div class="mut" style="font-size:10.5px;margin-top:4px">Prochaine étape : 5 ans, dans 1 sur 2 ans de chemin</div>
+        <div class="sec">Vous en chiffres</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <div class="card" style="padding:9px;text-align:center"><div class="h" style="font-size:17px;color:var(--pri)">48 213</div><div class="mut" style="font-size:10px">mots doux</div></div>
+          <div class="card" style="padding:9px;text-align:center"><div class="h" style="font-size:17px;color:var(--pri)">1 902</div><div class="mut" style="font-size:10px">souvenirs</div></div>
+          <div class="card" style="padding:9px;text-align:center"><div class="h" style="font-size:17px;color:var(--pri)">37</div><div class="mut" style="font-size:10px">lettres</div></div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>Notre histoire</b><span>Depuis l'accueil : votre rencontre racontée, les anniversaires de chacun, vos étapes franchies, vous en chiffres.</span></figcaption>
+  </figure>
+
+  <!-- 6 · Souvenirs -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="punch"></div>
+      <div class="sb"><span>12:40</span><span>●●●</span></div>
+      <div style="padding:6px 14px 0"><div class="h" style="font-size:22px">Souvenirs</div>
+        <div class="row" style="gap:6px;margin-top:8px"><span class="chip" style="background:var(--pri);color:var(--on-pri)">Tout</span><span class="chip" style="background:var(--sf2);color:var(--mut)">Albums</span><span class="chip" style="background:var(--sf2);color:var(--mut)">Vidéos</span><span class="chip" style="background:var(--sf2);color:var(--mut)">Vocaux</span></div>
+      </div>
+      <div style="padding:10px 14px;flex:1;overflow:hidden">
+        <div class="row" style="gap:8px">
+          <div style="flex:1"><div style="height:92px;border-radius:16px;overflow:hidden"><img src="IMG(s_419)" alt="" style="width:100%;height:100%;object-fit:cover"></div><div style="font-size:11.5px;font-weight:600;margin-top:4px">Lisbonne 2025</div><div class="mut" style="font-size:10px">48 photos</div></div>
+          <div style="flex:1"><div style="height:92px;border-radius:16px;overflow:hidden"><img src="IMG(s_429)" alt="" style="width:100%;height:100%;object-fit:cover"></div><div style="font-size:11.5px;font-weight:600;margin-top:4px">Nos dimanches</div><div class="mut" style="font-size:10px">31 photos</div></div>
+          <div style="width:52px"><div style="height:92px;border-radius:16px;border:2px dashed var(--acc);display:grid;place-items:center;color:var(--pri)"><svg class="ic"><use href="#i-plus"/></svg></div></div>
+        </div>
+        <div class="sec">Novembre 2026</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px">
+          <img src="IMG(s_696)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+          <img src="IMG(t_646)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+          <img src="IMG(s_431)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+          <img src="IMG(t_896)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+          <img src="IMG(s_1011)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+          <img src="IMG(t_660)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+        </div>
+        <div class="sec">Octobre 2026</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px">
+          <img src="IMG(s_365)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+          <img src="IMG(t_787)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+          <img src="IMG(s_755)" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+        </div>
+      </div>
+      <div class="tabs">
+        <div><span class="pill"><svg class="ic"><use href="#i-heart"/></svg></span>Nous</div>
+        <div><span class="pill"><svg class="ic"><use href="#i-chat"/></svg></span>Messages</div>
+        <div class="on"><span class="pill"><svg class="ic"><use href="#i-img"/></svg></span>Souvenirs</div>
+        <div><span class="pill"><svg class="ic"><use href="#i-mail"/></svg></span>Lettres</div>
+      </div>
+    </div></div>
+    <figcaption><b>Souvenirs</b><span>Tout ce que vous vous envoyez, rangé par mois, et vos albums à vous. Remplace « Saisons ».</span></figcaption>
+  </figure>
+
+  <!-- 7 · Lettres (capsules) -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="punch"></div>
+      <div class="sb"><span>22:05</span><span>●●●</span></div>
+      <div style="padding:6px 14px 0" class="row"><div class="h grow" style="font-size:22px">Lettres</div><span class="btn" style="padding:7px 12px;font-size:12px"><svg class="ic s"><use href="#i-pen"/></svg>Écrire</span></div>
+      <div style="padding:10px 14px;flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px">
+        <div style="border-radius:22px;padding:14px;background:linear-gradient(135deg,var(--acc-sf),var(--sf));box-shadow:0 0 0 1px var(--line);position:relative">
+          <div class="row"><img class="av" src="IMG(s_883)" alt="" width="30" height="30"><div class="grow"><b>De Malik</b><div class="mut" style="font-size:11px">arrivée ce soir</div></div><span class="chip">Nouvelle</span></div>
+          <div class="h" style="font-size:15px;margin-top:8px">Pour nos 1 000 jours</div>
+          <div class="mut" style="font-size:12px">Toucher pour ouvrir ♡</div>
+        </div>
+        <div style="border-radius:22px;padding:14px;background:var(--sf);box-shadow:0 0 0 1px var(--line)">
+          <div class="row"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--acc));display:grid;place-items:center;color:#fff"><svg class="ic s"><use href="#i-lock"/></svg></div><div class="grow"><b>Capsule pour vos 4 ans</b><div class="mut" style="font-size:11px">de toi · s'ouvrira le 12 mars 2027</div></div></div>
+          <div style="height:5px;border-radius:4px;background:var(--sf2);margin-top:10px;overflow:hidden"><div style="width:70%;height:100%;background:linear-gradient(90deg,var(--gold),var(--pri))"></div></div>
+          <div class="mut" style="font-size:10.5px;margin-top:4px">Encore 116 jours. Même vous ne pouvez pas la lire avant.</div>
+        </div>
+        <div style="border-radius:22px;padding:12px 14px;background:var(--sf);box-shadow:0 0 0 1px var(--line)" class="row"><img class="av" src="IMG(s_1027)" alt="" width="30" height="30"><div class="grow"><b>Merci pour tout</b><div class="mut" style="font-size:11px">de toi · lue par Malik · 2 sept.</div></div><span style="color:var(--gold)">★</span></div>
+        <div style="border-radius:22px;padding:12px 14px;background:var(--sf);box-shadow:0 0 0 1px var(--line)" class="row"><img class="av" src="IMG(s_883)" alt="" width="30" height="30"><div class="grow"><b>Ma première lettre</b><div class="mut" style="font-size:11px">de Malik · 14 févr.</div></div></div>
+      </div>
+      <div class="tabs">
+        <div><span class="pill"><svg class="ic"><use href="#i-heart"/></svg></span>Nous</div>
+        <div><span class="pill"><svg class="ic"><use href="#i-chat"/></svg></span>Messages</div>
+        <div><span class="pill"><svg class="ic"><use href="#i-img"/></svg></span>Souvenirs</div>
+        <div class="on"><span class="pill"><svg class="ic"><use href="#i-mail"/></svg></span>Lettres<span class="badge">1</span></div>
+      </div>
+    </div></div>
+    <figcaption><b>Lettres</b><span>Des lettres longues, à lire au calme, et des capsules qui ne s'ouvrent qu'au jour choisi. Pas d'enveloppe ni de cachet : un style à part de Lettre Ouverte.</span></figcaption>
+  </figure>
+
+  <!-- 8 · Lire une lettre -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="punch"></div>
+      <div class="sb"><span>22:06</span><span>●●●</span></div>
+      <div class="row" style="padding:6px 14px 4px"><svg class="ic"><use href="#i-back"/></svg><div class="grow"></div><span style="color:var(--gold)">☆</span></div>
+      <div style="margin:4px 14px 18px;flex:1;border-radius:26px;padding:22px 20px;background:linear-gradient(180deg,var(--sf),var(--sf2));box-shadow:0 10px 30px -14px rgba(120,20,60,.35),0 0 0 1px var(--line);overflow:hidden;position:relative">
+        <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(var(--acc-sf),transparent 70%)"></div>
+        <div class="mut" style="font-size:11px">De Malik · 17 novembre 2026</div>
+        <div class="h" style="font-size:20px;margin:6px 0 12px">Pour nos 1 000 jours</div>
+        <div style="font-size:13.5px;line-height:1.65">Mon cœur,<br><br>Mille jours. Je les ai comptés sans m'en rendre compte, à travers tes rires du matin, tes messages au milieu de mes journées, et nos dimanches qui ne finissent jamais.<br><br>Merci d'être toi.</div>
+        <div style="margin-top:14px;font-weight:600;color:var(--pri)">Ton Malik ♡</div>
+      </div>
+    </div></div>
+    <figcaption><b>Lire une lettre</b><span>Un papier doux, de la place pour les mots. Police système, lisible : l'émotion vient des mots, pas d'une calligraphie.</span></figcaption>
+  </figure>
+
+</div>
+</main>
+
+<section class="notes">
+  <div class="note"><h3>Ce qui change</h3><ul>
+    <li>Plus de jardin, de graine ni de saisons : on parle de <b>vous</b>.</li>
+    <li>4 onglets : <b>Nous · Messages · Souvenirs · Lettres</b>. Les Dates vivent dans « Nous » et « Notre histoire ».</li>
+    <li>Couleurs : crème et framboise le jour, prune profonde avec lueurs rose et or la nuit.</li>
+  </ul></div>
+  <div class="note"><h3>Le profil du couple</h3><ul>
+    <li>Une photo à deux, une couverture, une bio, partagées et chiffrées.</li>
+    <li>Chacun : sa date d'anniversaire, le surnom qu'il donne à l'autre.</li>
+    <li>Notre histoire : la rencontre racontée, les étapes (1 mois → 50 ans), vous en chiffres.</li>
+  </ul></div>
+  <div class="note"><h3>Instants (stories)</h3><ul>
+    <li>Chacun publie : photo, vidéo (30 s) ou texte sur un dégradé, 24 h.</li>
+    <li>Répondre envoie un message qui cite l'instant. Chiffrés comme les photos.</li>
+  </ul></div>
+  <div class="note"><h3>Personnalisation</h3><ul>
+    <li>Bulles : forme, couleur des tiennes et des siennes. Fond : dégradés ou votre photo floutée.</li>
+    <li>Partagée par vous deux ; le thème jour / nuit reste propre à chaque téléphone.</li>
+  </ul></div>
+</section>
+
+<script>
+document.querySelectorAll('.toggle button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.toggle button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  document.getElementById('stage').classList.toggle('night', b.dataset.t==='night');
+}));
+</script>
+</body>
+</html>
