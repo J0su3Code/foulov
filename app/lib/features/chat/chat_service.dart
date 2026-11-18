@@ -16,6 +16,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/bytea.dart';
 import '../../src/rust/api/chat.dart';
 import '../../src/rust/api/device.dart';
+import '../../src/rust/api/space.dart';
+import '../space/space_service.dart';
 import 'push_service.dart';
 import '../backup/backup_service.dart';
 import '../dates/reminders.dart';
@@ -29,6 +31,9 @@ import '../dates/reminders.dart';
 ///   attente (aucune ne se perd si l'app était fermée), on les traite dans l'ordre, puis on les supprime du serveur.
 class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   ChatService(this._db, {required this.partnerId, required this.coupleId});
+
+  /// Notre espace (profil du couple, instants, lettres, albums) : même transport chiffré.
+  late final SpaceService space = SpaceService(this);
 
   final SupabaseClient _db;
   final String partnerId;
@@ -68,8 +73,10 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     await chatReprocessUnknown();
     profile = await chatProfile();
     dates = await chatDates();
-    unawaited(Reminders.reschedule(dates, profile.togetherSince));
     await _loadPage();
+    _mediaDir = '${(await getApplicationSupportDirectory()).path}/media';
+    await space.load();
+    rescheduleReminders(); // après le chargement des anniversaires de chacun
     _channel = _db
         .channel('enveloppes-$_me')
         .onPostgresChanges(
@@ -83,10 +90,9 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
           // À chaque (re)connexion, on rattrape ce qui est arrivé pendant la coupure.
           if (status == RealtimeSubscribeStatus.subscribed) pull();
         });
-    _mediaDir = '${(await getApplicationSupportDirectory()).path}/media';
     unawaited(pull());
     unawaited(flush());
-    unawaited(_transfer());
+    unawaited(transfer());
     unawaited(chatPurge().catchError((_) {}));
     unawaited(PushService.register(_db));
     _startLive();
@@ -222,7 +228,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     if (_foreground) {
       unawaited(pull());
       unawaited(flush());
-      unawaited(_transfer());
+      unawaited(transfer());
       unawaited(_readVisible());
       unawaited(BackupService.instance.maybeBackup(_db));
     }
@@ -310,6 +316,14 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
 
   // ------------------------------------------------------------------ dates importantes
 
+  /// Anniversaires de chacun (« Notre histoire »), pour les dates à venir et les rappels.
+  List<Birthday> get birthdays => [
+    if (space.myBirthday != null) ('Ton anniversaire', space.myBirthday!),
+    if (space.partnerBirthday != null) ('L\'anniversaire de $partnerLabel', space.partnerBirthday!),
+  ];
+
+  void rescheduleReminders() => unawaited(Reminders.reschedule(dates, profile.togetherSince, birthdays: birthdays));
+
   List<DateEntry> dates = const [];
 
   /// Crée (id vide) ou modifie une date ; elle part chiffrée chez ton amour.
@@ -327,13 +341,13 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _reloadDates() async {
     dates = await chatDates();
-    unawaited(Reminders.reschedule(dates, profile.togetherSince));
+    rescheduleReminders();
     _notify();
   }
 
   Future<void> _reloadProfile() async {
     profile = await chatProfile();
-    unawaited(Reminders.reschedule(dates, profile.togetherSince));
+    rescheduleReminders();
     _notify();
     unawaited(flush());
   }
@@ -346,6 +360,16 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     final s = await chatSendText(partner: partnerId, body: text, replyTo: replyTo);
     _upsert(s.message);
     _notify();
+    space.onActivity();
+    unawaited(flush());
+  }
+
+  /// Répond à un instant : le message cite l'instant (sa miniature et son texte restent après ses 24 h).
+  Future<void> replyToMoment(String momentId, String text) async {
+    final s = await spaceReplyToMoment(partner: partnerId, momentId: momentId, body: text);
+    _upsert(s.message);
+    _notify();
+    space.onActivity();
     unawaited(flush());
   }
 
@@ -433,6 +457,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   // ------------------------------------------------------------------ photos
 
   late final String _mediaDir;
+  String get mediaDir => _mediaDir;
   final _http = http.Client();
   bool _hasDownloads = false;
   bool _transferring = false, _transferAgain = false;
@@ -456,8 +481,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       keepExif: false,
     );
     if (full == null) throw StateError('photo illisible');
-    final size = await _imageSize(full);
-    final thumb = await _thumbnail(full);
+    final size = await imageSize(full);
+    final thumb = await thumbnail(full);
     final created = await chatCreateMedia(
       dir: _mediaDir,
       plain: full,
@@ -470,16 +495,41 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       caption: caption,
       replyTo: replyTo,
     );
-    _remember(created.message.id, full);
+    remember(created.message.id, full);
     _upsert(created.message);
     _notify();
-    unawaited(_transfer());
+    unawaited(transfer());
   }
 
   /// Prépare et envoie une vidéo : réencodée en MP4 720p (bien plus légère, et sans ses métadonnées,
   /// position GPS comprise), puis chiffrée par blocs depuis le fichier, sans jamais tout charger en mémoire.
   /// `onProgress` reçoit l'avancement du réencodage (0 → 1).
-  Future<void> sendVideo(String path, {String caption = '', String? replyTo, void Function(double)? onProgress}) async {
+  Future<void> sendVideo(String path, {String caption = '', String? replyTo, void Function(double)? onProgress}) =>
+      withCompressedVideo(path, onProgress, (out, thumb, w, h, ms) async {
+        final created = await chatCreateMediaFile(
+          dir: _mediaDir,
+          src: out,
+          kind: 2,
+          mime: 'video/mp4',
+          width: w,
+          height: h,
+          durationMs: ms,
+          thumb: thumb,
+          caption: caption,
+          replyTo: replyTo,
+        );
+        _upsert(created.message);
+        _notify();
+        unawaited(transfer());
+      });
+
+  /// Réencode une vidéo (MP4 720p, métadonnées retirées), en tire une miniature, appelle `use`, puis efface les
+  /// copies en clair. `onProgress` reçoit l'avancement du réencodage (0 → 1).
+  Future<void> withCompressedVideo(
+    String path,
+    void Function(double)? onProgress,
+    Future<void> Function(String out, Uint8List thumb, int width, int height, int durationMs) use,
+  ) async {
     final sub = vc.VideoCompress.compressProgress$.subscribe((p) => onProgress?.call(p / 100));
     vc.MediaInfo? info;
     try {
@@ -493,23 +543,9 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       if (out == null) throw StateError('vidéo illisible');
       final frame = await vc.VideoCompress.getByteThumbnail(out, quality: 80, position: -1);
       if (frame == null) throw StateError('miniature impossible');
-      final thumb = await _thumbnail(frame);
-      final size = await _imageSize(thumb); // proportions telles qu'affichées (rotation comprise)
-      final created = await chatCreateMediaFile(
-        dir: _mediaDir,
-        src: out,
-        kind: 2,
-        mime: 'video/mp4',
-        width: size.$1,
-        height: size.$2,
-        durationMs: (info!.duration ?? 0).round(),
-        thumb: thumb,
-        caption: caption,
-        replyTo: replyTo,
-      );
-      _upsert(created.message);
-      _notify();
-      unawaited(_transfer());
+      final thumb = await thumbnail(frame);
+      final size = await imageSize(thumb); // proportions telles qu'affichées (rotation comprise)
+      await use(out, thumb, size.$1, size.$2, (info!.duration ?? 0).round());
     } finally {
       sub.unsubscribe();
       // Les copies en clair (réencodage, copie faite par le sélecteur) sont effacées aussitôt le chiffrement fait.
@@ -541,7 +577,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       );
       _upsert(created.message);
       _notify();
-      unawaited(_transfer());
+      unawaited(transfer());
     } finally {
       try {
         await File(path).delete();
@@ -549,7 +585,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  static Future<(int, int)> _imageSize(Uint8List jpeg) async {
+  static Future<(int, int)> imageSize(Uint8List jpeg) async {
     final buffer = await ImmutableBuffer.fromUint8List(jpeg);
     final desc = await ImageDescriptor.encoded(buffer);
     final r = (desc.width, desc.height);
@@ -559,7 +595,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Miniature (320 px) qui voyage dans le message chiffré : affichée aussitôt chez le partenaire.
-  static Future<Uint8List> _thumbnail(Uint8List full) async {
+  static Future<Uint8List> thumbnail(Uint8List full) async {
     for (final q in [62, 45, 30]) {
       final t = await FlutterImageCompress.compressWithList(
         full,
@@ -582,14 +618,14 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     }
     try {
       final b = await chatOpenMedia(messageId: id);
-      _remember(id, b);
+      remember(id, b);
       return b;
     } catch (_) {
       return null;
     }
   }
 
-  void _remember(String id, Uint8List b) {
+  void remember(String id, Uint8List b) {
     _cache[id] = b;
     _cacheBytes += b.length;
     while (_cacheBytes > _cacheMax && _cache.isNotEmpty) {
@@ -599,7 +635,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Dépose les photos en attente et télécharge celles reçues. Une exécution à la fois.
-  Future<void> _transfer() async {
+  Future<void> transfer() async {
     if (_transferring) {
       _transferAgain = true;
       return;
@@ -619,6 +655,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
           if (res.statusCode != 200) throw HttpException('dépôt ${res.statusCode}');
           await chatMediaUploaded(partner: partnerId, messageId: u.messageId, objectKey: link['key'] as String);
           await _refresh([u.messageId]);
+          await space.onFile(u.messageId);
           _notify();
           unawaited(flush());
         }
@@ -636,8 +673,17 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
           await res.stream.pipe(part.openWrite()).timeout(const Duration(minutes: 10));
           await chatMediaDownloaded(messageId: d.messageId, downloaded: part.path, dir: _mediaDir);
           await _refresh([d.messageId]);
+          await space.onFile(d.messageId);
           _notify();
         }
+        // Photos remplacées, instants expirés ou retirés : leurs fichiers chiffrés quittent R2.
+        await SpaceService.emptyTrash((key) async {
+          final link = await _link({'action': 'delete', 'key': key});
+          final res = await _http.delete(Uri.parse(link['url'] as String)).timeout(const Duration(seconds: 30));
+          if (res.statusCode != 204 && res.statusCode != 200 && res.statusCode != 404) {
+            throw HttpException('suppression ${res.statusCode}');
+          }
+        });
       } while (_transferAgain);
     } catch (e) {
       if (kDebugMode) debugPrint('[FOULOVE] photos : $e');
@@ -661,7 +707,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     _retry = Timer(Duration(milliseconds: ms), () {
       unawaited(flush());
       unawaited(pull());
-      unawaited(_transfer());
+      unawaited(transfer());
     });
   }
 
@@ -703,9 +749,11 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
             if (res.updated.isNotEmpty) await _refresh(res.updated);
             if (res.profileChanged) {
               profile = await chatProfile();
-              unawaited(Reminders.reschedule(dates, profile.togetherSince));
+              rescheduleReminders();
             }
             if (res.datesChanged) await _reloadDates();
+            await space.onReceived(res);
+            if (res.momentsChanged || res.profileChanged) _hasDownloads = true;
           } catch (e) {
             if (e.toString().contains('clé de ton partenaire a changé')) {
               partnerKeyChanged = true;
@@ -718,6 +766,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
         _notify();
         if (done.isNotEmpty) await _db.from('envelopes').delete().inFilter('id', done);
         if (fresh.isNotEmpty) {
+          space.onActivity();
           final kind = _visible && _foreground ? 3 : 2; // « lu » implique « distribué »
           final rec = await chatSendReceipt(partner: partnerId, ids: fresh, kind: kind);
           if (rec != null && kind == 3) await _refresh(fresh);
@@ -728,7 +777,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       } while (_pullAgain);
       if (_hasDownloads) {
         _hasDownloads = false;
-        unawaited(_transfer());
+        unawaited(transfer());
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[FOULOVE] réception : $e');

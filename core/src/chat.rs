@@ -33,7 +33,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16")]
         pub body: Option<Body>,
     }
 
@@ -55,6 +55,130 @@ pub mod pb {
         Delete(Delete),
         #[prost(message, tag = "8")]
         Date(DateEntry),
+        #[prost(message, tag = "9")]
+        Setting(Setting),
+        #[prost(message, tag = "10")]
+        Picture(Picture),
+        #[prost(message, tag = "11")]
+        Moment(Moment),
+        #[prost(message, tag = "12")]
+        MomentSeen(Ref),
+        #[prost(message, tag = "13")]
+        Album(Album),
+        #[prost(message, tag = "14")]
+        Letter(Letter),
+        #[prost(message, tag = "15")]
+        LetterRead(Ref),
+        #[prost(message, tag = "16")]
+        MomentGone(Ref),
+    }
+
+    /// Une petite valeur de « Notre espace » (bio, histoire, style des bulles, anniversaire…).
+    /// `personal` : elle décrit l'expéditeur (son anniversaire, la couleur de ses bulles), sinon le couple.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Setting {
+        #[prost(string, tag = "1")]
+        pub key: String,
+        /// Absent = retirée.
+        #[prost(string, optional, tag = "2")]
+        pub value: Option<String>,
+        #[prost(uint64, tag = "3")]
+        pub updated_at: u64,
+        #[prost(bool, tag = "4")]
+        pub personal: bool,
+    }
+
+    /// Fichier chiffré sur R2 : sa clé, son empreinte et ses dimensions voyagent ici, dans le message chiffré.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct FileRef {
+        #[prost(uint32, tag = "1")]
+        pub kind: u32,
+        #[prost(string, tag = "2")]
+        pub object_key: String,
+        #[prost(bytes = "vec", tag = "3")]
+        pub file_key: Vec<u8>,
+        #[prost(bytes = "vec", tag = "4")]
+        pub sha256: Vec<u8>,
+        #[prost(uint64, tag = "5")]
+        pub size: u64,
+        #[prost(string, tag = "6")]
+        pub mime: String,
+        #[prost(uint32, tag = "7")]
+        pub width: u32,
+        #[prost(uint32, tag = "8")]
+        pub height: u32,
+        #[prost(uint32, tag = "9")]
+        pub duration_ms: u32,
+        #[prost(bytes = "vec", tag = "10")]
+        pub thumb: Vec<u8>,
+    }
+
+    /// Photo du couple, couverture ou fond de conversation. Sans fichier = retirée.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Picture {
+        #[prost(string, tag = "1")]
+        pub slot: String,
+        #[prost(uint64, tag = "2")]
+        pub updated_at: u64,
+        #[prost(message, optional, tag = "3")]
+        pub file: Option<FileRef>,
+    }
+
+    /// Un instant (story) : photo, vidéo ou texte, visible 24 h.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Moment {
+        #[prost(bytes = "vec", tag = "1")]
+        pub id: Vec<u8>,
+        #[prost(uint64, tag = "2")]
+        pub created_at: u64,
+        /// 1 photo, 2 vidéo, 4 texte.
+        #[prost(uint32, tag = "3")]
+        pub kind: u32,
+        #[prost(string, tag = "4")]
+        pub text: String,
+        /// Fond d'un instant texte (numéro de dégradé).
+        #[prost(uint32, tag = "5")]
+        pub style: u32,
+        #[prost(message, optional, tag = "6")]
+        pub file: Option<FileRef>,
+    }
+
+    /// Désigne un instant ou une lettre (vu, lue, retiré).
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Ref {
+        #[prost(bytes = "vec", tag = "1")]
+        pub id: Vec<u8>,
+    }
+
+    /// Un album, envoyé en entier à chaque modification ; le plus récent l'emporte.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Album {
+        #[prost(bytes = "vec", tag = "1")]
+        pub id: Vec<u8>,
+        #[prost(string, tag = "2")]
+        pub title: String,
+        #[prost(uint64, tag = "3")]
+        pub updated_at: u64,
+        #[prost(bool, tag = "4")]
+        pub deleted: bool,
+        /// Identifiants des messages photo ou vidéo, dans l'ordre.
+        #[prost(bytes = "vec", repeated, tag = "5")]
+        pub items: Vec<Vec<u8>>,
+    }
+
+    /// Une lettre, ou une capsule si `open_at` est dans le futur.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Letter {
+        #[prost(bytes = "vec", tag = "1")]
+        pub id: Vec<u8>,
+        #[prost(uint64, tag = "2")]
+        pub sent_at: u64,
+        #[prost(string, tag = "3")]
+        pub title: String,
+        #[prost(string, tag = "4")]
+        pub body: String,
+        #[prost(uint64, optional, tag = "5")]
+        pub open_at: Option<u64>,
     }
 
     /// Une date importante du couple (ou sa suppression).
@@ -153,6 +277,9 @@ pub mod pb {
         pub body: String,
         #[prost(bytes = "vec", optional, tag = "4")]
         pub reply_to: Option<Vec<u8>>,
+        /// Réponse à un instant (son identifiant).
+        #[prost(bytes = "vec", optional, tag = "5")]
+        pub moment: Option<Vec<u8>>,
     }
 
     #[derive(Clone, PartialEq, prost::Message)]
@@ -208,6 +335,14 @@ pub struct ChatMessage {
     pub media: Option<MediaInfo>,
     /// Supprimé : il ne reste que la trace « Message supprimé » (ni texte, ni fichier, ni réaction).
     pub deleted: bool,
+    /// Réponse à un instant : son texte et sa miniature, gardés même après ses 24 h.
+    pub quote: Option<Quote>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Quote {
+    pub text: String,
+    pub thumb: Vec<u8>,
 }
 
 /// Enveloppe chiffrée à déposer sur le serveur, avec son identifiant (format UUID, choisi ici).
@@ -234,7 +369,7 @@ pub struct CoupleProfile {
 
 const MAX_NAME_CHARS: usize = 40;
 
-fn clean_name(s: &str) -> Option<String> {
+pub(crate) fn clean_name(s: &str) -> Option<String> {
     let t: String = s.trim().chars().filter(|c| !c.is_control()).collect();
     (!t.is_empty() && t.chars().count() <= MAX_NAME_CHARS).then_some(t)
 }
@@ -260,10 +395,16 @@ pub enum Received {
     Message(ChatMessage),
     /// Messages dont le statut ou les réactions ont changé.
     Updated(Vec<String>),
-    /// Le profil du couple a changé (prénom du partenaire, date « ensemble depuis »).
+    /// Le profil du couple a changé (prénom, date « ensemble depuis », bio, photos, style…).
     Profile,
     /// Les dates importantes ont changé.
     Dates,
+    /// Les instants ont changé (nouveau, vu, retiré).
+    Moments,
+    /// Les lettres ont changé (nouvelle, lue).
+    Letters,
+    /// Les albums ont changé.
+    Albums,
     /// Rien à afficher : doublon, message d'appairage, contenu d'une version future.
     Nothing,
     /// Enveloppe illisible (altérée ou corrompue) : écartée, jamais affichée.
@@ -356,6 +497,10 @@ pub(crate) fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMess
         their_reaction: r.get(7)?,
         media,
         deleted: r.get::<_, i64>(15)? == 1,
+        quote: match r.get::<_, Option<String>>(16)? {
+            Some(text) => Some(Quote { text, thumb: r.get::<_, Option<Vec<u8>>>(17)?.unwrap_or_default() }),
+            None => None,
+        },
     })
 }
 
@@ -364,7 +509,7 @@ pub(crate) fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMess
 pub(crate) fn erase(c: &rusqlite::Connection, id: &str, from_me: Option<bool>) -> R<bool> {
     let n = c
         .execute(
-            "UPDATE messages SET body = '', my_reaction = NULL, their_reaction = NULL, deleted = 1
+            "UPDATE messages SET body = '', my_reaction = NULL, their_reaction = NULL, quote_text = NULL, quote_thumb = NULL, deleted = 1
              WHERE id = ?1 AND deleted = 0 AND (?2 IS NULL OR from_me = ?2)",
             params![id, from_me],
         )
@@ -383,19 +528,19 @@ pub(crate) fn erase(c: &rusqlite::Connection, id: &str, from_me: Option<bool>) -
 
 // ------------------------------------------------------------------ petites valeurs du profil (table kv)
 
-fn kv_get(c: &rusqlite::Connection, k: &str) -> R<Option<String>> {
+pub(crate) fn kv_get(c: &rusqlite::Connection, k: &str) -> R<Option<String>> {
     c.query_row("SELECT v FROM kv WHERE k = ?1", params![k], |r| r.get::<_, Option<String>>(0))
         .optional()
         .map(Option::flatten)
         .map_err(db)
 }
 
-fn kv_newer(c: &rusqlite::Connection, k: &str, at: u64) -> R<bool> {
+pub(crate) fn kv_newer(c: &rusqlite::Connection, k: &str, at: u64) -> R<bool> {
     let cur: Option<i64> = c.query_row("SELECT at FROM kv WHERE k = ?1", params![k], |r| r.get(0)).optional().map_err(db)?;
     Ok(cur.is_none_or(|cur| (at as i64) > cur))
 }
 
-fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64) -> R<()> {
+pub(crate) fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64) -> R<()> {
     c.execute(
         "INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT (k) DO UPDATE SET v = excluded.v, at = excluded.at",
         params![k, v, at as i64],
@@ -406,14 +551,17 @@ fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64) -> R<()> 
 
 /// Message et, s'il y en a une, sa photo ou vidéo.
 pub(crate) const SELECT: &str = "SELECT m.id, m.from_me, m.body, m.reply_to, m.sent_at, m.status, m.my_reaction, \
-    m.their_reaction, md.kind, md.mime, md.width, md.height, md.duration_ms, md.thumb, md.state, m.deleted \
-    FROM messages m LEFT JOIN media md ON md.message_id = m.id";
+    m.their_reaction, md.kind, md.mime, md.width, md.height, md.duration_ms, md.thumb, md.state, m.deleted, \
+    m.quote_text, m.quote_thumb FROM messages m LEFT JOIN media md ON md.message_id = m.id";
 
 impl Device {
     pub(crate) fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
         // Accusés, profil, dates, suppressions : rien qui mérite de réveiller le téléphone du partenaire.
         // Une suppression ne réveille pas le téléphone : elle s'appliquera à la prochaine ouverture.
-        let urgent = matches!(body, pb::Body::Text(_) | pb::Body::Reaction(_) | pb::Body::Media(_));
+        let urgent = matches!(
+            body,
+            pb::Body::Text(_) | pb::Body::Reaction(_) | pb::Body::Media(_) | pb::Body::Letter(_) | pb::Body::Moment(_)
+        );
         let envelope = self.encrypt(partner, &encode(body))?;
         let envelope_id = uuid_v4();
         self.store
@@ -429,6 +577,17 @@ impl Device {
 
     /// Chiffre un message texte, l'ajoute à l'historique (« en attente ») et à la boîte d'envoi.
     pub fn send_text(&mut self, partner: &str, body: &str, reply_to: Option<&str>) -> R<(ChatMessage, Outgoing)> {
+        self.send_text_with(partner, body, reply_to, None)
+    }
+
+    /// `moment` : réponse à cet instant (le message le cite).
+    pub(crate) fn send_text_with(
+        &mut self,
+        partner: &str,
+        body: &str,
+        reply_to: Option<&str>,
+        moment: Option<&str>,
+    ) -> R<(ChatMessage, Outgoing)> {
         let body = body.trim();
         if body.is_empty() || body.len() > MAX_TEXT_BYTES {
             return Err(DeviceError::Protocol("message vide ou trop long".into()));
@@ -458,8 +617,16 @@ impl Device {
             their_reaction: None,
             media: None,
             deleted: false,
+            quote: None,
         };
-        let text = pb::Text { id: id.to_vec(), sent_at: sent_at as u64, body: msg.body.clone(), reply_to: reply_wire };
+        let text =
+            pb::Text {
+            id: id.to_vec(),
+            sent_at: sent_at as u64,
+            body: msg.body.clone(),
+            reply_to: reply_wire,
+            moment: moment.and_then(unhex),
+        };
         let tx = self.store.conn.clone();
         let out = tx.atomically(|| {
             self.store
@@ -470,8 +637,12 @@ impl Device {
                     params![msg.id, msg.body, msg.reply_to, sent_at],
                 )
                 .map_err(db)?;
+            if let Some(mid) = moment {
+                crate::space::attach_quote(&self.store.conn.lock(), &msg.id, mid)?;
+            }
             self.enqueue(partner, pb::Body::Text(text), Some(&msg.id))
         })?;
+        let msg = if moment.is_some() { self.message(&msg.id)?.unwrap_or(msg) } else { msg };
         Ok((msg, out))
     }
 
@@ -635,6 +806,9 @@ impl Device {
                 if n == 0 {
                     return Ok(Received::Nothing);
                 }
+                if let Some(mid) = t.moment.as_deref().and_then(id_from_wire) {
+                    crate::space::attach_quote(&c, &id, &mid)?;
+                }
                 let m = c
                     .query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message)
                     .map_err(db)?;
@@ -674,6 +848,14 @@ impl Device {
             }
             pb::Body::Media(m) => crate::chat_media::apply_media(&c, m),
             pb::Body::Date(d) => crate::dates::apply_date(&c, d),
+            pb::Body::Setting(x) => crate::space::apply_setting(&c, x),
+            pb::Body::Picture(x) => crate::space::apply_picture(&c, x),
+            pb::Body::Moment(x) => crate::space::apply_moment(&c, x),
+            pb::Body::MomentSeen(x) => crate::space::apply_moment_seen(&c, x),
+            pb::Body::MomentGone(x) => crate::space::apply_moment_gone(&c, x),
+            pb::Body::Album(x) => crate::space::apply_album(&c, x),
+            pb::Body::Letter(x) => crate::space::apply_letter(&c, x),
+            pb::Body::LetterRead(x) => crate::space::apply_letter_read(&c, x),
             pb::Body::Delete(d) => {
                 let id = id_from_wire(&d.target).ok_or(DeviceError::BadMessage)?;
                 // Le partenaire ne peut retirer que ses propres messages, jamais les nôtres.

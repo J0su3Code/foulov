@@ -5,7 +5,7 @@ Chaque promesse affichée dans l'app doit pouvoir être reliée à une section d
 
 ## 1. Objectifs
 
-1. Seuls les deux téléphones d'un couple peuvent lire ce que le couple échange : messages, photos, vidéos, souvenirs, données du jardin.
+1. Seuls les deux téléphones d'un couple peuvent lire ce que le couple échange : messages, photos, vidéos, souvenirs, profil du couple, instants, lettres.
 2. Une fuite complète de nos serveurs (base de données, stockage, sauvegardes, journaux) ne révèle aucun contenu.
 3. Personne ne peut se glisser entre les deux partenaires au moment de l'appairage sans que ça se voie.
 4. Collecter le minimum de métadonnées, et dire exactement lesquelles.
@@ -76,6 +76,31 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
 - Chaque date (titre, jour, « chaque année », rappel) voyage **chiffrée** par la session Signal ; le serveur n'en voit rien. La modification la plus récente l'emporte, date par date ; une suppression laisse une trace datée pour qu'une ancienne version arrivée en retard ne la fasse pas réapparaître.
 - Les **rappels sont programmés par le téléphone lui-même** (notifications locales) : aucun serveur ne sait quand ni quoi. Sur l'écran verrouillé, leur texte reste masqué si le téléphone masque les contenus sensibles.
 
+## 4quater. Notre espace (profil du couple, instants, albums, lettres)
+
+Code : `core/src/space.rs`, tests `core/tests/space.rs`.
+
+- **Même transport que les messages.** Bio, histoire, anniversaires, style des bulles, photos du couple, instants,
+  albums et lettres sont des contenus protobuf de la session Signal, remplis au multiple de 160 octets : le serveur ne
+  distingue pas une lettre d'un message (seule la taille arrondie et l'indicateur `urgent` sont visibles).
+- **Le plus récent l'emporte.** Réglages, photos du couple et albums sont horodatés ; une version ancienne arrivée en
+  retard ne remplace jamais une plus récente. Les valeurs reçues sont validées (longueurs, formats, emplacements connus) ;
+  une clé inconnue (version future) est ignorée.
+- **Valeurs personnelles.** L'anniversaire et la couleur des bulles décrivent leur auteur : rangés `me.*` chez lui,
+  `p.*` chez l'autre. L'année de naissance est facultative. Le surnom donné à l'autre ne quitte pas le téléphone.
+- **Photos du couple** (photo à deux, couverture, fond) : fichiers chiffrés sur R2 exactement comme les photos de la
+  conversation (§6). Remplacée ou retirée, l'ancienne est effacée du téléphone, et son auteur la supprime de R2 (table
+  `r2_trash`). Une photo remplacée pendant son dépôt n'est jamais envoyée, et son objet part aussi à la corbeille.
+- **Instants (24 h).** Photo, vidéo (30 s) ou texte. Passé 24 h (ou retirés par leur auteur), ils sont effacés des deux
+  téléphones et leurs fichiers retirés de R2. Un instant arrivé après son expiration n'est pas affiché. Ils ne figurent
+  **jamais** dans la sauvegarde. « Vu » n'est envoyé qu'une fois. Une réponse est un message ordinaire qui copie le texte
+  et la miniature de l'instant.
+- **Capsules.** Une lettre dont l'ouverture est datée arrive tout de suite, chiffrée, et l'app la garde **scellée** chez
+  les deux jusqu'à la date (le texte n'est pas rendu par le cœur avant). C'est une promesse de l'app, **pas** un verrou
+  cryptographique dans le temps : quelqu'un qui extrairait la base SQLCipher déverrouillée de son propre téléphone
+  pourrait la lire avant. L'interface ne prétend rien de plus.
+- **Chiffres et jours de flamme** : calculés sur le téléphone à partir de l'historique local, jamais envoyés.
+
 ## 5. Appairage du couple
 
 1. **Inès crée l'espace.** Le serveur crée un couple et un **code d'invitation** de 10 caractères en alphabet Crockford base32, par exemple `K7Q4M-9XHPT`.
@@ -120,7 +145,7 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
 - **Sauvegarde chiffrée** (activée par défaut, désactivable) :
   - à la création du compte, l'app affiche une **phrase de récupération de 24 mots** (256 bits) à noter sur papier ;
   - clé de sauvegarde = Argon2id(phrase, sel stocké avec la sauvegarde) ;
-  - la sauvegarde (historique, clés des fichiers, état du jardin) est chiffrée avec cette clé puis déposée sur R2 ;
+  - la sauvegarde (historique, clés des fichiers, profil du couple, albums, lettres) est chiffrée avec cette clé puis déposée sur R2 ;
   - **sans la phrase, personne ne peut la lire, pas même nous**. Phrase perdue et téléphones perdus = données perdues. L'app le dit clairement.
 - **Clé de chaque sauvegarde** : HKDF-SHA256(secret de la phrase, sel aléatoire de 256 bits). La phrase vaut déjà 256 bits aléatoires (BIP39, liste française, accents facultatifs à la saisie) : une dérivation lente comme Argon2 n'ajouterait rien contre la force brute. La sauvegarde ne contient **jamais** les clés Signal.
 - **Restauration** sur un nouveau téléphone : après la connexion, l'app propose la phrase si une sauvegarde existe et que le téléphone n'a aucun historique (écran protégé contre les captures). Le téléphone crée une **nouvelle identité**, rouvre une session avec le partenaire et le couple compare ses 7 symboles.
@@ -163,7 +188,7 @@ C'est la liste exacte affichée dans l'app :
 | Quand l'un de vous a l'app ouverte (« en ligne ») et quand il écrit (« écrit… »), jamais ce qu'il écrit. Canal temps réel privé, réservé aux deux membres du couple par les règles d'accès. **Désactivable** dans « Notre espace » (on ne voit alors plus non plus ceux de l'autre) | Indicateurs de présence et d'écriture |
 | Les adresses IP, dans les journaux techniques de nos hébergeurs (Supabase, Cloudflare), selon leurs politiques | Fonctionnement du réseau ; nous n'ajoutons aucun journal applicatif contenant des IP |
 
-Jamais : contenu, noms de fichiers, légendes, dates du couple, surnoms, réponses aux questions, état du jardin, carnet d'adresses, numéro de téléphone.
+Jamais : contenu, noms de fichiers, légendes, dates du couple, surnoms, bio, histoire, anniversaires, lettres, instants, carnet d'adresses, numéro de téléphone.
 
 ## 11. Ce qu'il reste à faire avant d'affirmer quoi que ce soit publiquement
 

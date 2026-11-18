@@ -68,7 +68,7 @@ fn photo_envoyee_recue_verifiee_et_ouverte() {
     // Dépôt sur « R2 », puis message chiffré au partenaire.
     let r2 = dir.path().join("r2.bin");
     fs::copy(&up.path, &r2).unwrap();
-    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap().unwrap();
     assert!(o.urgent, "une photo mérite une notification");
     malik.outbox_sent(&o.envelope_id).unwrap();
     assert_eq!(malik.message(&msg.id).unwrap().unwrap().status, STATUS_SENT);
@@ -94,7 +94,7 @@ fn un_fichier_altere_sur_le_serveur_est_refuse() {
     let dir = tempfile::tempdir().unwrap();
     let (mut ines, mut malik) = couple(dir.path());
     let (msg, up) = malik.create_media(&dir.path().join("m"), &[42u8; 5000], photo("")).unwrap();
-    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap().unwrap();
     let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
     let mut bad = fs::read(&up.path).unwrap();
     bad[100] ^= 1;
@@ -114,7 +114,7 @@ fn app_arretee_avant_l_envoi_puis_reprise() {
     drop(malik);
     let mut malik = Device::open(&dir.path().join("malik.db"), &[2; 32]).unwrap();
     assert_eq!(malik.pending_uploads().unwrap(), vec![up.clone()]);
-    malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    malik.media_uploaded(INES, &msg.id, KEY).unwrap().unwrap();
     assert!(malik.pending_uploads().unwrap().is_empty());
     assert!(malik.media_uploaded(INES, &msg.id, KEY).is_err(), "jamais envoyé deux fois");
 }
@@ -152,7 +152,7 @@ fn video_chiffree_depuis_un_fichier_puis_lue_par_morceaux() {
     v.duration_ms = 12_000;
     let (msg, up) = malik.create_media_file(&dir.path().join("m"), &src, v).unwrap();
     assert_eq!(malik.media_len(&msg.id).unwrap(), plain.len() as u64);
-    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap().unwrap();
 
     let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
     assert_eq!(r.media.as_ref().unwrap().duration_ms, 12_000);
@@ -196,7 +196,7 @@ fn supprimer_pour_nous_deux_et_pour_moi() {
     let (mut ines, mut malik) = couple(dir.path());
     // Une photo de Malik, reçue et téléchargée par Inès.
     let (msg, up) = malik.create_media(&dir.path().join("m"), &[5u8; 4000], photo("oups")).unwrap();
-    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap().unwrap();
     let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
     let dl = dir.path().join("dl.part");
     fs::copy(&up.path, &dl).unwrap();
@@ -252,7 +252,7 @@ fn message_vocal_envoye_recu_et_lu_par_morceaux() {
     v.duration_ms = 7_300;
     v.thumb = &wave;
     let (msg, up) = malik.create_media_file(&dir.path().join("m"), &src, v).unwrap();
-    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap();
+    let o = malik.media_uploaded(INES, &msg.id, KEY).unwrap().unwrap();
     assert!(o.urgent, "un vocal réveille le téléphone");
     let Received::Message(r) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
     let md = r.media.unwrap();

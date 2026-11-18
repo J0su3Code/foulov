@@ -87,10 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.local_florist_outlined, size: 44, color: c.secondary),
+              Icon(Icons.favorite_rounded, size: 44, color: c.primary),
               const SizedBox(height: 16),
               Text(switch (_step) {
-                _Step.choose => 'Entrons dans\nvotre jardin.',
+                _Step.choose => 'Entrons dans\nvotre bulle.',
                 _Step.email => 'Ton adresse\ne-mail',
                 _Step.code => 'Vérifie\ntes e-mails',
               }, style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.1)),

@@ -47,7 +47,7 @@ fn sauvegarde_puis_restauration_sur_un_telephone_neuf() {
             NewMedia { kind: 1, mime: "image/jpeg", width: 10, height: 10, duration_ms: 0, thumb: b"mini", caption: "nous", reply_to: None },
         )
         .unwrap();
-    let o = malik.media_uploaded(INES, &photo.id, KEY).unwrap();
+    let o = malik.media_uploaded(INES, &photo.id, KEY).unwrap().unwrap();
     let Received::Message(p) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!() };
     let o = malik.set_my_name(INES, "Malik").unwrap();
     ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap();

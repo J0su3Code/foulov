@@ -19,6 +19,13 @@ pub struct ChatMessage {
     pub media: Option<MediaInfo>,
     /// Supprimé : seule la trace « Message supprimé » reste.
     pub deleted: bool,
+    /// Réponse à un instant : son texte et sa miniature.
+    pub quote: Option<Quote>,
+}
+
+pub struct Quote {
+    pub text: String,
+    pub thumb: Vec<u8>,
 }
 
 /// Photo ou vidéo jointe. `state` : 0 à envoyer, 1 sur ce téléphone, 2 à télécharger, 3 illisible.
@@ -53,6 +60,7 @@ impl From<core::ChatMessage> for ChatMessage {
                 state: x.state,
             }),
             deleted: m.deleted,
+            quote: m.quote.map(|q| Quote { text: q.text, thumb: q.thumb }),
         }
     }
 }
@@ -87,6 +95,9 @@ pub struct Received {
     pub profile_changed: bool,
     /// Les dates importantes ont changé.
     pub dates_changed: bool,
+    pub moments_changed: bool,
+    pub letters_changed: bool,
+    pub albums_changed: bool,
 }
 
 /// Profil du couple, jamais visible du serveur.
@@ -150,12 +161,24 @@ pub fn chat_outbox_sent(envelope_id: String) -> anyhow::Result<Option<String>> {
 
 pub fn chat_receive(partner: String, envelope_id: String, envelope: Envelope) -> anyhow::Result<Received> {
     with_device(|d| {
-        let none = Received { message: None, updated: vec![], rejected: false, profile_changed: false, dates_changed: false };
+        let none = Received {
+            message: None,
+            updated: vec![],
+            rejected: false,
+            profile_changed: false,
+            dates_changed: false,
+            moments_changed: false,
+            letters_changed: false,
+            albums_changed: false,
+        };
         Ok(match d.receive(&partner, &envelope_id, &CoreEnvelope { kind: envelope.kind, body: envelope.body })? {
             core::Received::Message(m) => Received { message: Some(m.into()), ..none },
             core::Received::Updated(ids) => Received { updated: ids, ..none },
             core::Received::Profile => Received { profile_changed: true, ..none },
             core::Received::Dates => Received { dates_changed: true, ..none },
+            core::Received::Moments => Received { moments_changed: true, ..none },
+            core::Received::Letters => Received { letters_changed: true, ..none },
+            core::Received::Albums => Received { albums_changed: true, ..none },
             core::Received::Nothing => none,
             core::Received::Rejected => Received { rejected: true, ..none },
         })
@@ -243,8 +266,9 @@ pub fn chat_create_media(
 }
 
 /// Le chiffré est sur R2 : prépare le message chiffré pour le partenaire (à vider par la boîte d'envoi).
-pub fn chat_media_uploaded(partner: String, message_id: String, object_key: String) -> anyhow::Result<Outgoing> {
-    with_device(|d| Ok(d.media_uploaded(&partner, &message_id, &object_key)?.into()))
+/// `None` : plus rien à envoyer (photo du couple remplacée, instant retiré pendant le dépôt).
+pub fn chat_media_uploaded(partner: String, message_id: String, object_key: String) -> anyhow::Result<Option<Outgoing>> {
+    with_device(|d| Ok(d.media_uploaded(&partner, &message_id, &object_key)?.map(Into::into)))
 }
 
 pub fn chat_pending_uploads() -> anyhow::Result<Vec<PendingUpload>> {
@@ -321,7 +345,7 @@ pub fn chat_media_read(message_id: String, offset: u64, len: u32) -> anyhow::Res
     with_device(|d| Ok(d.media_read(&message_id, offset, len)?))
 }
 
-/// Photos et vidéos (onglet Saisons), de la plus récente à la plus ancienne. `kind` : 1 photos, 2 vidéos.
+/// Photos et vidéos (onglet Souvenirs), de la plus récente à la plus ancienne. `kind` : 1 photos, 2 vidéos, 3 vocaux.
 pub fn chat_media_gallery(
     before_sent_at: Option<i64>,
     before_id: Option<String>,

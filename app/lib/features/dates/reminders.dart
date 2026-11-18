@@ -8,7 +8,14 @@ import '../../src/rust/api/chat.dart';
 
 /// Une date à venir, telle qu'affichée et rappelée.
 class Upcoming {
-  const Upcoming({required this.title, required this.next, this.entry, this.years, this.coupleAnniversary = false});
+  const Upcoming({
+    required this.title,
+    required this.next,
+    this.entry,
+    this.years,
+    this.coupleAnniversary = false,
+    this.birthday = false,
+  });
 
   final String title;
 
@@ -21,6 +28,9 @@ class Upcoming {
   /// Nombre d'années fêtées à cette occurrence (dates annuelles dont l'année est passée).
   final int? years;
   final bool coupleAnniversary;
+
+  /// Anniversaire de l'un de vous deux (« Notre histoire »).
+  final bool birthday;
 
   int daysLeft(DateTime today) => DateTime(next.year, next.month, next.day).difference(_day(today)).inDays;
 }
@@ -38,9 +48,24 @@ DateTime? nextOccurrence(DateTime d, {required bool yearly, required DateTime to
   return thisYear.isBefore(t) ? at(t.year + 1) : thisYear;
 }
 
-/// Toutes les dates à venir (y compris l'anniversaire du couple), de la plus proche à la plus lointaine.
-List<Upcoming> upcoming(List<DateEntry> dates, String? togetherSince, DateTime today) {
+/// Anniversaire de l'un de vous deux : (titre, « MM-JJ » ou « AAAA-MM-JJ »).
+typedef Birthday = (String title, String date);
+
+/// Toutes les dates à venir (anniversaire du couple et de chacun compris), de la plus proche à la plus lointaine.
+List<Upcoming> upcoming(
+  List<DateEntry> dates,
+  String? togetherSince,
+  DateTime today, {
+  List<Birthday> birthdays = const [],
+}) {
   final out = <Upcoming>[];
+  for (final (title, raw) in birthdays) {
+    final p = raw.split('-').map(int.tryParse).toList();
+    if (p.any((x) => x == null) || (p.length != 2 && p.length != 3)) continue;
+    final (m, d, y) = p.length == 2 ? (p[0]!, p[1]!, null) : (p[1]!, p[2]!, p[0]);
+    final n = nextOccurrence(DateTime(y ?? 2000, m, d), yearly: true, today: today)!;
+    out.add(Upcoming(title: title, next: n, years: y == null ? null : n.year - y, birthday: true));
+  }
   final since = togetherSince == null ? null : DateTime.tryParse(togetherSince);
   if (since != null) {
     final n = nextOccurrence(since, yearly: true, today: today)!;
@@ -106,7 +131,11 @@ abstract final class Reminders {
   };
 
   /// Reprogramme tous les rappels (après chaque changement de date ou de « ensemble depuis »).
-  static Future<void> reschedule(List<DateEntry> dates, String? togetherSince) async {
+  static Future<void> reschedule(
+    List<DateEntry> dates,
+    String? togetherSince, {
+    List<Birthday> birthdays = const [],
+  }) async {
     await init();
     if (!_ready) return;
     try {
@@ -115,9 +144,9 @@ abstract final class Reminders {
       }
       final now = tz.TZDateTime.now(tz.local);
       var id = _first;
-      for (final u in upcoming(dates, togetherSince, now)) {
-        // Anniversaire du couple : rappel le jour même ; sinon selon le choix de la date.
-        final before = u.coupleAnniversary ? 0 : u.entry?.remindDays;
+      for (final u in upcoming(dates, togetherSince, now, birthdays: birthdays)) {
+        // Anniversaire du couple : le jour même ; anniversaire de chacun : la veille ; sinon selon le choix.
+        final before = u.coupleAnniversary ? 0 : (u.birthday ? 1 : u.entry?.remindDays);
         if (before == null || id > _last) continue;
         final at = tz.TZDateTime(tz.local, u.next.year, u.next.month, u.next.day, 9).subtract(Duration(days: before));
         if (at.isBefore(now)) continue;

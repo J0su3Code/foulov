@@ -2,25 +2,26 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-/// Éléments vivants de FouLove : pétales qui flottent, cœur qui bat, tiges qui s'enlacent, pluie de pétales.
+/// Éléments vivants de FouLove : petits cœurs qui flottent, cœur qui bat, deux rubans qui dessinent un cœur,
+/// pluie de cœurs.
 /// Tous respectent « réduire les animations » du système (ils s'affichent alors immobiles).
 
 bool _reduce(BuildContext c) => MediaQuery.maybeDisableAnimationsOf(c) ?? false;
 
-// ===================================================================== pétales flottants
+// ===================================================================== cœurs flottants
 
-/// Arrière-plan doux : dégradé et pétales qui descendent lentement en tournoyant.
-class PetalBackground extends StatefulWidget {
-  const PetalBackground({super.key, required this.child, this.count = 16});
+/// Arrière-plan doux : dégradé et petits cœurs qui montent lentement, comme des bulles.
+class LoveBackground extends StatefulWidget {
+  const LoveBackground({super.key, required this.child, this.count = 16});
 
   final Widget child;
   final int count;
 
   @override
-  State<PetalBackground> createState() => _PetalBackgroundState();
+  State<LoveBackground> createState() => _LoveBackgroundState();
 }
 
-class _PetalBackgroundState extends State<PetalBackground> with SingleTickerProviderStateMixin {
+class _LoveBackgroundState extends State<LoveBackground> with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
 
   @override
@@ -48,7 +49,7 @@ class _PetalBackgroundState extends State<PetalBackground> with SingleTickerProv
         fit: StackFit.expand,
         children: [
           IgnorePointer(
-            child: RepaintBoundary(child: CustomPaint(painter: _PetalsPainter(_c, widget.count, cs.secondary, dark))),
+            child: RepaintBoundary(child: CustomPaint(painter: _HeartsPainter(_c, widget.count, cs.secondary, dark))),
           ),
           widget.child,
         ],
@@ -57,8 +58,15 @@ class _PetalBackgroundState extends State<PetalBackground> with SingleTickerProv
   }
 }
 
-class _PetalsPainter extends CustomPainter {
-  _PetalsPainter(this.anim, this.count, this.color, this.dark) : super(repaint: anim);
+/// Petit cœur centré sur l'origine, de hauteur ~18.
+Path heartPath([double s = 1]) => Path()
+  ..moveTo(0, 7 * s)
+  ..cubicTo(-10 * s, 0, -9 * s, -10 * s, 0, -5 * s)
+  ..cubicTo(9 * s, -10 * s, 10 * s, 0, 0, 7 * s)
+  ..close();
+
+class _HeartsPainter extends CustomPainter {
+  _HeartsPainter(this.anim, this.count, this.color, this.dark) : super(repaint: anim);
 
   final Animation<double> anim;
   final int count;
@@ -74,24 +82,21 @@ class _PetalsPainter extends CustomPainter {
       final x0 = r.nextDouble() * size.width;
       final scale = .55 + r.nextDouble() * .8;
       final t = (anim.value * speed + phase) % 1.0;
-      final y = -30 + t * (size.height + 60);
-      final x = x0 + sin(t * pi * 4 + i) * 22;
-      final a = (dark ? .22 : .30) * (0.4 + 0.6 * sin(t * pi));
+      // Ils montent doucement en se balançant, et s'estompent en haut comme en bas.
+      final y = size.height + 30 - t * (size.height + 60);
+      final x = x0 + sin(t * pi * 3 + i) * 18;
+      final a = (dark ? .18 : .24) * sin(t * pi);
       canvas.save();
       canvas.translate(x, y);
-      canvas.rotate(t * pi * 3 + i);
+      canvas.rotate(sin(t * pi * 2 + i) * .35);
       canvas.scale(scale);
-      final p = Path()
-        ..moveTo(0, 0)
-        ..cubicTo(7, -4, 8, -14, 0, -18)
-        ..cubicTo(-8, -14, -7, -4, 0, 0);
-      canvas.drawPath(p, Paint()..color = color.withValues(alpha: a));
+      canvas.drawPath(heartPath(), Paint()..color = color.withValues(alpha: a));
       canvas.restore();
     }
   }
 
   @override
-  bool shouldRepaint(covariant _PetalsPainter old) => old.color != color || old.count != count;
+  bool shouldRepaint(covariant _HeartsPainter old) => old.color != color || old.count != count;
 }
 
 // ===================================================================== cœur qui bat
@@ -168,10 +173,10 @@ class _BeatingHeartState extends State<BeatingHeart> with SingleTickerProviderSt
   }
 }
 
-// ===================================================================== tiges enlacées en cœur
+// ===================================================================== deux rubans en cœur
 
-/// Deux tiges partent du même point, s'écartent et se rejoignent en dessinant un cœur ;
-/// des feuilles apparaissent, une fleur éclot en haut.
+/// Deux rubans (rose et or) partent du même point, s'écartent et se rejoignent en dessinant un cœur ;
+/// une étincelle jaillit là où ils se retrouvent, et un petit cœur plein palpite au centre.
 class EntwinedHeart extends StatefulWidget {
   const EntwinedHeart({super.key, this.size = 220});
 
@@ -197,7 +202,6 @@ class _EntwinedHeartState extends State<EntwinedHeart> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     if (_reduce(context)) {
       _grow.value = 1;
       _sway.stop();
@@ -209,10 +213,10 @@ class _EntwinedHeartState extends State<EntwinedHeart> with TickerProviderStateM
           Listenable.merge([_grow, _sway]),
           () => Curves.easeInOutCubic.transform(_grow.value),
           () => _sway.value,
-          stemA: dark ? const Color(0xFF5FA79A) : const Color(0xFF3E6B4E),
-          stemB: dark ? const Color(0xFF8CCBB5) : const Color(0xFF7DB37A),
+          stemA: cs.primary,
+          stemB: cs.tertiary,
           petal: cs.secondary,
-          core: dark ? const Color(0xFFF6E6CF) : const Color(0xFFF2C94C),
+          core: Color.lerp(cs.tertiary, Colors.white, .5)!,
         ),
       ),
     );
@@ -263,40 +267,32 @@ class _EntwinedPainter extends CustomPainter {
           ..strokeWidth = size.width * .022
           ..strokeCap = StrokeCap.round,
       );
-      // Feuilles le long de la tige.
-      for (final s in [.22, .45, .68]) {
-        final lg = ((g - s) / .15).clamp(0.0, 1.0);
-        if (lg <= 0) continue;
-        final p = _heart(s, side, size);
-        final q = _heart(s + .01, side, size);
-        final ang = atan2(q.dy - p.dy, q.dx - p.dx) + (side > 0 ? -1.1 : 1.1);
-        canvas.save();
-        canvas.translate(p.dx, p.dy);
-        canvas.rotate(ang + w * .05);
-        canvas.scale(Curves.easeOutBack.transform(lg) * size.width / 220);
-        final leaf = Path()
-          ..moveTo(0, 0)
-          ..quadraticBezierTo(10, -9, 24, 0)
-          ..quadraticBezierTo(10, 8, 0, 0);
-        canvas.drawPath(leaf, Paint()..color = color.withValues(alpha: .95));
-        canvas.restore();
-      }
     }
-    // Fleur au creux du cœur, quand les deux tiges se rejoignent.
+    // Quand les deux rubans se rejoignent en haut : une petite étincelle, puis un cœur plein qui palpite doucement.
     final bloom = ((g - .82) / .18).clamp(0.0, 1.0);
     if (bloom > 0) {
       final c = _heart(1, 1, size);
       final b = Curves.easeOutBack.transform(bloom);
-      final r = size.width * .07 * b;
-      canvas.drawCircle(c, r * 2.6, Paint()..color = petal.withValues(alpha: .18 * bloom));
-      for (var i = 0; i < 6; i++) {
-        final a = i / 6 * 2 * pi + w * .1;
-        canvas.drawOval(
-          Rect.fromCenter(center: c + Offset(cos(a), sin(a)) * r, width: r * 1.6, height: r * 1.05),
-          Paint()..color = Color.lerp(petal, Colors.white, i.isEven ? 0 : .25)!,
+      canvas.drawCircle(c, size.width * .16 * b, Paint()..color = petal.withValues(alpha: .16 * bloom));
+      for (var i = 0; i < 8; i++) {
+        final a = i / 8 * 2 * pi + w * .2;
+        final r0 = size.width * .05 * b, r1 = size.width * (.09 + (i.isEven ? .03 : 0)) * b;
+        canvas.drawLine(
+          c + Offset(cos(a), sin(a)) * r0,
+          c + Offset(cos(a), sin(a)) * r1,
+          Paint()
+            ..color = core.withValues(alpha: .9 * bloom)
+            ..strokeWidth = size.width * .012
+            ..strokeCap = StrokeCap.round,
         );
       }
-      canvas.drawCircle(c, r * .55, Paint()..color = core);
+      // Le cœur plein, au centre du grand cœur dessiné.
+      final center = Offset(size.width / 2, size.height * .5);
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.scale(size.width / 70 * b * (1 + .03 * w));
+      canvas.drawPath(heartPath(), Paint()..color = petal.withValues(alpha: .9 * bloom));
+      canvas.restore();
     }
   }
 
@@ -304,17 +300,17 @@ class _EntwinedPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-// ===================================================================== pluie de pétales
+// ===================================================================== pluie de cœurs
 
-/// Pluie de pétales jouée une fois (célébration).
-class PetalBurst extends StatefulWidget {
-  const PetalBurst({super.key});
+/// Pluie de cœurs jouée une fois (célébration).
+class HeartBurst extends StatefulWidget {
+  const HeartBurst({super.key});
 
   @override
-  State<PetalBurst> createState() => _PetalBurstState();
+  State<HeartBurst> createState() => _HeartBurstState();
 }
 
-class _PetalBurstState extends State<PetalBurst> with SingleTickerProviderStateMixin {
+class _HeartBurstState extends State<HeartBurst> with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 4200))
     ..forward();
 
@@ -354,7 +350,7 @@ class _BurstPainter extends CustomPainter {
       final spin = (r.nextDouble() - .5) * 14;
       final drift = (r.nextDouble() - .5) * 60;
       final tt = t * 3.2;
-      // Projection puis chute ralentie, comme des pétales légers.
+      // Projection puis chute ralentie, comme des confettis légers.
       final p =
           origin +
           Offset(
@@ -368,11 +364,7 @@ class _BurstPainter extends CustomPainter {
       canvas.rotate(spin * t);
       final s = .7 + r.nextDouble() * .9;
       canvas.scale(s);
-      final path = Path()
-        ..moveTo(0, 0)
-        ..cubicTo(6, -4, 7, -12, 0, -15)
-        ..cubicTo(-7, -12, -6, -4, 0, 0);
-      canvas.drawPath(path, Paint()..color = colors[i % colors.length].withValues(alpha: a));
+      canvas.drawPath(heartPath(.8), Paint()..color = colors[i % colors.length].withValues(alpha: a));
       canvas.restore();
     }
   }

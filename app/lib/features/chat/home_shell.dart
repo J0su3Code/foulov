@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../theme/foulov_theme.dart';
+import '../space/letters_screen.dart';
+import '../space/nous_screen.dart';
+import '../space/souvenirs_screen.dart';
 import 'chat_screen.dart';
 import 'chat_service.dart';
-import 'seasons_screen.dart';
-import '../dates/dates_screen.dart';
 
-/// L'espace du couple, avec sa barre de navigation (Messages, Saisons, Dates). La barre ne montre que ce qui
-/// fonctionne vraiment.
+/// L'espace du couple et sa barre de navigation : Nous · Messages · Souvenirs · Lettres.
 class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
@@ -28,50 +30,168 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
+  void _go(int i) {
+    if (i == _tab) return;
+    HapticFeedback.selectionClick();
+    setState(() => _tab = i);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      // Les écrans gardent leur état (défilement, saisie en cours) d'un onglet à l'autre.
-      body: IndexedStack(
-        index: _tab,
-        children: [
-          ChatScreen(
-            service: widget.service,
-            since: widget.since,
-            onShowSymbols: widget.onShowSymbols,
-            onSignOut: widget.onSignOut,
-            // « Lu » seulement quand la conversation est vraiment sous les yeux.
-            active: _tab == 0,
-          ),
-          SeasonsScreen(service: widget.service),
-          DatesScreen(service: widget.service),
-        ],
+    final s = widget.service;
+    return PopScope(
+      // Retour depuis un autre onglet : on revient d'abord à « Nous ».
+      canPop: _tab == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _tab = 0);
+      },
+      child: Scaffold(
+        // Les écrans gardent leur état (défilement, saisie en cours) d'un onglet à l'autre.
+        body: IndexedStack(
+          index: _tab,
+          children: [
+            NousScreen(
+              chat: s,
+              onOpenChat: () => _go(1),
+              onOpenLetters: () => _go(3),
+              onShowSymbols: widget.onShowSymbols,
+              onSignOut: widget.onSignOut,
+            ),
+            ChatScreen(
+              service: s,
+              since: widget.since,
+              onShowSymbols: widget.onShowSymbols,
+              onSignOut: widget.onSignOut,
+              // « Lu » seulement quand la conversation est vraiment sous les yeux.
+              active: _tab == 1,
+            ),
+            SouvenirsScreen(chat: s),
+            LettersScreen(chat: s),
+          ],
+        ),
+        bottomNavigationBar: ListenableBuilder(
+          listenable: Listenable.merge([s, s.space]),
+          builder: (context, _) {
+            final unread = s.messages.where((m) => !m.fromMe && m.status == 0 && !m.deleted).length;
+            return _LoveBar(
+              index: _tab,
+              onTap: _go,
+              items: [
+                const _Item(Icons.favorite_border_rounded, Icons.favorite_rounded, 'Nous'),
+                _Item(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Messages', badge: unread),
+                const _Item(Icons.photo_library_outlined, Icons.photo_library_rounded, 'Souvenirs'),
+                _Item(Icons.mail_outline_rounded, Icons.mail_rounded, 'Lettres', badge: s.space.unreadLetters),
+              ],
+            );
+          },
+        ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        height: 66,
-        backgroundColor: cs.surface,
-        indicatorColor: cs.secondary.withValues(alpha: .28),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline_rounded),
-            selectedIcon: Icon(Icons.chat_bubble_rounded),
-            label: 'Messages',
+    );
+  }
+}
+
+class _Item {
+  const _Item(this.icon, this.selected, this.label, {this.badge = 0});
+
+  final IconData icon, selected;
+  final String label;
+  final int badge;
+}
+
+/// Barre du bas : pastille douce sous l'onglet actif, pastille rose pour ce qui attend.
+class _LoveBar extends StatelessWidget {
+  const _LoveBar({required this.index, required this.onTap, required this.items});
+
+  final int index;
+  final ValueChanged<int> onTap;
+  final List<_Item> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(top: BorderSide(color: cs.outline)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 66,
+          child: Row(
+            children: [
+              for (final (i, it) in items.indexed)
+                Expanded(
+                  child: Semantics(
+                    selected: i == index,
+                    button: true,
+                    label: it.badge > 0 ? '${it.label}, ${it.badge} nouveau${it.badge > 1 ? 'x' : ''}' : it.label,
+                    child: InkResponse(
+                      onTap: () => onTap(i),
+                      radius: 40,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                padding: EdgeInsets.symmetric(horizontal: i == index ? 20 : 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: i == index ? context.love.soft : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  i == index ? it.selected : it.icon,
+                                  color: i == index ? cs.primary : cs.onSurfaceVariant,
+                                  size: 24,
+                                ),
+                              ),
+                              if (it.badge > 0)
+                                Positioned(
+                                  right: i == index ? 8 : 2,
+                                  top: -2,
+                                  child: Container(
+                                    constraints: const BoxConstraints(minWidth: 17),
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      color: cs.primary,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: cs.surface, width: 1.5),
+                                    ),
+                                    child: Text(
+                                      it.badge > 99 ? '99+' : '${it.badge}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: cs.onPrimary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            it.label,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: i == index ? FontWeight.w700 : FontWeight.w500,
+                              color: i == index ? cs.onSurface : cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.photo_library_outlined),
-            selectedIcon: Icon(Icons.photo_library_rounded),
-            label: 'Saisons',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.event_outlined),
-            selectedIcon: Icon(Icons.event_rounded),
-            label: 'Dates',
-          ),
-        ],
+        ),
       ),
     );
   }

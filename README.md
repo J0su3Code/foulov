@@ -1,6 +1,6 @@
 # FouLove
 
-L'espace privé d'un couple : messages, photos, souvenirs et un jardin qui pousse avec votre histoire.
+L'espace privé d'un couple, « une bulle à deux » : messages, instants, souvenirs, lettres et capsules, chiffrés de bout en bout.
 Tout est chiffré de bout en bout, sur vos deux téléphones.
 
 > Projet en cours de développement. Rien n'est encore publié sur les stores.

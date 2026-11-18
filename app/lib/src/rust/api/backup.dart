@@ -8,7 +8,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `key`
 
-NewPhrase backupNewPhrase() => RustLib.instance.api.crateApiBackupBackupNewPhrase();
+NewPhrase backupNewPhrase() =>
+    RustLib.instance.api.crateApiBackupBackupNewPhrase();
 
 /// Phrase tapée → secret (erreur si mot inconnu, nombre de mots ou contrôle faux).
 Future<Uint8List> backupPhraseToSecret({required String phrase}) =>
@@ -21,11 +22,15 @@ Future<String> backupSecretToPhrase({required List<int> secret}) =>
 Future<Uint8List> backupExport({required List<int> secret}) =>
     RustLib.instance.api.crateApiBackupBackupExport(secret: secret);
 
-Future<RestoreSummary> backupImport({required List<int> secret, required List<int> data}) =>
+Future<RestoreSummary> backupImport({
+  required List<int> secret,
+  required List<int> data,
+}) =>
     RustLib.instance.api.crateApiBackupBackupImport(secret: secret, data: data);
 
 /// Mot sans accents ni majuscules : pour comparer un mot recopié, quelle que soit la façon de taper les accents.
-String backupPlainWord({required String word}) => RustLib.instance.api.crateApiBackupBackupPlainWord(word: word);
+String backupPlainWord({required String word}) =>
+    RustLib.instance.api.crateApiBackupBackupPlainWord(word: word);
 
 class NewPhrase {
   /// 24 mots séparés par des espaces.
@@ -42,18 +47,28 @@ class NewPhrase {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is NewPhrase && runtimeType == other.runtimeType && phrase == other.phrase && secret == other.secret;
+      other is NewPhrase &&
+          runtimeType == other.runtimeType &&
+          phrase == other.phrase &&
+          secret == other.secret;
 }
 
 class RestoreSummary {
   final int messages;
   final int media;
   final int dates;
+  final int letters;
 
-  const RestoreSummary({required this.messages, required this.media, required this.dates});
+  const RestoreSummary({
+    required this.messages,
+    required this.media,
+    required this.dates,
+    required this.letters,
+  });
 
   @override
-  int get hashCode => messages.hashCode ^ media.hashCode ^ dates.hashCode;
+  int get hashCode =>
+      messages.hashCode ^ media.hashCode ^ dates.hashCode ^ letters.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -62,5 +77,6 @@ class RestoreSummary {
           runtimeType == other.runtimeType &&
           messages == other.messages &&
           media == other.media &&
-          dates == other.dates;
+          dates == other.dates &&
+          letters == other.letters;
 }
