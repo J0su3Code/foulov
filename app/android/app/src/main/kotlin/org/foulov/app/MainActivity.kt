@@ -49,6 +49,11 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     result.success(null)
                 }
+                // Retour depuis l'accueil : l'app passe en arrière-plan (comme le bouton d'accueil) au lieu de se fermer.
+                "background" -> {
+                    moveTaskToBack(true)
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }

@@ -147,6 +147,12 @@ class SpaceService extends ChangeNotifier {
       format: CompressFormat.jpeg,
       keepExif: false,
     );
+    // La copie recadrée (ou celle du sélecteur) est en clair dans le cache : effacée dès qu'on a l'image.
+    if (path.contains('/cache/')) {
+      try {
+        await File(path).delete();
+      } catch (_) {}
+    }
     if (full == null) throw StateError('photo illisible');
     final size = await ChatService.imageSize(full);
     final thumb = await ChatService.thumbnail(full);

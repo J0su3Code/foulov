@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 /// Couleurs de FouLove : « une bulle à deux ».
@@ -218,6 +219,13 @@ abstract final class FouLovTheme {
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
     return base.copyWith(
       extensions: [love],
+      // Transitions douces : retour prédictif d'Android (on voit l'écran précédent pendant le geste), glissé sur iOS.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,

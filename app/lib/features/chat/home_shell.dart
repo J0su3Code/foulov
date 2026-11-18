@@ -31,7 +31,7 @@ class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
   void _go(int i) {
-    if (i == _tab) return;
+    if (i == _tab || !mounted) return;
     HapticFeedback.selectionClick();
     setState(() => _tab = i);
   }
@@ -40,10 +40,16 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final s = widget.service;
     return PopScope(
-      // Retour depuis un autre onglet : on revient d'abord à « Nous ».
-      canPop: _tab == 0,
+      // Retour depuis un autre onglet : on revient d'abord à « Nous » ; depuis « Nous », l'app passe en
+      // arrière-plan sans se fermer (on la retrouve telle quelle).
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) setState(() => _tab = 0);
+        if (didPop) return;
+        if (_tab != 0) {
+          _go(0);
+        } else {
+          const MethodChannel('foulove/notifications').invokeMethod<void>('background').catchError((_) {});
+        }
       },
       child: Scaffold(
         // Les écrans gardent leur état (défilement, saisie en cours) d'un onglet à l'autre.
@@ -64,26 +70,35 @@ class _HomeShellState extends State<HomeShell> {
               onSignOut: widget.onSignOut,
               // « Lu » seulement quand la conversation est vraiment sous les yeux.
               active: _tab == 1,
+              onBack: () => _go(0),
+              bottomInset: MediaQuery.paddingOf(context).bottom,
             ),
             SouvenirsScreen(chat: s),
             LettersScreen(chat: s),
           ],
         ),
-        bottomNavigationBar: ListenableBuilder(
-          listenable: Listenable.merge([s, s.space]),
-          builder: (context, _) {
-            final unread = s.messages.where((m) => !m.fromMe && m.status == 0 && !m.deleted).length;
-            return _LoveBar(
-              index: _tab,
-              onTap: _go,
-              items: [
-                const _Item(Icons.favorite_border_rounded, Icons.favorite_rounded, 'Nous'),
-                _Item(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Messages', badge: unread),
-                const _Item(Icons.photo_library_outlined, Icons.photo_library_rounded, 'Souvenirs'),
-                _Item(Icons.mail_outline_rounded, Icons.mail_rounded, 'Lettres', badge: s.space.unreadLetters),
-              ],
-            );
-          },
+        // Dans la conversation, la barre s'efface : tout le bas est pour la saisie, comme dans une messagerie.
+        bottomNavigationBar: AnimatedSize(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          child: _tab == 1
+              ? const SizedBox(width: double.infinity)
+              : ListenableBuilder(
+                  listenable: Listenable.merge([s, s.space]),
+                  builder: (context, _) {
+                    final unread = s.messages.where((m) => !m.fromMe && m.status == 0 && !m.deleted).length;
+                    return _LoveBar(
+                      index: _tab,
+                      onTap: _go,
+                      items: [
+                        const _Item(Icons.favorite_border_rounded, Icons.favorite_rounded, 'Nous'),
+                        _Item(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Messages', badge: unread),
+                        const _Item(Icons.photo_library_outlined, Icons.photo_library_rounded, 'Souvenirs'),
+                        _Item(Icons.mail_outline_rounded, Icons.mail_rounded, 'Lettres', badge: s.space.unreadLetters),
+                      ],
+                    );
+                  },
+                ),
         ),
       ),
     );

@@ -4,6 +4,7 @@
     <!-- Messages vocaux : demandé seulement au premier enregistrement. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
+        android:enableOnBackInvokedCallback="true"
         android:label="FouLove"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
@@ -49,6 +50,11 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification" />
+            <!-- Recadrage des photos du couple (image_cropper / uCrop). -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
