@@ -133,3 +133,13 @@ pub fn device_mark_verified(partner: String) -> anyhow::Result<()> {
 pub fn device_is_verified(partner: String) -> anyhow::Result<bool> {
     with_device(|d| Ok(d.is_verified(&partner)?))
 }
+
+/// Clé du partenaire en laquelle ce téléphone a confiance (`None` : jamais vue).
+pub fn device_trusted_identity(partner: String) -> anyhow::Result<Option<Vec<u8>>> {
+    with_device(|d| Ok(d.trusted_identity(&partner)?))
+}
+
+/// Accepte la nouvelle clé du partenaire (nouveau téléphone), après comparaison des 7 symboles.
+pub fn device_accept_partner_key(partner: String, identity_key: Vec<u8>) -> anyhow::Result<()> {
+    with_device(|d| Ok(d.accept_partner_key(&partner, &identity_key)?))
+}

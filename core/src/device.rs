@@ -281,6 +281,13 @@ impl Device {
         Ok(self.store.is_verified(&addr(partner))?)
     }
 
+    /// Clé d'identité du partenaire en laquelle ce téléphone a confiance (la première vue, ou celle acceptée
+    /// après une nouvelle vérification). Si le serveur en publie une autre, le partenaire a changé de téléphone.
+    pub fn trusted_identity(&self, partner: &str) -> R<Option<Vec<u8>>> {
+        let k = self.store.identity.get_identity(&addr(partner)).now_or_never().expect("synchrone")?;
+        Ok(k.map(|k| k.serialize().to_vec()))
+    }
+
     /// Accepte une nouvelle clé du partenaire après une nouvelle vérification des symboles.
     pub fn accept_partner_key(&self, partner: &str, identity_key: &[u8]) -> R<()> {
         let k = IdentityKey::decode(identity_key).map_err(|_| DeviceError::BadBundle)?;
