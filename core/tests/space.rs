@@ -271,3 +271,55 @@ fn chiffres_et_sauvegarde() {
 fn foulov_now() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
 }
+
+#[test]
+fn nouveau_telephone_sans_sauvegarde_retrouve_notre_espace() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ines, mut malik) = couple(dir.path());
+    // Leur espace : prénom, date, bio, anniversaire de Malik, une date, une photo du couple, une lettre de chacun.
+    for o in [
+        ines.set_my_name(MALIK, "Inès").unwrap(),
+        ines.set_together_since(MALIK, "2023-03-12").unwrap(),
+        ines.set_setting(MALIK, "bio", "Deux cœurs, une bulle.", false).unwrap(),
+    ] {
+        deliver(&mut ines, &mut malik, INES, &o);
+    }
+    let o = malik.set_setting(INES, "birthday", "09-03", true).unwrap();
+    deliver(&mut malik, &mut ines, MALIK, &o);
+    let up = ines.set_picture(&dir.path().join("i"), "avatar", &[4u8; 200], "image/jpeg", 10, 10, b"a").unwrap();
+    let o = ines.media_uploaded(MALIK, &up.message_id, KEY1).unwrap().unwrap();
+    deliver(&mut ines, &mut malik, INES, &o);
+    let (_, o) = ines.send_letter(MALIK, "De moi", "Pour toi.", None).unwrap();
+    deliver(&mut ines, &mut malik, INES, &o);
+    let (_, o) = malik.send_letter(INES, "De Malik", "Pour Inès.", None).unwrap();
+    deliver(&mut malik, &mut ines, MALIK, &o);
+
+    // Malik change de téléphone, sans sauvegarde : tout est vide chez lui.
+    let mut malik2 = Device::open(&dir.path().join("m2.db"), &[3; 32]).unwrap();
+    malik2.generate_bundle(5).unwrap();
+    let ib = ines.generate_bundle(5).unwrap();
+    malik2.start_session(INES, &view(&ib)).unwrap();
+    let (_, hello) = malik2.send_text(INES, "nouveau téléphone", None).unwrap();
+    assert!(ines.receive(MALIK, &hello.envelope_id, &hello.envelope).is_err(), "clé à revérifier");
+    assert_eq!(ines.resync_if_needed(MALIK).unwrap(), 0, "rien tant que la clé n'est pas acceptée");
+    ines.accept_partner_key(MALIK, &malik2.identity_key().unwrap()).unwrap();
+    ines.receive(MALIK, &hello.envelope_id, &hello.envelope).unwrap();
+
+    // Inès lui renvoie l'espace commun, une seule fois.
+    let n = ines.resync_if_needed(MALIK).unwrap();
+    assert_eq!(n, 5, "prénom, date, bio, photo à deux, sa lettre");
+    assert_eq!(ines.resync_if_needed(MALIK).unwrap(), 0);
+    for o in ines.outbox().unwrap() {
+        malik2.receive(INES, &o.envelope_id, &o.envelope).unwrap();
+        ines.outbox_sent(&o.envelope_id).unwrap();
+    }
+    let p = malik2.profile().unwrap();
+    assert_eq!((p.partner_name.as_deref(), p.together_since.as_deref()), (Some("Inès"), Some("2023-03-12")));
+    assert_eq!(get(&malik2, "s.bio").as_deref(), Some("Deux cœurs, une bulle."));
+    assert_eq!(malik2.pictures().unwrap().len(), 1, "la photo à deux, à retélécharger");
+    let letters = malik2.letters().unwrap();
+    assert_eq!(letters.len(), 1, "seulement les lettres d'Inès (les siennes ne lui reviennent pas comme venant d'elle)");
+    assert!(!letters[0].from_me && letters[0].title == "De moi");
+    // Son propre anniversaire (« p. » chez Inès) n'est pas renvoyé comme s'il était celui d'Inès.
+    assert_eq!(get(&malik2, "p.birthday"), None);
+}

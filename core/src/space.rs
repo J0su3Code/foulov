@@ -934,6 +934,125 @@ impl Device {
     }
 }
 
+impl Device {
+    /// Renvoie au partenaire tout ce qui est commun (après qu'on a accepté la clé de son nouveau téléphone) :
+    /// prénom, date « ensemble depuis », bio, histoire, style, mes valeurs personnelles, dates, albums, photos du
+    /// couple, lettres. Chaque élément garde son horodatage d'origine : chez lui, rien de plus récent n'est écrasé,
+    /// et ce qu'il a déjà est ignoré. L'historique des messages, lui, ne revient que par la sauvegarde (§7).
+    /// Ne fait rien si aucun renvoi n'est en attente. Renvoie le nombre d'éléments envoyés.
+    /// Renvoi demandé à la main (« Renvoyer notre espace » dans les réglages).
+    pub fn resync_now(&mut self, partner: &str) -> R<u32> {
+        kv_set(&self.store.conn.lock(), "resync_pending", Some("1"), now_ms() as u64)?;
+        self.resync_if_needed(partner)
+    }
+
+    pub fn resync_if_needed(&mut self, partner: &str) -> R<u32> {
+        let pending = crate::chat::kv_get(&self.store.conn.lock(), "resync_pending")?.is_some();
+        if !pending {
+            return Ok(0);
+        }
+        let bodies: Vec<pb::Body> = {
+            let c = self.store.conn.lock();
+            let mut out = Vec::new();
+            let kv: Vec<(String, Option<String>, i64)> = {
+                let mut st = c.prepare("SELECT k, v, at FROM kv").map_err(db)?;
+                st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).map_err(db)?.collect::<Result<_, _>>().map_err(db)?
+            };
+            for (k, v, at) in kv {
+                let at = at as u64;
+                match k.as_str() {
+                    "my_name" => {
+                        if let Some(name) = v {
+                            out.push(pb::Body::Profile(pb::Profile { name, updated_at: at }));
+                        }
+                    }
+                    "together_since" => out.push(pb::Body::Couple(pb::Couple { together_since: v.unwrap_or_default(), updated_at: at })),
+                    _ => {
+                        let (personal, key) = match k.split_once('.') {
+                            Some(("s", key)) => (false, key),
+                            Some(("me", key)) => (true, key),
+                            _ => continue,
+                        };
+                        out.push(pb::Body::Setting(pb::Setting { key: key.to_owned(), value: v, updated_at: at, personal }));
+                    }
+                }
+            }
+            let mut st = c.prepare("SELECT id, title, date, yearly, remind_days, updated_at, deleted FROM dates").map_err(db)?;
+            for row in st
+                .query_map([], |r| {
+                    Ok((r.get::<_, String>(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get::<_, Option<i64>>(4)?, r.get::<_, i64>(5)?, r.get(6)?))
+                })
+                .map_err(db)?
+            {
+                let (id, title, date, yearly, remind, at, deleted) = row.map_err(db)?;
+                out.push(pb::Body::Date(pb::DateEntry {
+                    id: wire_id(&id)?,
+                    title,
+                    date,
+                    yearly,
+                    remind_days: remind.map(|x| x as u32),
+                    updated_at: at as u64,
+                    deleted,
+                }));
+            }
+            let heads: Vec<(String, String, i64, bool)> = {
+                let mut st = c.prepare("SELECT id, title, updated_at, deleted FROM albums").map_err(db)?;
+                st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).map_err(db)?.collect::<Result<_, _>>().map_err(db)?
+            };
+            let mut items = c.prepare("SELECT message_id FROM album_items WHERE album_id = ?1 ORDER BY pos").map_err(db)?;
+            for (id, title, at, deleted) in heads {
+                let ids: Vec<String> = items.query_map(params![id], |r| r.get(0)).map_err(db)?.collect::<Result<_, _>>().map_err(db)?;
+                out.push(pb::Body::Album(pb::Album {
+                    id: wire_id(&id)?,
+                    title,
+                    updated_at: at as u64,
+                    deleted,
+                    items: ids.iter().filter_map(|i| unhex(i)).collect(),
+                }));
+            }
+            let pics: Vec<(String, Option<String>, i64)> = {
+                let mut st = c.prepare("SELECT slot, media_id, updated_at FROM pictures").map_err(db)?;
+                st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).map_err(db)?.collect::<Result<_, _>>().map_err(db)?
+            };
+            for (slot, mid, at) in pics {
+                let file = match mid {
+                    Some(m) => match file_ref(&c, &m)? {
+                        Some(f) => Some(f),
+                        None => continue, // pas encore déposée : elle partira normalement après son dépôt
+                    },
+                    None => None,
+                };
+                out.push(pb::Body::Picture(pb::Picture { slot, updated_at: at as u64, file }));
+            }
+            // Seulement les miennes : les siennes lui reviendraient comme venant de moi.
+            let mut st = c.prepare("SELECT id, title, body, sent_at, open_at FROM letters WHERE from_me = 1").map_err(db)?;
+            for row in st
+                .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get(1)?, r.get(2)?, r.get::<_, i64>(3)?, r.get::<_, Option<i64>>(4)?)))
+                .map_err(db)?
+            {
+                let (id, title, body, sent_at, open_at) = row.map_err(db)?;
+                out.push(pb::Body::Letter(pb::Letter {
+                    id: wire_id(&id)?,
+                    sent_at: sent_at as u64,
+                    title,
+                    body,
+                    open_at: open_at.map(|x| x as u64),
+                }));
+            }
+            out
+        };
+        let n = bodies.len() as u32;
+        let tx = self.store.conn.clone();
+        tx.atomically(|| {
+            for b in bodies.clone() {
+                self.enqueue(partner, b, None)?;
+            }
+            self.store.conn.lock().execute("DELETE FROM kv WHERE k = 'resync_pending'", []).map_err(db)?;
+            Ok(n)
+        })
+    }
+}
+
 /// Lit `kind, mime, width, height, duration_ms, thumb, state` à partir de la colonne `i`.
 fn media_info(r: &rusqlite::Row<'_>, i: usize) -> rusqlite::Result<MediaInfo> {
     Ok(MediaInfo {

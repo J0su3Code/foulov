@@ -291,7 +291,9 @@ impl Device {
     /// Accepte une nouvelle clé du partenaire après une nouvelle vérification des symboles.
     pub fn accept_partner_key(&self, partner: &str, identity_key: &[u8]) -> R<()> {
         let k = IdentityKey::decode(identity_key).map_err(|_| DeviceError::BadBundle)?;
-        Ok(self.store.accept_identity_change(&addr(partner), &k)?)
+        self.store.accept_identity_change(&addr(partner), &k)?;
+        // Son nouveau téléphone n'a peut-être rien (pas de sauvegarde) : on lui renverra ce qui est commun (`resync`).
+        crate::chat::kv_set(&self.store.conn.lock(), "resync_pending", Some("1"), crate::chat::now_ms() as u64)
     }
 }
 

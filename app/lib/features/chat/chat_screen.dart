@@ -608,7 +608,7 @@ class _NameNudge extends StatelessWidget {
       decoration: BoxDecoration(color: cs.secondary.withValues(alpha: .14), borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
-          const Text('🌷', style: TextStyle(fontSize: 22)),
+          const Text('💌', style: TextStyle(fontSize: 22)),
           const SizedBox(width: 10),
           const Expanded(child: Text('Dis à ton amour comment tu t\'appelles : ton prénom lui arrivera chiffré.')),
           TextButton(
