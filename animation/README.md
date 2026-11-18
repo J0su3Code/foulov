@@ -1,4 +1,32 @@
-# Intro cinématique FouLove
+# Intros FouLove
+
+## « Une bulle à deux » (actuelle)
+
+`intro_love.py` : deux lumières (rose et or) entrent, dessinent un cœur de leurs traînées, se retrouvent dans une
+étincelle ; le cœur s'illumine et une bulle irisée se gonfle autour de lui, puis monte dans le tiers haut de l'écran
+pour laisser la place au panneau d'accueil. Tout est généré par code ; seul élément externe : l'éclairage de studio
+CC0 « Studio Small 09 » (Poly Haven, Sergej Majboroda), visible seulement dans les reflets de la bulle.
+
+```bash
+./render_all.sh                      # jour puis nuit, 1080×2400, 30 i/s, puis make_video.sh
+./export_app_assets.sh render/love_day.mp4 render/love_night.mp4
+```
+
+Images de contrôle : `blender -b --factory-startup -P intro_love.py -- --theme night --res 360x800 --samples 24 --frames 40,152,225`.
+
+| Images (30 i/s) | Action |
+|---|---|
+| 1–24 | Le fond s'éclaire, des lueurs floues flottent |
+| 10–70 | La lumière rose (gauche) et la lumière or (droite) entrent en traînant une comète |
+| 70 | Elles se touchent à la pointe du cœur : étincelles |
+| 70–150 | Chacune dessine une moitié du cœur |
+| 150 | Retrouvailles au creux du cœur : éclat, le cœur s'illumine |
+| 165–205 | La bulle irisée se gonfle (film de savon : transparence + reflets arc-en-ciel au bord) |
+| 190–225 | La bulle monte dans le tiers haut |
+
+L'icône de l'app vient de `icon_love.py` (mêmes cœur et bulle), puis `dart run flutter_launcher_icons` dans `app/`.
+
+## « Jardin » (ancienne, conservée pour mémoire)
 
 Tout est généré par code : scène, animation, textures des feuilles et des pétales.
 Les seuls éléments externes sont des matières et modèles **CC0** de [Poly Haven](https://polyhaven.com) (sol, herbe, fougères, éclairages HDRI), téléchargés par script.

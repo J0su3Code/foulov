@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../backup/backup_service.dart';
 import '../backup/phrase_screen.dart';
 import '../lock/app_lock.dart';
+import '../../theme/theme_mode.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'chat_service.dart';
 
@@ -25,7 +26,7 @@ class SpaceScreen extends StatelessWidget {
         final p = service.profile;
         final lock = AppLock.instance;
         return Scaffold(
-          appBar: AppBar(title: const Text('Notre espace'), backgroundColor: cs.surface),
+          appBar: AppBar(title: const Text('Réglages'), backgroundColor: cs.surface),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
             children: [
@@ -69,6 +70,24 @@ class SpaceScreen extends StatelessWidget {
                     onTap: () => _pickDate(context, p.togetherSince),
                   ),
                 ],
+              ),
+              const _Section('Apparence'),
+              ValueListenableBuilder(
+                valueListenable: ThemeModeSetting.instance,
+                builder: (context, mode, _) => SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto_outlined),
+                      label: Text('Auto'),
+                    ),
+                    ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text('Jour')),
+                    ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text('Nuit')),
+                  ],
+                  selected: {mode},
+                  onSelectionChanged: (s) => ThemeModeSetting.instance.set(s.first),
+                ),
               ),
               const _Section('Sauvegarde'),
               ListenableBuilder(listenable: BackupService.instance, builder: (context, _) => _BackupCard()),

@@ -374,7 +374,10 @@ class _AlbumsStrip extends StatelessWidget {
                 child: _AlbumCard(chat: chat, album: a),
               ),
             ),
-          SizedBox(width: 72, child: _NewAlbum(chat: chat)),
+          SizedBox(
+            width: chat.space.albums.isEmpty ? 150 : 72,
+            child: _NewAlbum(chat: chat, big: chat.space.albums.isEmpty),
+          ),
         ],
       ),
     ),

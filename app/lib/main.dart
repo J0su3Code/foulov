@@ -13,6 +13,7 @@ import 'features/intro/intro_screen.dart';
 import 'features/lock/app_lock.dart';
 import 'src/rust/frb_generated.dart';
 import 'theme/foulov_theme.dart';
+import 'theme/theme_mode.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ Future<void> main() async {
     authOptions: FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
   );
   await AppLock.instance.init();
+  await ThemeModeSetting.instance.load();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(FouLovApp(auth: AuthService(Supabase.instance.client)));
@@ -37,19 +39,22 @@ class FouLovApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FouLove',
-      debugShowCheckedModeBanner: false,
-      theme: FouLovTheme.jour,
-      darkTheme: FouLovTheme.nuit,
-      themeMode: ThemeMode.system,
-      // Composants système en français (calendrier, menus Copier/Coller…).
-      locale: const Locale('fr'),
-      supportedLocales: const [Locale('fr')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      // Le verrou recouvre tout l'écran (navigation comprise), seulement quand quelqu'un est connecté.
-      builder: (context, child) => LockGate(active: auth.session != null, child: child ?? const SizedBox()),
-      home: _AuthGate(auth: auth),
+    return ValueListenableBuilder(
+      valueListenable: ThemeModeSetting.instance,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'FouLove',
+        debugShowCheckedModeBanner: false,
+        theme: FouLovTheme.jour,
+        darkTheme: FouLovTheme.nuit,
+        themeMode: mode,
+        // Composants système en français (calendrier, menus Copier/Coller…).
+        locale: const Locale('fr'),
+        supportedLocales: const [Locale('fr')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        // Le verrou recouvre tout l'écran (navigation comprise), seulement quand quelqu'un est connecté.
+        builder: (context, child) => LockGate(active: auth.session != null, child: child ?? const SizedBox()),
+        home: _AuthGate(auth: auth),
+      ),
     );
   }
 }

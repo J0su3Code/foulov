@@ -322,7 +322,14 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     if (space.partnerBirthday != null) ('L\'anniversaire de $partnerLabel', space.partnerBirthday!),
   ];
 
-  void rescheduleReminders() => unawaited(Reminders.reschedule(dates, profile.togetherSince, birthdays: birthdays));
+  /// Rappels : son anniversaire la veille (le tien, inutile de te le rappeler).
+  void rescheduleReminders() => unawaited(
+    Reminders.reschedule(
+      dates,
+      profile.togetherSince,
+      birthdays: [if (space.partnerBirthday != null) ('L\'anniversaire de $partnerLabel', space.partnerBirthday!)],
+    ),
+  );
 
   List<DateEntry> dates = const [];
 
