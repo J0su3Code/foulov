@@ -59,6 +59,7 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && (_last?.keyChanged ?? false)) _reload();
   }
+
   // Après avoir rejoint par QR code, ce téléphone est déjà vérifié, mais il affiche quand même les symboles :
   // le partenaire en a besoin pour vérifier de son côté.
   bool _showSymbols = false;
@@ -184,7 +185,7 @@ class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: PetalBackground(
+    body: LoveBackground(
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -248,7 +249,7 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PetalBackground(
+      body: LoveBackground(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
@@ -262,10 +263,10 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
                 const Spacer(),
                 const Center(child: EntwinedHeart(size: 230)),
                 const SizedBox(height: 18),
-                Text('Deux tiges,\nun seul jardin.', style: _title(context), textAlign: TextAlign.center),
+                Text('Deux cœurs,\nune seule bulle.', style: _title(context), textAlign: TextAlign.center),
                 const SizedBox(height: 10),
                 Text(
-                  'Crée votre espace et invite la personne que tu aimes, ou rejoins celui qu\'elle a déjà planté.',
+                  'Crée votre bulle et invite la personne que tu aimes, ou rejoins celle qu\'elle a déjà créée.',
                   style: _soft(context),
                   textAlign: TextAlign.center,
                 ),
@@ -274,8 +275,8 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
                   const Center(child: CircularProgressIndicator())
                 else ...[
                   FilledButton.icon(
-                    icon: const Icon(Icons.spa_outlined),
-                    label: const Text('Créer notre espace'),
+                    icon: const Icon(Icons.favorite_rounded),
+                    label: const Text('Créer notre bulle'),
                     onPressed: _create,
                   ),
                   const SizedBox(height: 8),
@@ -374,7 +375,7 @@ class _InviteScreenState extends State<InviteScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: PetalBackground(
+      body: LoveBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -547,7 +548,7 @@ class _JoinScreenState extends State<JoinScreen> {
     final normalized = _code.text.toUpperCase().replaceAll(RegExp(r'[^0-9A-Z]'), '');
     return Scaffold(
       appBar: AppBar(backgroundColor: Colors.transparent, title: const Text('Rejoindre')),
-      body: PetalBackground(
+      body: LoveBackground(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
@@ -687,7 +688,7 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: PetalBackground(
+      body: LoveBackground(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
@@ -807,7 +808,7 @@ class CelebrationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PetalBackground(
+      body: LoveBackground(
         count: 24,
         child: Stack(
           children: [
@@ -820,7 +821,7 @@ class CelebrationScreen extends StatelessWidget {
                     const Spacer(),
                     const Center(child: EntwinedHeart(size: 240)),
                     const SizedBox(height: 18),
-                    Text('Votre jardin est né.', style: _title(context), textAlign: TextAlign.center),
+                    Text('Votre bulle est née.', style: _title(context), textAlign: TextAlign.center),
                     const SizedBox(height: 10),
                     Text(
                       'Désormais, tout ce que vous vous envoyez est chiffré sur vos deux téléphones. Rien que vous deux.',
@@ -830,13 +831,13 @@ class CelebrationScreen extends StatelessWidget {
                     const Spacer(),
                     FilledButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Entrer dans notre jardin'),
+                      child: const Text('Entrer dans notre bulle'),
                     ),
                   ],
                 ),
               ),
             ),
-            const Positioned.fill(child: PetalBurst()),
+            const Positioned.fill(child: HeartBurst()),
           ],
         ),
       ),

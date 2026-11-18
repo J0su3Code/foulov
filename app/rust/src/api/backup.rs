@@ -41,13 +41,14 @@ pub struct RestoreSummary {
     pub messages: u32,
     pub media: u32,
     pub dates: u32,
+    pub letters: u32,
 }
 
 pub fn backup_import(secret: Vec<u8>, data: Vec<u8>) -> anyhow::Result<RestoreSummary> {
     let k = key(secret)?;
     with_device(|d| {
         let s = d.import_backup(&k, &data)?;
-        Ok(RestoreSummary { messages: s.messages, media: s.media, dates: s.dates })
+        Ok(RestoreSummary { messages: s.messages, media: s.media, dates: s.dates, letters: s.letters })
     })
 }
 

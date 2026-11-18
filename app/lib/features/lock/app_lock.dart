@@ -149,7 +149,7 @@ class _LockScreenState extends State<_LockScreen> {
     final t = Theme.of(context);
     return Material(
       color: t.colorScheme.surface,
-      child: PetalBackground(
+      child: LoveBackground(
         count: 10,
         child: SafeArea(
           child: Padding(
@@ -161,7 +161,7 @@ class _LockScreenState extends State<_LockScreen> {
                 const Center(child: EntwinedHeart(size: 170)),
                 const SizedBox(height: 18),
                 Text(
-                  'Votre jardin est fermé à clé',
+                  'Votre bulle est fermée à clé',
                   textAlign: TextAlign.center,
                   style: t.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),

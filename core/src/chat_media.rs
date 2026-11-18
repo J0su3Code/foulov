@@ -28,6 +28,74 @@ pub const KIND_VOICE: u8 = 3;
 pub const MAX_MEDIA_BYTES: u64 = 220 * 1024 * 1024;
 /// Plafond de la miniature, qui voyage dans le message chiffré.
 pub const MAX_THUMB_BYTES: usize = 64 * 1024;
+
+/// À quoi sert un fichier chiffré (colonne `media.purpose`).
+pub(crate) const FOR_MESSAGE: i64 = 0;
+pub(crate) const FOR_PICTURE: i64 = 1;
+pub(crate) const FOR_MOMENT: i64 = 2;
+
+/// Vérifie la description d'un fichier reçu (nom d'objet, clé, empreinte, taille, type, miniature).
+pub(crate) fn valid_file(f: &pb::FileRef, kinds: &[u8]) -> bool {
+    u8::try_from(f.kind).is_ok_and(|k| kinds.contains(&k) && check_meta(k, &f.mime, &f.thumb, "", f.width, f.height))
+        && valid_object_key(&f.object_key)
+        && f.file_key.len() == 32
+        && f.sha256.len() == 32
+        && f.size > 0
+        && f.size <= MAX_MEDIA_BYTES
+}
+
+/// Enregistre un fichier reçu, à télécharger (état 2).
+pub(crate) fn insert_remote(c: &rusqlite::Connection, id: &str, f: &pb::FileRef, purpose: i64) -> R<()> {
+    c.execute(
+        "INSERT OR REPLACE INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms,
+           thumb, path, state, purpose) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, 2, ?12)",
+        params![id, f.kind, f.object_key, f.file_key, f.sha256, f.size as i64, f.mime, f.width, f.height, f.duration_ms, f.thumb, purpose],
+    )
+    .map_err(db)?;
+    Ok(())
+}
+
+/// Description d'un fichier déjà déposé sur R2, pour l'envoyer au partenaire.
+pub(crate) fn file_ref(c: &rusqlite::Connection, id: &str) -> R<Option<pb::FileRef>> {
+    c.query_row(
+        "SELECT kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb FROM media
+         WHERE message_id = ?1 AND object_key IS NOT NULL",
+        params![id],
+        |r| {
+            Ok(pb::FileRef {
+                kind: r.get::<_, i64>(0)? as u32,
+                object_key: r.get(1)?,
+                file_key: r.get(2)?,
+                sha256: r.get(3)?,
+                size: r.get::<_, i64>(4)? as u64,
+                mime: r.get(5)?,
+                width: r.get::<_, i64>(6)? as u32,
+                height: r.get::<_, i64>(7)? as u32,
+                duration_ms: r.get::<_, i64>(8)? as u32,
+                thumb: r.get(9)?,
+            })
+        },
+    )
+    .optional()
+    .map_err(db)
+}
+
+/// Retire un fichier : le chiffré local est effacé ; si `trash`, son objet R2 est mis à la corbeille.
+pub(crate) fn drop_file(c: &rusqlite::Connection, id: &str, trash: bool) -> R<()> {
+    let row: Option<(Option<String>, Option<String>)> = c
+        .query_row("SELECT path, object_key FROM media WHERE message_id = ?1", params![id], |r| Ok((r.get(0)?, r.get(1)?)))
+        .optional()
+        .map_err(db)?;
+    let Some((path, key)) = row else { return Ok(()) };
+    if let Some(p) = path {
+        let _ = fs::remove_file(p);
+    }
+    if let (true, Some(k)) = (trash, key) {
+        c.execute("INSERT OR IGNORE INTO r2_trash (object_key) VALUES (?1)", params![k]).map_err(db)?;
+    }
+    c.execute("DELETE FROM media WHERE message_id = ?1", params![id]).map_err(db)?;
+    Ok(())
+}
 const MIMES: &[&str] =
     &["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4", "video/quicktime", "audio/mp4", "audio/aac"];
 
@@ -64,7 +132,7 @@ fn invalid(what: &str) -> DeviceError {
 }
 
 /// Nom d'objet attribué par le serveur : « c/<couple>/<32 hex> ».
-fn valid_object_key(k: &str) -> bool {
+pub(crate) fn valid_object_key(k: &str) -> bool {
     let parts: Vec<&str> = k.split('/').collect();
     parts.len() == 3
         && parts[0] == "c"
@@ -74,7 +142,7 @@ fn valid_object_key(k: &str) -> bool {
         && parts[2].chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
 }
 
-fn check_meta(kind: u8, mime: &str, thumb: &[u8], caption: &str, w: u32, h: u32) -> bool {
+pub(crate) fn check_meta(kind: u8, mime: &str, thumb: &[u8], caption: &str, w: u32, h: u32) -> bool {
     let family = match kind {
         KIND_PHOTO => "image/",
         KIND_VIDEO => "video/",
@@ -90,13 +158,13 @@ fn check_meta(kind: u8, mime: &str, thumb: &[u8], caption: &str, w: u32, h: u32)
 }
 
 /// Écriture sûre : fichier temporaire puis renommage (jamais de fichier à moitié écrit sous le nom final).
-fn write_atomic(path: &Path, data: &[u8]) -> std::io::Result<()> {
+pub(crate) fn write_atomic(path: &Path, data: &[u8]) -> std::io::Result<()> {
     let tmp = path.with_extension("tmp");
     fs::write(&tmp, data)?;
     fs::rename(&tmp, path)
 }
 
-fn io(e: std::io::Error) -> DeviceError {
+pub(crate) fn io(e: std::io::Error) -> DeviceError {
     DeviceError::Protocol(format!("fichier : {e}"))
 }
 
@@ -226,10 +294,83 @@ impl Device {
         }
     }
 
-    /// Le chiffré est sur R2 sous `object_key` : envoie le message chiffré au partenaire.
-    pub fn media_uploaded(&mut self, partner: &str, message_id: &str, object_key: &str) -> R<Outgoing> {
+    /// Chiffre un fichier qui n'est pas un message (photo du couple, instant) et le garde dans `dir`, « à envoyer ».
+    /// `src` : chemin d'un fichier en clair (vidéo), sinon `plain`.
+    pub(crate) fn create_file(
+        &mut self,
+        dir: &Path,
+        id: &str,
+        plain: Option<&[u8]>,
+        src: Option<&Path>,
+        m: &NewMedia<'_>,
+        purpose: i64,
+    ) -> R<PendingUpload> {
+        if !check_meta(m.kind, m.mime, m.thumb, "", m.width, m.height) {
+            return Err(invalid("type ou miniature"));
+        }
+        fs::create_dir_all(dir).map_err(io)?;
+        let path: PathBuf = dir.join(format!("{id}.flm"));
+        let (key, sha, size) = match (plain, src) {
+            (Some(p), _) if !p.is_empty() && media::ciphertext_len(p.len() as u64) <= MAX_MEDIA_BYTES => {
+                let enc = media::encrypt(p).map_err(|e| invalid(&e.to_string()))?;
+                write_atomic(&path, &enc.ciphertext).map_err(io)?;
+                (enc.key, enc.sha256, enc.ciphertext.len() as u64)
+            }
+            (None, Some(s)) => {
+                let len = fs::metadata(s).map_err(io)?.len();
+                if len == 0 || media::ciphertext_len(len) > MAX_MEDIA_BYTES {
+                    return Err(invalid("fichier vide ou trop volumineux"));
+                }
+                let enc = media::encrypt_file(s, &path).map_err(|e| invalid(&e.to_string()))?;
+                (enc.key, enc.sha256, enc.size)
+            }
+            _ => return Err(invalid("fichier vide ou trop volumineux")),
+        };
+        let path_s = path.to_string_lossy().into_owned();
+        let r = self.store.conn.lock().execute(
+            "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state, purpose)
+             VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 0, ?12)",
+            params![id, m.kind, key.to_vec(), sha.to_vec(), size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb, path_s, purpose],
+        );
+        if let Err(e) = r {
+            let _ = fs::remove_file(&path);
+            return Err(db(e));
+        }
+        Ok(PendingUpload { message_id: id.to_owned(), path: path_s, size })
+    }
+
+    /// Le chiffré est sur R2 sous `object_key` : envoie au partenaire ce qu'il décrit (message, photo du couple,
+    /// instant). `None` : plus rien à envoyer (photo remplacée entre-temps, instant retiré ou expiré).
+    pub fn media_uploaded(&mut self, partner: &str, message_id: &str, object_key: &str) -> R<Option<Outgoing>> {
         if !valid_object_key(object_key) {
             return Err(invalid("nom d'objet"));
+        }
+        let row: Option<(i64, i64)> = self
+            .store
+            .conn
+            .lock()
+            .query_row("SELECT purpose, state FROM media WHERE message_id = ?1", params![message_id], |r| Ok((r.get(0)?, r.get(1)?)))
+            .optional()
+            .map_err(db)?;
+        let purpose = match row {
+            // Retiré pendant le dépôt (photo remplacée, instant supprimé) : l'objet déposé ne sert plus.
+            None => {
+                self.store
+                    .conn
+                    .lock()
+                    .execute("INSERT OR IGNORE INTO r2_trash (object_key) VALUES (?1)", params![object_key])
+                    .map_err(db)?;
+                return Ok(None);
+            }
+            Some((p, 0)) => Some(p),
+            Some(_) => None,
+        };
+        match purpose {
+            None => return Err(invalid("rien à envoyer pour ce fichier")),
+            Some(FOR_PICTURE) => return self.picture_uploaded(partner, message_id, object_key),
+            Some(FOR_MOMENT) => return self.moment_uploaded(partner, message_id, object_key),
+            Some(FOR_MESSAGE) => {}
+            Some(_) => return Err(invalid("usage inconnu")),
         }
         let tx = self.store.conn.clone();
         tx.atomically(|| {
@@ -270,14 +411,14 @@ impl Device {
                 )
                 .map_err(db)?
             };
-            self.enqueue(partner, pb::Body::Media(row), Some(message_id))
+            self.enqueue(partner, pb::Body::Media(row), Some(message_id)).map(Some)
         })
     }
 
     /// Photos et vidéos créées mais pas encore déposées (l'app s'est arrêtée, coupure réseau).
     pub fn pending_uploads(&self) -> R<Vec<PendingUpload>> {
         let c = self.store.conn.lock();
-        let mut st = c.prepare("SELECT message_id, path, size FROM media WHERE state = 0 AND path IS NOT NULL").map_err(db)?;
+        let mut st = c.prepare("SELECT message_id, path, size FROM media WHERE state = 0 AND path IS NOT NULL ORDER BY rowid").map_err(db)?;
         let rows = st
             .query_map([], |r| Ok(PendingUpload { message_id: r.get(0)?, path: r.get(1)?, size: r.get::<_, i64>(2)? as u64 }))
             .map_err(db)?;
@@ -339,14 +480,14 @@ impl Device {
         Ok(true)
     }
 
-    /// Toutes les photos et vidéos (onglet Saisons ; les messages vocaux n'y figurent pas), de la plus récente à la plus ancienne, par pages.
-    /// `kind` : 1 photos, 2 vidéos, `None` les deux. Les médias illisibles (altérés) sont exclus.
+    /// Toutes les photos et vidéos (onglet Souvenirs ; les vocaux seulement avec `kind` = 3), de la plus récente à la plus ancienne, par pages.
+    /// `kind` : 1 photos, 2 vidéos, 3 vocaux, `None` photos et vidéos. Les médias illisibles (altérés) sont exclus.
     pub fn media_gallery(&self, before: Option<(i64, String)>, limit: u32, kind: Option<u8>) -> R<Vec<ChatMessage>> {
         let c = self.store.conn.lock();
         let (sa, id) = before.unwrap_or((i64::MAX, String::new()));
         let mut st = c
             .prepare(&format!(
-                "{SELECT} WHERE md.kind IN (1, 2) AND md.state != 3 AND (?4 IS NULL OR md.kind = ?4)
+                "{SELECT} WHERE md.state != 3 AND m.deleted = 0 AND ((?4 IS NULL AND md.kind IN (1, 2)) OR md.kind = ?4)
                  AND (m.sent_at, m.id) < (?1, ?2) ORDER BY m.sent_at DESC, m.id DESC LIMIT ?3"
             ))
             .map_err(db)?;

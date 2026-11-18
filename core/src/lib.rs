@@ -11,6 +11,7 @@ pub mod dates;
 pub mod device;
 pub mod media;
 pub mod sas;
+pub mod space;
 pub mod store;
 
 pub use libsignal_protocol;

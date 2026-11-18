@@ -10,6 +10,10 @@ import '../../src/rust/api/chat.dart';
 import '../../theme/foulov_theme.dart';
 import '../../ui/love.dart';
 import 'chat_service.dart';
+import '../space/moments.dart';
+import '../space/personalize_screen.dart';
+import '../space/widgets.dart';
+import 'bubble_look.dart';
 import 'space_screen.dart';
 import 'voice.dart';
 import 'media_viewer.dart';
@@ -59,6 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _newest = _s.messages.firstOrNull?.id;
     _s.addListener(_changed);
+    _s.space.addListener(_changed);
     _s.visible = widget.active;
     _scroll.addListener(_onScroll);
     _input.addListener(() {
@@ -79,6 +84,7 @@ class _ChatScreenState extends State<ChatScreen> {
     unawaited(VoicePlayback.instance.stop());
     _s.visible = false;
     _s.removeListener(_changed);
+    _s.space.removeListener(_changed);
     _input.dispose();
     _focus.dispose();
     _scroll.dispose();
@@ -362,95 +368,106 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final msgs = _s.messages;
-    return Scaffold(
-      backgroundColor: cs.surface,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _Header(service: _s, since: widget.since, onShowSymbols: widget.onShowSymbols, onSignOut: widget.onSignOut),
-            if (_s.profile.myName == null)
-              _NameNudge(service: _s, onShowSymbols: widget.onShowSymbols, onSignOut: widget.onSignOut),
-            if (_s.partnerKeyChanged) _KeyChanged(onVerify: widget.onShowSymbols),
-            Expanded(
-              child: Stack(
-                children: [
-                  if (msgs.isEmpty)
-                    const _Empty()
-                  else
-                    ListView.builder(
-                      controller: _scroll,
-                      reverse: true,
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                      itemCount: msgs.length + 1 + (_s.partnerTyping ? 1 : 0),
-                      itemBuilder: (context, i) {
-                        // Les trois points de « écrit… », tout en bas de la conversation.
-                        if (_s.partnerTyping) {
-                          if (i == 0) return const _TypingBubble();
-                          i -= 1;
-                        }
-                        if (i == msgs.length) return _s.hasMore ? const _Loading() : const _E2EBadge();
-                        final m = msgs[i];
-                        final older = i + 1 < msgs.length ? msgs[i + 1] : null;
-                        final newer = i > 0 ? msgs[i - 1] : null;
-                        final newDay = older == null || !_sameDay(older.sentAt, m.sentAt);
-                        final groupTop = newDay || older.fromMe != m.fromMe || m.sentAt - older.sentAt > 180000;
-                        final groupBottom =
-                            newer == null ||
-                            newer.fromMe != m.fromMe ||
-                            newer.sentAt - m.sentAt > 180000 ||
-                            !_sameDay(newer.sentAt, m.sentAt);
-                        final bubble = _Bubble(
-                          key: ValueKey(m.id),
-                          m: m,
-                          service: _s,
-                          groupTop: groupTop,
-                          groupBottom: groupBottom,
-                          entering: _entering.remove(m.id),
-                          onReply: () => _reply(m),
-                          onActions: () => _actions(m),
-                          onLove: () => _s.react(m.id, '❤️'),
-                        );
-                        return newDay ? Column(children: [_DaySeparator(m.sentAt), bubble]) : bubble;
-                      },
-                    ),
-                  Positioned(
-                    right: 16,
-                    bottom: 12,
-                    child: AnimatedScale(
-                      scale: _showJump ? 1 : 0,
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutBack,
-                      child: FloatingActionButton.small(
-                        heroTag: null,
-                        elevation: 2,
-                        backgroundColor: cs.surfaceContainer,
-                        foregroundColor: cs.onSurface,
-                        onPressed: _toBottom,
-                        child: const Icon(Icons.keyboard_arrow_down_rounded),
+    return BubbleLook.from(
+      _s.space,
+      child: Scaffold(
+        backgroundColor: cs.surface,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _Header(
+                service: _s,
+                since: widget.since,
+                onShowSymbols: widget.onShowSymbols,
+                onSignOut: widget.onSignOut,
+              ),
+              if (_s.profile.myName == null)
+                _NameNudge(service: _s, onShowSymbols: widget.onShowSymbols, onSignOut: widget.onSignOut),
+              if (_s.partnerKeyChanged) _KeyChanged(onVerify: widget.onShowSymbols),
+              Expanded(
+                child: ChatWallpaper(
+                  space: _s.space,
+                  child: Stack(
+                    children: [
+                      if (msgs.isEmpty)
+                        const _Empty()
+                      else
+                        ListView.builder(
+                          controller: _scroll,
+                          reverse: true,
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                          itemCount: msgs.length + 1 + (_s.partnerTyping ? 1 : 0),
+                          itemBuilder: (context, i) {
+                            // Les trois points de « écrit… », tout en bas de la conversation.
+                            if (_s.partnerTyping) {
+                              if (i == 0) return const _TypingBubble();
+                              i -= 1;
+                            }
+                            if (i == msgs.length) return _s.hasMore ? const _Loading() : const _E2EBadge();
+                            final m = msgs[i];
+                            final older = i + 1 < msgs.length ? msgs[i + 1] : null;
+                            final newer = i > 0 ? msgs[i - 1] : null;
+                            final newDay = older == null || !_sameDay(older.sentAt, m.sentAt);
+                            final groupTop = newDay || older.fromMe != m.fromMe || m.sentAt - older.sentAt > 180000;
+                            final groupBottom =
+                                newer == null ||
+                                newer.fromMe != m.fromMe ||
+                                newer.sentAt - m.sentAt > 180000 ||
+                                !_sameDay(newer.sentAt, m.sentAt);
+                            final bubble = _Bubble(
+                              key: ValueKey(m.id),
+                              m: m,
+                              service: _s,
+                              groupTop: groupTop,
+                              groupBottom: groupBottom,
+                              entering: _entering.remove(m.id),
+                              onReply: () => _reply(m),
+                              onActions: () => _actions(m),
+                              onLove: () => _s.react(m.id, '❤️'),
+                            );
+                            return newDay ? Column(children: [_DaySeparator(m.sentAt), bubble]) : bubble;
+                          },
+                        ),
+                      Positioned(
+                        right: 16,
+                        bottom: 12,
+                        child: AnimatedScale(
+                          scale: _showJump ? 1 : 0,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutBack,
+                          child: FloatingActionButton.small(
+                            heroTag: null,
+                            elevation: 2,
+                            backgroundColor: cs.surfaceContainer,
+                            foregroundColor: cs.onSurface,
+                            onPressed: _toBottom,
+                            child: const Icon(Icons.keyboard_arrow_down_rounded),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            ListenableBuilder(
-              listenable: _recorder,
-              builder: (context, _) => _Composer(
-                recorder: _recorder,
-                onMic: _startVoice,
-                onVoiceSend: _sendVoice,
-                onVoiceCancel: _recorder.cancel,
-                controller: _input,
-                focus: _focus,
-                replyTo: _replyTo,
-                onCancelReply: () => setState(() => _replyTo = null),
-                onSend: _send,
-                onPhoto: _pickPhoto,
+              ListenableBuilder(
+                listenable: _recorder,
+                builder: (context, _) => _Composer(
+                  recorder: _recorder,
+                  onMic: _startVoice,
+                  onVoiceSend: _sendVoice,
+                  onVoiceCancel: _recorder.cancel,
+                  controller: _input,
+                  focus: _focus,
+                  replyTo: _replyTo,
+                  onCancelReply: () => setState(() => _replyTo = null),
+                  onSend: _send,
+                  onPhoto: _pickPhoto,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -494,89 +511,81 @@ class _Header extends StatelessWidget {
   final VoidCallback onShowSymbols;
   final VoidCallback onSignOut;
 
-  void _open(BuildContext context) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => SpaceScreen(service: service, onShowSymbols: onShowSymbols, onSignOut: onSignOut),
-    ),
-  );
+  void _push(BuildContext context, Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final space = service.space;
     final together = daysTogether(service.profile.togetherSince);
-    final garden = since == null ? null : DateTime.now().difference(since!).inDays + 1;
-    final subtitle = together != null
-        ? (together == 1 ? 'Premier jour ensemble' : '$together jours ensemble')
-        : (garden == null ? null : 'Jour $garden de votre jardin');
+    final subtitle = together == null
+        ? null
+        : (together <= 1 ? 'Premier jour ensemble' : '${frNumber(together)} jours ensemble');
     return Material(
       color: cs.surface,
-      child: InkWell(
-        onTap: () => _open(context),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 8, 4, 10),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: cs.outline)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [cs.secondary.withValues(alpha: .35), cs.secondary]),
-                ),
-                child: const Center(child: Text('💞', style: TextStyle(fontSize: 20))),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 6, 4, 8),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: cs.outline)),
+        ),
+        child: Row(
+          children: [
+            CoupleAvatar(
+              space: space,
+              size: 38,
+              ring: space.theirsUnseen,
+              onTap: space.theirs.isEmpty ? null : () => openMoments(context, space, mine: false),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    service.partnerLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  // « écrit… » ou « en ligne » d'abord ; sinon vos jours ensemble.
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: service.partnerTyping
+                        ? Text(
+                            'écrit…',
+                            key: const ValueKey('t'),
+                            style: TextStyle(fontSize: 12.5, color: cs.primary, fontWeight: FontWeight.w600),
+                          )
+                        : service.partnerOnline
+                        ? Text(
+                            'en ligne',
+                            key: const ValueKey('o'),
+                            style: TextStyle(fontSize: 12.5, color: context.love.ok),
+                          )
+                        : subtitle == null
+                        ? const SizedBox.shrink()
+                        : Text(
+                            subtitle,
+                            key: const ValueKey('d'),
+                            style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
+                          ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      service.partnerLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    // « écrit… » ou « en ligne » d'abord ; sinon vos jours ensemble.
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: service.partnerTyping
-                          ? Text(
-                              'écrit…',
-                              key: const ValueKey('t'),
-                              style: TextStyle(fontSize: 12.5, color: cs.secondary, fontWeight: FontWeight.w600),
-                            )
-                          : service.partnerOnline
-                          ? Text(
-                              'en ligne',
-                              key: const ValueKey('o'),
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFF7FE0C2)
-                                    : const Color(0xFF2E8F6E),
-                              ),
-                            )
-                          : subtitle == null
-                          ? const SizedBox.shrink()
-                          : Text(
-                              subtitle,
-                              key: const ValueKey('d'),
-                              style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.tune_rounded),
-                tooltip: 'Notre espace',
-                onPressed: () => _open(context),
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.palette_outlined),
+              tooltip: 'Personnaliser',
+              onPressed: () => _push(context, PersonalizeScreen(space: space)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.tune_rounded),
+              tooltip: 'Réglages',
+              onPressed: () =>
+                  _push(context, SpaceScreen(service: service, onShowSymbols: onShowSymbols, onSignOut: onSignOut)),
+            ),
+          ],
         ),
       ),
     );
@@ -718,7 +727,7 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     // Défilable : avec le clavier ouvert, la place se réduit et le cœur rapetisse.
-    return PetalBackground(
+    return LoveBackground(
       count: 10,
       child: LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
@@ -732,7 +741,7 @@ class _Empty extends StatelessWidget {
                   children: [
                     EntwinedHeart(size: box.maxHeight < 520 ? 110 : 170),
                     const SizedBox(height: 16),
-                    Text('Votre jardin est prêt', style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    Text('Votre bulle est prête', style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     Text(
                       'Écris le premier mot doux. Il sera chiffré sur ce téléphone, et seul celui de ton amour pourra le lire.',
@@ -807,7 +816,8 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
     final cs = t.colorScheme;
     final night = t.brightness == Brightness.dark;
     final mine = m.fromMe;
-    const r = Radius.circular(20), tail = Radius.circular(6);
+    final look = BubbleLook.of(context);
+    final r = look.radius, tail = look.tail;
     // Coin resserré côté expéditeur ; en milieu de groupe, les bulles se « tiennent » par ce côté.
     final radius = BorderRadius.only(
       topLeft: !mine && !widget.groupTop ? tail : r,
@@ -815,7 +825,7 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
       bottomLeft: mine ? r : tail,
       bottomRight: mine ? tail : r,
     );
-    final fg = mine ? (night ? const Color(0xFF2A0B16) : cs.onPrimary) : cs.onSurface;
+    final fg = look.fg(context, mine);
     final reaction = [m.theirReaction, m.myReaction].whereType<String>().toSet();
 
     Widget bubble = m.media?.kind == 3
@@ -825,16 +835,12 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
         : Container(
             constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 7),
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              color: mine ? (night ? null : cs.primary) : (night ? FouLovColors.velours2 : cs.surfaceContainer),
-              gradient: mine && night ? const LinearGradient(colors: [Color(0xFFFFB08A), Color(0xFFFF7895)]) : null,
-              border: mine ? null : Border.all(color: cs.outline),
-            ),
+            decoration: BubbleLook.of(context).box(context, fromMe: mine, radius: radius),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (m.quote != null) _MomentQuote(q: m.quote!, mine: mine, fg: fg),
                 if (m.replyTo != null) _Quote(id: m.replyTo!, service: widget.service, mine: mine, fg: fg),
                 Wrap(
                   alignment: WrapAlignment.end,
@@ -996,18 +1002,70 @@ class _Status extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final night = Theme.of(context).brightness == Brightness.dark;
     final (icon, color, label) = switch (status) {
       0 => (Icons.schedule_rounded, fg.withValues(alpha: .55), 'en attente'),
       1 => (Icons.check_rounded, fg.withValues(alpha: .7), 'envoyé'),
       2 => (Icons.done_all_rounded, fg.withValues(alpha: .7), 'distribué'),
-      _ => (Icons.done_all_rounded, night ? const Color(0xFF2A0B16) : cs.secondary, 'lu'),
+      _ => (Icons.done_all_rounded, fg, 'lu'),
     };
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
       transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
       child: Icon(icon, key: ValueKey(status), size: 15, color: color, semanticLabel: label),
+    );
+  }
+}
+
+/// Réponse à un instant : sa miniature (ou son texte) et « Ton instant » / « Son instant ».
+class _MomentQuote extends StatelessWidget {
+  const _MomentQuote({required this.q, required this.mine, required this.fg});
+
+  final Quote q;
+  final bool mine;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(color: fg.withValues(alpha: .10), borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: q.thumb.isNotEmpty
+                ? Image.memory(q.thumb, width: 34, height: 46, fit: BoxFit.cover)
+                : Container(
+                    width: 34,
+                    height: 46,
+                    decoration: BoxDecoration(gradient: LinearGradient(colors: MomentStyles.of(0))),
+                    child: const Icon(Icons.format_quote_rounded, color: Colors.white, size: 18),
+                  ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  mine ? 'Réponse à son instant' : 'Réponse à ton instant',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg.withValues(alpha: .85)),
+                ),
+                if (q.text.isNotEmpty)
+                  Text(
+                    q.text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12.5, color: fg.withValues(alpha: .75)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1244,7 +1302,6 @@ class _MediaBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final md = m.media!;
     final width = min(MediaQuery.sizeOf(context).width * .68, 280.0);
     final aspect = md.width > 0 && md.height > 0 ? (md.width / md.height).clamp(.62, 1.8) : 1.0;
@@ -1262,12 +1319,7 @@ class _MediaBubble extends StatelessWidget {
     return Container(
       width: width,
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        color: mine ? (night ? null : cs.primary) : (night ? FouLovColors.velours2 : cs.surfaceContainer),
-        gradient: mine && night ? const LinearGradient(colors: [Color(0xFFFFB08A), Color(0xFFFF7895)]) : null,
-        border: mine ? null : Border.all(color: cs.outline),
-      ),
+      decoration: BubbleLook.of(context).box(context, fromMe: mine, radius: radius),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -1482,7 +1534,6 @@ class _TypingBubbleState extends State<_TypingBubble> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final night = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Align(
@@ -1491,14 +1542,14 @@ class _TypingBubbleState extends State<_TypingBubble> with SingleTickerProviderS
           label: 'Ton amour est en train d\'écrire',
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: night ? FouLovColors.velours2 : cs.surfaceContainer,
-              border: Border.all(color: cs.outline),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                bottomLeft: Radius.circular(6),
+            decoration: BubbleLook.of(context).box(
+              context,
+              fromMe: false,
+              radius: BorderRadius.only(
+                topLeft: BubbleLook.of(context).radius,
+                topRight: BubbleLook.of(context).radius,
+                bottomRight: BubbleLook.of(context).radius,
+                bottomLeft: BubbleLook.of(context).tail,
               ),
             ),
             child: AnimatedBuilder(
@@ -1647,12 +1698,7 @@ class _VoiceBubble extends StatelessWidget {
         return Container(
           width: min(MediaQuery.sizeOf(context).width * .72, 300.0),
           padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            color: mine ? (night ? null : cs.primary) : (night ? FouLovColors.velours2 : cs.surfaceContainer),
-            gradient: mine && night ? const LinearGradient(colors: [Color(0xFFFFB08A), Color(0xFFFF7895)]) : null,
-            border: mine ? null : Border.all(color: cs.outline),
-          ),
+          decoration: BubbleLook.of(context).box(context, fromMe: mine, radius: radius),
           child: Row(
             children: [
               IconButton(

@@ -5,7 +5,8 @@
 //! - **Clé de chaque sauvegarde** = HKDF-SHA256(phrase, sel aléatoire de 256 bits, « FouLove-backup-v1 »).
 //!   Le secret fait déjà 256 bits aléatoires : une dérivation lente (Argon2) n'apporterait rien contre la force
 //!   brute, HKDF suffit et chaque sauvegarde a sa propre clé.
-//! - **Contenu** : messages, médias (clés des fichiers et noms des objets R2, miniatures), profil, dates.
+//! - **Contenu** : messages, médias (clés des fichiers et noms des objets R2, miniatures), profil, dates, photos
+//!   du couple, albums, lettres. Pas les instants : ils sont éphémères (24 h).
 //!   **Pas** les clés Signal : une phrase volée ne permet pas de lire les échanges futurs. À la restauration, le
 //!   téléphone crée une nouvelle identité et le couple revérifie ses 7 symboles.
 //! - **Format** : `FLB1 ‖ sel (32) ‖ fichier chiffré STREAM AES-256-GCM` (même construction que les médias,
@@ -97,6 +98,58 @@ pub mod bpb {
         pub kv: Vec<Kv>,
         #[prost(message, repeated, tag = "6")]
         pub dates: Vec<Date>,
+        #[prost(message, repeated, tag = "7")]
+        pub pictures: Vec<Picture>,
+        #[prost(message, repeated, tag = "8")]
+        pub albums: Vec<Album>,
+        #[prost(message, repeated, tag = "9")]
+        pub letters: Vec<Letter>,
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Picture {
+        #[prost(string, tag = "1")]
+        pub slot: String,
+        #[prost(string, optional, tag = "2")]
+        pub media_id: Option<String>,
+        #[prost(bool, tag = "3")]
+        pub from_me: bool,
+        #[prost(int64, tag = "4")]
+        pub updated_at: i64,
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Album {
+        #[prost(string, tag = "1")]
+        pub id: String,
+        #[prost(string, tag = "2")]
+        pub title: String,
+        #[prost(int64, tag = "3")]
+        pub updated_at: i64,
+        #[prost(bool, tag = "4")]
+        pub deleted: bool,
+        #[prost(string, repeated, tag = "5")]
+        pub items: Vec<String>,
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Letter {
+        #[prost(string, tag = "1")]
+        pub id: String,
+        #[prost(bool, tag = "2")]
+        pub from_me: bool,
+        #[prost(string, tag = "3")]
+        pub title: String,
+        #[prost(string, tag = "4")]
+        pub body: String,
+        #[prost(int64, tag = "5")]
+        pub sent_at: i64,
+        #[prost(int64, optional, tag = "6")]
+        pub open_at: Option<i64>,
+        #[prost(int64, optional, tag = "7")]
+        pub read_at: Option<i64>,
+        #[prost(bool, tag = "8")]
+        pub starred: bool,
     }
 
     #[derive(Clone, PartialEq, prost::Message)]
@@ -121,6 +174,10 @@ pub mod bpb {
         pub their_reaction: Option<String>,
         #[prost(bool, tag = "10")]
         pub deleted: bool,
+        #[prost(string, optional, tag = "11")]
+        pub quote_text: Option<String>,
+        #[prost(bytes = "vec", optional, tag = "12")]
+        pub quote_thumb: Option<Vec<u8>>,
     }
 
     #[derive(Clone, PartialEq, prost::Message)]
@@ -147,6 +204,9 @@ pub mod bpb {
         pub duration_ms: u32,
         #[prost(bytes = "vec", tag = "11")]
         pub thumb: Vec<u8>,
+        /// 0 message, 1 photo du couple (les instants, éphémères, ne sont jamais sauvegardés).
+        #[prost(uint32, tag = "12")]
+        pub purpose: u32,
     }
 
     #[derive(Clone, PartialEq, prost::Message)]
@@ -184,6 +244,7 @@ pub struct RestoreSummary {
     pub messages: u32,
     pub media: u32,
     pub dates: u32,
+    pub letters: u32,
 }
 
 impl Device {
@@ -193,7 +254,7 @@ impl Device {
             let c = self.store.conn.lock();
             let mut b = bpb::Backup { version: 1, created_at: crate::chat::now_ms() as u64, ..Default::default() };
             let mut st = c
-                .prepare("SELECT id, from_me, body, reply_to, sent_at, received_at, status, my_reaction, their_reaction, deleted FROM messages")
+                .prepare("SELECT id, from_me, body, reply_to, sent_at, received_at, status, my_reaction, their_reaction, deleted, quote_text, quote_thumb FROM messages")
                 .map_err(db)?;
             b.messages = st
                 .query_map([], |r| {
@@ -208,6 +269,8 @@ impl Device {
                         my_reaction: r.get(7)?,
                         their_reaction: r.get(8)?,
                         deleted: r.get::<_, i64>(9)? == 1,
+                        quote_text: r.get(10)?,
+                        quote_thumb: r.get(11)?,
                     })
                 })
                 .map_err(db)?
@@ -216,8 +279,8 @@ impl Device {
             // Seuls les médias déjà déposés sur R2 peuvent être retrouvés ; les autres restent sans fichier.
             let mut st = c
                 .prepare(
-                    "SELECT message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb
-                     FROM media WHERE object_key IS NOT NULL AND state != 3",
+                    "SELECT message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, purpose
+                     FROM media WHERE object_key IS NOT NULL AND state != 3 AND purpose IN (0, 1)",
                 )
                 .map_err(db)?;
             b.media = st
@@ -234,6 +297,7 @@ impl Device {
                         height: r.get::<_, i64>(8)? as u32,
                         duration_ms: r.get::<_, i64>(9)? as u32,
                         thumb: r.get(10)?,
+                        purpose: r.get::<_, i64>(11)? as u32,
                     })
                 })
                 .map_err(db)?
@@ -256,6 +320,41 @@ impl Device {
                         remind_days: r.get::<_, Option<i64>>(4)?.map(|x| x as u32),
                         updated_at: r.get(5)?,
                         deleted: r.get::<_, i64>(6)? == 1,
+                    })
+                })
+                .map_err(db)?
+                .collect::<Result<_, _>>()
+                .map_err(db)?;
+            let mut st = c.prepare("SELECT slot, media_id, from_me, updated_at FROM pictures").map_err(db)?;
+            b.pictures = st
+                .query_map([], |r| Ok(bpb::Picture { slot: r.get(0)?, media_id: r.get(1)?, from_me: r.get(2)?, updated_at: r.get(3)? }))
+                .map_err(db)?
+                .collect::<Result<_, _>>()
+                .map_err(db)?;
+            let mut st = c.prepare("SELECT id, title, updated_at, deleted FROM albums").map_err(db)?;
+            let mut items = c.prepare("SELECT message_id FROM album_items WHERE album_id = ?1 ORDER BY pos").map_err(db)?;
+            b.albums = st
+                .query_map([], |r| Ok(bpb::Album { id: r.get(0)?, title: r.get(1)?, updated_at: r.get(2)?, deleted: r.get(3)?, items: vec![] }))
+                .map_err(db)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(db)?;
+            for a in &mut b.albums {
+                a.items = items.query_map(params![a.id], |r| r.get(0)).map_err(db)?.collect::<Result<_, _>>().map_err(db)?;
+            }
+            let mut st = c
+                .prepare("SELECT id, from_me, title, body, sent_at, open_at, read_at, starred FROM letters")
+                .map_err(db)?;
+            b.letters = st
+                .query_map([], |r| {
+                    Ok(bpb::Letter {
+                        id: r.get(0)?,
+                        from_me: r.get(1)?,
+                        title: r.get(2)?,
+                        body: r.get(3)?,
+                        sent_at: r.get(4)?,
+                        open_at: r.get(5)?,
+                        read_at: r.get(6)?,
+                        starred: r.get(7)?,
                     })
                 })
                 .map_err(db)?
@@ -293,10 +392,10 @@ impl Device {
                 sum.messages += c
                     .execute(
                         "INSERT OR IGNORE INTO messages (id, from_me, body, reply_to, sent_at, received_at, status, my_reaction,
-                           their_reaction, deleted) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                           their_reaction, deleted, quote_text, quote_thumb) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                         params![
                             m.id, m.from_me, m.body, m.reply_to, m.sent_at, m.received_at, m.status, m.my_reaction,
-                            m.their_reaction, m.deleted
+                            m.their_reaction, m.deleted, m.quote_text, m.quote_thumb
                         ],
                     )
                     .map_err(db)? as u32;
@@ -305,10 +404,10 @@ impl Device {
                 sum.media += c
                     .execute(
                         "INSERT OR IGNORE INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height,
-                           duration_ms, thumb, path, state) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, 2)",
+                           duration_ms, thumb, path, state, purpose) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, 2, ?12)",
                         params![
                             m.message_id, m.kind, m.object_key, m.file_key, m.sha256, m.size as i64, m.mime, m.width, m.height,
-                            m.duration_ms, m.thumb
+                            m.duration_ms, m.thumb, m.purpose.min(1)
                         ],
                     )
                     .map_err(db)? as u32;
@@ -329,6 +428,44 @@ impl Device {
                            remind_days = excluded.remind_days, updated_at = excluded.updated_at, deleted = excluded.deleted
                          WHERE excluded.updated_at > dates.updated_at",
                         params![d.id, d.title, d.date, d.yearly, d.remind_days, d.updated_at, d.deleted],
+                    )
+                    .map_err(db)? as u32;
+            }
+            for p in &b.pictures {
+                c.execute(
+                    "INSERT INTO pictures (slot, media_id, from_me, updated_at) VALUES (?1, ?2, ?3, ?4)
+                     ON CONFLICT (slot) DO UPDATE SET media_id = excluded.media_id, from_me = excluded.from_me,
+                       updated_at = excluded.updated_at WHERE excluded.updated_at > pictures.updated_at",
+                    params![p.slot, p.media_id, p.from_me, p.updated_at],
+                )
+                .map_err(db)?;
+            }
+            for a in &b.albums {
+                let n = c
+                    .execute(
+                        "INSERT INTO albums (id, title, updated_at, deleted) VALUES (?1, ?2, ?3, ?4)
+                         ON CONFLICT (id) DO UPDATE SET title = excluded.title, updated_at = excluded.updated_at,
+                           deleted = excluded.deleted WHERE excluded.updated_at > albums.updated_at",
+                        params![a.id, a.title, a.updated_at, a.deleted],
+                    )
+                    .map_err(db)?;
+                if n > 0 {
+                    c.execute("DELETE FROM album_items WHERE album_id = ?1", params![a.id]).map_err(db)?;
+                    for (pos, m) in a.items.iter().enumerate() {
+                        c.execute(
+                            "INSERT OR IGNORE INTO album_items (album_id, message_id, pos) VALUES (?1, ?2, ?3)",
+                            params![a.id, m, pos as i64],
+                        )
+                        .map_err(db)?;
+                    }
+                }
+            }
+            for l in &b.letters {
+                sum.letters += c
+                    .execute(
+                        "INSERT OR IGNORE INTO letters (id, from_me, title, body, sent_at, open_at, read_at, starred)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                        params![l.id, l.from_me, l.title, l.body, l.sent_at, l.open_at, l.read_at, l.starred],
                     )
                     .map_err(db)? as u32;
             }

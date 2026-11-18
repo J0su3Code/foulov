@@ -153,7 +153,7 @@ class _WelcomeSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Plantez la\npremière graine.',
+                    'Rien que\nvous deux.',
                     style: t.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       height: 1.1,
@@ -162,7 +162,7 @@ class _WelcomeSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Un espace privé pour vous deux, qui grandit avec chaque jour passé ensemble.',
+                    'Votre bulle privée : vos mots, vos photos, vos souvenirs. Chiffrés, pour toujours entre vous.',
                     style: t.textTheme.bodyLarge?.copyWith(color: t.colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 22),

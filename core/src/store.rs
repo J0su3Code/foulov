@@ -86,7 +86,7 @@ fn addr_key(a: &ProtocolAddress) -> String {
     format!("{}.{}", a.name(), u32::from(a.device_id()))
 }
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v BLOB NOT NULL);
@@ -128,6 +128,24 @@ CREATE TABLE IF NOT EXISTS media (
   message_id TEXT PRIMARY KEY, kind INTEGER NOT NULL, object_key TEXT, file_key BLOB NOT NULL,
   sha256 BLOB NOT NULL, size INTEGER NOT NULL, mime TEXT NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL,
   duration_ms INTEGER NOT NULL, thumb BLOB NOT NULL, path TEXT, state INTEGER NOT NULL);
+-- Notre espace (version 5). Photos du couple : un emplacement (« avatar », « cover », « wallpaper ») → un fichier.
+CREATE TABLE IF NOT EXISTS pictures (
+  slot TEXT PRIMARY KEY, media_id TEXT, from_me INTEGER NOT NULL, updated_at INTEGER NOT NULL);
+-- Instants (24 h). kind : 1 photo, 2 vidéo, 4 texte. seen : vu par moi (les siens) ou par lui (les miens).
+CREATE TABLE IF NOT EXISTS moments (
+  id TEXT PRIMARY KEY, from_me INTEGER NOT NULL, created_at INTEGER NOT NULL, kind INTEGER NOT NULL,
+  text TEXT NOT NULL, style INTEGER NOT NULL, seen INTEGER NOT NULL DEFAULT 0);
+-- Albums : la version la plus récente l'emporte, une suppression laisse une trace datée.
+CREATE TABLE IF NOT EXISTS albums (
+  id TEXT PRIMARY KEY, title TEXT NOT NULL, updated_at INTEGER NOT NULL, deleted INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS album_items (
+  album_id TEXT NOT NULL, message_id TEXT NOT NULL, pos INTEGER NOT NULL, PRIMARY KEY (album_id, message_id));
+-- Lettres et capsules (open_at : ne s'ouvre pas avant cette heure, en millisecondes).
+CREATE TABLE IF NOT EXISTS letters (
+  id TEXT PRIMARY KEY, from_me INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, sent_at INTEGER NOT NULL,
+  open_at INTEGER, read_at INTEGER, starred INTEGER NOT NULL DEFAULT 0);
+-- Fichiers chiffrés à retirer de R2 (photo remplacée, instant expiré).
+CREATE TABLE IF NOT EXISTS r2_trash (object_key TEXT PRIMARY KEY);
 ";
 
 /// Mises à niveau des bases créées par une version précédente (CREATE IF NOT EXISTS n'ajoute pas de colonne).
@@ -145,6 +163,15 @@ fn migrate(conn: &Connection) -> Result<(), StoreError> {
     if !has_deleted {
         // Version 4 : messages supprimés (pour soi ou pour les deux) : il ne reste qu'une trace « supprimé ».
         conn.execute_batch("ALTER TABLE messages ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")?;
+    }
+    // Version 5 : à quoi sert un fichier (0 message, 1 photo du couple, 2 instant) ; citation d'un instant.
+    let has_purpose: bool = conn.prepare("SELECT 1 FROM pragma_table_info('media') WHERE name = 'purpose'")?.exists([])?;
+    if !has_purpose {
+        conn.execute_batch("ALTER TABLE media ADD COLUMN purpose INTEGER NOT NULL DEFAULT 0")?;
+    }
+    let has_quote: bool = conn.prepare("SELECT 1 FROM pragma_table_info('messages') WHERE name = 'quote_text'")?.exists([])?;
+    if !has_quote {
+        conn.execute_batch("ALTER TABLE messages ADD COLUMN quote_text TEXT; ALTER TABLE messages ADD COLUMN quote_thumb BLOB;")?;
     }
     Ok(())
 }
