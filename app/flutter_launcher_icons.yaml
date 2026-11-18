@@ -9,3 +9,5 @@ flutter_launcher_icons:
   adaptive_icon_background: assets/icon/background.png
   adaptive_icon_foreground: assets/icon/foreground.png
   adaptive_icon_monochrome: assets/icon/monochrome.png
+  # Le premier plan est déjà cadré dans la zone sûre (bulle = 62 % du carré) : pas de marge en plus.
+  adaptive_icon_foreground_inset: 0
