@@ -49,7 +49,11 @@ class _BackupSetupScreenState extends State<BackupSetupScreen> {
   }
 
   Future<void> _check() async {
-    final ok = [for (var i = 0; i < 3; i++) _answers[i].text.trim().toLowerCase() == _words[_ask[i]]].every((x) => x);
+    // Accents facultatifs : les 2048 mots restent distincts sans eux.
+    final ok = [
+      for (var i = 0; i < 3; i++)
+        backupPlainWord(word: _answers[i].text.trim()) == backupPlainWord(word: _words[_ask[i]]),
+    ].every((x) => x);
     if (!ok) {
       setState(() => _wrong = 'Un des mots ne correspond pas. Vérifie ton papier : le numéro compte.');
       return;

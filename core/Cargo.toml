@@ -22,6 +22,7 @@ sha2 = "0.11"
 thiserror = "2"
 bip39 = { version = "3", features = ["french"] }
 hkdf = "0.13"
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 futures-util = "0.3"

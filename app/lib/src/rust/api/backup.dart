@@ -28,6 +28,10 @@ Future<RestoreSummary> backupImport({
 }) =>
     RustLib.instance.api.crateApiBackupBackupImport(secret: secret, data: data);
 
+/// Mot sans accents ni majuscules : pour comparer un mot recopié, quelle que soit la façon de taper les accents.
+String backupPlainWord({required String word}) =>
+    RustLib.instance.api.crateApiBackupBackupPlainWord(word: word);
+
 class NewPhrase {
   /// 24 mots séparés par des espaces.
   final String phrase;
