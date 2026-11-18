@@ -48,10 +48,24 @@ pub fn new_phrase() -> (String, [u8; 32]) {
     (m.to_string(), entropy)
 }
 
-/// Relit une phrase tapée (espaces, majuscules et accents normalisés), vérifie son contrôle.
+/// Mot sans accents ni majuscules (« éléphant » → « elephant »), quelle que soit la forme Unicode tapée.
+pub fn plain_word(w: &str) -> String {
+    use unicode_normalization::UnicodeNormalization;
+    w.nfkd().filter(|c| !('\u{0300}'..='\u{036f}').contains(c)).flat_map(char::to_lowercase).collect()
+}
+
+/// Relit une phrase tapée : espaces et majuscules tolérés, et les accents peuvent être omis (les mots de la liste
+/// française restent distincts sans eux, vérifié par un test). Le contrôle BIP39 détecte une faute de frappe.
 pub fn phrase_to_secret(phrase: &str) -> Result<[u8; 32], BackupError> {
-    let cleaned: String = phrase.split_whitespace().map(str::to_lowercase).collect::<Vec<_>>().join(" ");
-    let m = Mnemonic::parse_in(Language::French, cleaned).map_err(|_| BackupError::BadPhrase)?;
+    let list = Language::French.word_list();
+    let words: Vec<&'static str> = phrase
+        .split_whitespace()
+        .map(|w| {
+            let p = plain_word(w);
+            list.iter().copied().find(|x| plain_word(x) == p).ok_or(BackupError::BadPhrase)
+        })
+        .collect::<Result<_, _>>()?;
+    let m = Mnemonic::parse_in(Language::French, words.join(" ")).map_err(|_| BackupError::BadPhrase)?;
     m.to_entropy().try_into().map_err(|_| BackupError::BadPhrase)
 }
 
@@ -336,6 +350,21 @@ mod tests {
         // Majuscules et espaces en trop tolérés.
         let messy = format!("  {}  ", p.to_uppercase().replace(' ', "   "));
         assert_eq!(phrase_to_secret(&messy).unwrap(), s);
+    }
+
+    #[test]
+    fn mots_francais_distincts_sans_accents_et_saisie_sans_accents() {
+        let list = Language::French.word_list();
+        let mut seen = std::collections::HashSet::new();
+        for w in list {
+            assert!(seen.insert(plain_word(w)), "« {w} » se confond avec un autre mot sans accents");
+        }
+        // Une phrase avec des mots accentués, tapée sans accents (et en forme composée « é » unique).
+        let (p, s) = new_phrase();
+        let typed: String = p.split(' ').map(plain_word).collect::<Vec<_>>().join(" ");
+        assert_eq!(phrase_to_secret(&typed).unwrap(), s);
+        use unicode_normalization::UnicodeNormalization;
+        assert_eq!(phrase_to_secret(&p.nfc().collect::<String>()).unwrap(), s);
     }
 
     #[test]

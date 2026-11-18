@@ -50,3 +50,9 @@ pub fn backup_import(secret: Vec<u8>, data: Vec<u8>) -> anyhow::Result<RestoreSu
         Ok(RestoreSummary { messages: s.messages, media: s.media, dates: s.dates })
     })
 }
+
+/// Mot sans accents ni majuscules : pour comparer un mot recopié, quelle que soit la façon de taper les accents.
+#[flutter_rust_bridge::frb(sync)]
+pub fn backup_plain_word(word: String) -> String {
+    core::plain_word(&word)
+}

@@ -803,6 +803,7 @@ dependencies = [
  "rusqlite",
  "sha2",
  "thiserror",
+ "unicode-normalization",
 ]
 
 [[package]]
