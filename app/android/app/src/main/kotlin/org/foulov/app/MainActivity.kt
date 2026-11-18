@@ -40,6 +40,15 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     result.success(null)
                 }
+                // Écran sensible (phrase de récupération) : ni capture d'écran, ni aperçu dans les apps récentes.
+                "secure" -> {
+                    if (call.arguments == true) {
+                        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                    } else {
+                        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                    }
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }

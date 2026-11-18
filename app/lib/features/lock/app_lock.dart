@@ -75,6 +75,9 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Demande l'empreinte, le visage ou le code du téléphone pour une action sensible.
+  Future<bool> confirm(String reason) => _authenticate(reason);
+
   Future<void> unlock() async {
     if (!locked) return;
     if (await _authenticate('Déverrouille FouLove')) {

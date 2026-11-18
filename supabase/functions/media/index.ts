@@ -19,6 +19,8 @@ const r2: R2 = {
 
 /// Plafond d'un fichier chiffré (photo ou vidéo, remplissage compris).
 const MAX_BYTES = 220 * 1024 * 1024;
+/// Plafond d'une sauvegarde chiffrée (textes, clés, miniatures : les fichiers restent sur R2).
+const MAX_BACKUP_BYTES = 500 * 1024 * 1024;
 const KEY = /^c\/([0-9a-f-]{36})\/[0-9a-f]{32}$/;
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -33,15 +35,40 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: auth } },
     auth: { persistSession: false },
   });
-  const { data: couple, error } = await db.rpc("my_couple_id");
-  if (error || typeof couple !== "string") return json({ error: "aucun couple" }, 403);
-
   let body: { action?: string; size?: number; key?: string };
   try {
     body = await req.json();
   } catch {
     return json({ error: "requête invalide" }, 400);
   }
+
+  // Sauvegarde chiffrée de l'utilisateur (une seule, remplacée à chaque fois) : `b/<son identifiant>/latest`.
+  // Elle est chiffrée avec une clé tirée de sa phrase de 24 mots, que le serveur n'a jamais.
+  if (body.action?.startsWith("backup_")) {
+    const { data: u } = await db.auth.getUser();
+    if (!u?.user) return json({ error: "non authentifié" }, 401);
+    const key = `b/${u.user.id}/latest`;
+    if (body.action === "backup_upload") {
+      const size = body.size;
+      if (!Number.isInteger(size) || size! < 1 || size! > MAX_BACKUP_BYTES) return json({ error: "taille invalide" }, 400);
+      return json({ url: await presign(r2, "PUT", key, { contentLength: size }) });
+    }
+    if (body.action === "backup_download") return json({ url: await presign(r2, "GET", key) });
+    if (body.action === "backup_status") {
+      const r = await fetch(await presign(r2, "HEAD", key), { method: "HEAD" });
+      if (r.status === 404) return json({ exists: false });
+      if (!r.ok) return json({ error: "stockage indisponible" }, 502);
+      return json({
+        exists: true,
+        size: Number(r.headers.get("content-length") ?? 0),
+        at: r.headers.get("last-modified"),
+      });
+    }
+    return json({ error: "action inconnue" }, 400);
+  }
+
+  const { data: couple, error } = await db.rpc("my_couple_id");
+  if (error || typeof couple !== "string") return json({ error: "aucun couple" }, 403);
 
   if (body.action === "upload") {
     const size = body.size;

@@ -73,6 +73,13 @@ pub fn ciphertext_len(len: u64) -> u64 {
     HEADER as u64 + padded + chunks * TAG as u64
 }
 
+/// Chiffre en mémoire avec une clé donnée (sauvegardes : clé dérivée de la phrase), préfixe de nonce aléatoire.
+pub fn encrypt_with_key(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>, MediaError> {
+    let mut prefix = [0u8; NONCE_PREFIX];
+    OsRng.try_fill_bytes(&mut prefix).map_err(|_| MediaError::Rng)?;
+    Ok(encrypt_with(key, &prefix, plaintext))
+}
+
 /// Chiffre un fichier en mémoire.
 pub fn encrypt(plaintext: &[u8]) -> Result<EncryptedMedia, MediaError> {
     let mut key = [0u8; 32];

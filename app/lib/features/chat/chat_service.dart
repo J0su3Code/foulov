@@ -17,6 +17,7 @@ import '../../core/bytea.dart';
 import '../../src/rust/api/chat.dart';
 import '../../src/rust/api/device.dart';
 import 'push_service.dart';
+import '../backup/backup_service.dart';
 import '../dates/reminders.dart';
 
 /// Messagerie du couple : transporte les enveloppes chiffrées entre le cœur Rust et Supabase.
@@ -89,6 +90,9 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(chatPurge().catchError((_) {}));
     unawaited(PushService.register(_db));
     _startLive();
+    unawaited(BackupService.instance.load());
+    // Sauvegarde chiffrée quotidienne, après le rattrapage des messages.
+    unawaited(Future<void>.delayed(const Duration(seconds: 20), () => BackupService.instance.maybeBackup(_db)));
   }
 
   // ------------------------------------------------------------------ présence et « en train d'écrire »
@@ -220,6 +224,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       unawaited(flush());
       unawaited(_transfer());
       unawaited(_readVisible());
+      unawaited(BackupService.instance.maybeBackup(_db));
     }
   }
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../backup/backup_service.dart';
+import '../backup/phrase_screen.dart';
 import '../lock/app_lock.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'chat_service.dart';
 
 /// « Notre espace » : prénoms, surnom, date « ensemble depuis », sécurité.
@@ -67,6 +70,8 @@ class SpaceScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              const _Section('Sauvegarde'),
+              ListenableBuilder(listenable: BackupService.instance, builder: (context, _) => _BackupCard()),
               const _Section('Confidentialité'),
               _Card(
                 children: [
@@ -314,4 +319,83 @@ class _Row extends StatelessWidget {
     ),
     onTap: onTap,
   );
+}
+
+/// Sauvegarde : activer (phrase de 24 mots), état, sauvegarder maintenant, revoir sa phrase.
+class _BackupCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final b = BackupService.instance;
+    final cs = Theme.of(context).colorScheme;
+    if (!b.enabled) {
+      return _Card(
+        children: [
+          ListTile(
+            leading: Icon(Icons.cloud_off_outlined, color: cs.error),
+            title: const Text('Sauvegarde désactivée'),
+            subtitle: const Text(
+              'Si tu perds ce téléphone, vos échanges seraient perdus. Active-la avec une phrase de 24 mots.',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: FilledButton.icon(
+              icon: const Icon(Icons.shield_outlined),
+              label: const Text('Activer la sauvegarde'),
+              onPressed: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const BackupSetupScreen())),
+            ),
+          ),
+        ],
+      );
+    }
+    final last = b.last;
+    final ago = last == null ? 'pas encore' : _ago(DateTime.now().difference(last));
+    return _Card(
+      children: [
+        ListTile(
+          leading: Icon(Icons.cloud_done_outlined, color: cs.secondary),
+          title: const Text('Sauvegarde chiffrée activée'),
+          subtitle: Text(
+            b.error ??
+                (b.running ? 'Sauvegarde en cours…' : 'Dernière sauvegarde : $ago. Chaque jour, automatiquement.'),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.backup_outlined),
+          title: const Text('Sauvegarder maintenant'),
+          enabled: !b.running,
+          onTap: () async {
+            final ok = await b.backupNow(Supabase.instance.client);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(ok ? 'Sauvegarde chiffrée terminée.' : 'La sauvegarde n\'a pas abouti.')),
+              );
+            }
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.key_outlined),
+          title: const Text('Revoir ma phrase de 24 mots'),
+          onTap: () async {
+            // Si le verrouillage est possible, on demande d'abord l'empreinte ou le code.
+            if (AppLock.instance.supported && !await AppLock.instance.confirm('Confirme pour afficher ta phrase')) {
+              return;
+            }
+            final p = await b.phrase();
+            if (p != null && context.mounted) {
+              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ShowPhraseScreen(phrase: p)));
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  static String _ago(Duration d) {
+    if (d.inMinutes < 1) return 'à l\'instant';
+    if (d.inHours < 1) return 'il y a ${d.inMinutes} min';
+    if (d.inDays < 1) return 'il y a ${d.inHours} h';
+    return 'il y a ${d.inDays} jour${d.inDays > 1 ? 's' : ''}';
+  }
 }
