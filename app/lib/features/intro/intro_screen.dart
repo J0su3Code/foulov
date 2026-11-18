@@ -166,7 +166,10 @@ class _WelcomeSheet extends StatelessWidget {
                     style: t.textTheme.bodyLarge?.copyWith(color: t.colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 22),
-                  FilledButton(onPressed: visible ? onStart : null, child: const Text('Commencer')),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(onPressed: visible ? onStart : null, child: const Text('Commencer')),
+                  ),
                   const SizedBox(height: 6),
                   TextButton(onPressed: visible ? onJoin : null, child: const Text("J'ai un code d'invitation")),
                 ],

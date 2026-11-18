@@ -97,7 +97,9 @@ class BackupService extends ChangeNotifier {
     final r = await db.functions
         .invoke('media', body: {'action': 'backup_status'})
         .timeout(const Duration(seconds: 20));
-    if (r.status != 200 || r.data is! Map || (r.data as Map)['exists'] != true) return null;
+    // Erreur (réseau, serveur) : on la signale, pour ne jamais conclure à tort « pas de sauvegarde ».
+    if (r.status != 200 || r.data is! Map) throw StateError('état de la sauvegarde ${r.status}');
+    if ((r.data as Map)['exists'] != true) return null;
     return HttpDate.tryParse((r.data as Map)['at'] as String? ?? '') ?? DateTime.now();
   }
 

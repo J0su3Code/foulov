@@ -122,7 +122,9 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
   - clé de sauvegarde = Argon2id(phrase, sel stocké avec la sauvegarde) ;
   - la sauvegarde (historique, clés des fichiers, état du jardin) est chiffrée avec cette clé puis déposée sur R2 ;
   - **sans la phrase, personne ne peut la lire, pas même nous**. Phrase perdue et téléphones perdus = données perdues. L'app le dit clairement.
-- **Restauration** sur un nouveau téléphone : nouvelles clés d'identité, restauration de l'historique depuis la sauvegarde, puis nouvelle vérification avec le partenaire (§5.6).
+- **Clé de chaque sauvegarde** : HKDF-SHA256(secret de la phrase, sel aléatoire de 256 bits). La phrase vaut déjà 256 bits aléatoires (BIP39, liste française, accents facultatifs à la saisie) : une dérivation lente comme Argon2 n'ajouterait rien contre la force brute. La sauvegarde ne contient **jamais** les clés Signal.
+- **Restauration** sur un nouveau téléphone : après la connexion, l'app propose la phrase si une sauvegarde existe et que le téléphone n'a aucun historique (écran protégé contre les captures). Le téléphone crée une **nouvelle identité**, rouvre une session avec le partenaire et le couple compare ses 7 symboles.
+- **Côté partenaire** : à chaque chargement, l'app compare la clé publiée par le serveur à celle en laquelle elle a confiance. Si elles diffèrent, l'écran « La clé de ton amour a changé » s'affiche avant tout le reste ; les nouveaux messages restent chiffrés et illisibles jusqu'à la comparaison des 7 symboles de la nouvelle clé. Une substitution par le serveur se verrait ainsi immédiatement.
 
 ## 8. Serveur (Supabase)
 

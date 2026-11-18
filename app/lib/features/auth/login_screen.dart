@@ -96,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
               }, style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.1)),
               const SizedBox(height: 10),
               Text(switch (_step) {
-                _Step.choose => 'Aucun mot de passe à retenir. Ensuite, ton empreinte suffira sur ce téléphone.',
+                _Step.choose => 'Aucun mot de passe à retenir. Ensuite, tu restes connecté sur ce téléphone.',
                 _Step.email => 'On t\'envoie un code à usage unique, valable 10 minutes.',
                 _Step.code => 'Saisis le code à 8 chiffres envoyé à ${_email.text.trim()}.',
               }, style: t.textTheme.bodyLarge?.copyWith(color: c.onSurfaceVariant)),

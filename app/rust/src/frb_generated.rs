@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -218401697;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1674772064;
 
 // Section: executor
 
@@ -1450,6 +1450,45 @@ fn wire__crate__api__crypto__decrypt_media_impl(
         },
     )
 }
+fn wire__crate__api__device__device_accept_partner_key_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "device_accept_partner_key",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_partner = <String>::sse_decode(&mut deserializer);
+            let api_identity_key = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || {
+                        let output_ok = crate::api::device::device_accept_partner_key(
+                            api_partner,
+                            api_identity_key,
+                        )?;
+                        std::result::Result::Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__device__device_decrypt_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1833,6 +1872,41 @@ fn wire__crate__api__device__device_start_session_impl(
                     (move || {
                         let output_ok =
                             crate::api::device::device_start_session(api_partner, api_bundle)?;
+                        std::result::Result::Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__device__device_trusted_identity_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "device_trusted_identity",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_partner = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || {
+                        let output_ok = crate::api::device::device_trusted_identity(api_partner)?;
                         std::result::Result::Ok(output_ok)
                     })(),
                 )
@@ -2373,6 +2447,17 @@ impl SseDecode for Option<u8> {
     }
 }
 
+impl SseDecode for Option<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<Vec<u8>>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for crate::api::chat::Outgoing {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2583,25 +2668,37 @@ fn pde_ffi_dispatcher_primary_impl(
         }
         36 => wire__crate__api__chat__chat_unread_impl(port, ptr, rust_vec_len, data_len),
         38 => wire__crate__api__crypto__decrypt_media_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__device__device_decrypt_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__device__device_encrypt_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__device__device_fingerprint_impl(port, ptr, rust_vec_len, data_len),
-        42 => {
+        39 => wire__crate__api__device__device_accept_partner_key_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        40 => wire__crate__api__device__device_decrypt_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__device__device_encrypt_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__device__device_fingerprint_impl(port, ptr, rust_vec_len, data_len),
+        43 => {
             wire__crate__api__device__device_generate_bundle_impl(port, ptr, rust_vec_len, data_len)
         }
-        43 => wire__crate__api__device__device_has_session_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__device__device_identity_key_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__device__device_is_verified_impl(port, ptr, rust_vec_len, data_len),
-        46 => {
+        44 => wire__crate__api__device__device_has_session_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__device__device_identity_key_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__device__device_is_verified_impl(port, ptr, rust_vec_len, data_len),
+        47 => {
             wire__crate__api__device__device_mark_verified_impl(port, ptr, rust_vec_len, data_len)
         }
-        47 => wire__crate__api__device__device_open_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__device__device_sas_with_impl(port, ptr, rust_vec_len, data_len),
-        49 => {
+        48 => wire__crate__api__device__device_open_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__device__device_sas_with_impl(port, ptr, rust_vec_len, data_len),
+        50 => {
             wire__crate__api__device__device_start_session_impl(port, ptr, rust_vec_len, data_len)
         }
-        50 => wire__crate__api__crypto__encrypt_media_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__crypto__init_app_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__device__device_trusted_identity_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        52 => wire__crate__api__crypto__encrypt_media_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__crypto__init_app_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2617,8 +2714,8 @@ fn pde_ffi_dispatcher_sync_impl(
         3 => wire__crate__api__backup__backup_new_phrase_impl(ptr, rust_vec_len, data_len),
         5 => wire__crate__api__backup__backup_plain_word_impl(ptr, rust_vec_len, data_len),
         37 => wire__crate__api__crypto__core_version_impl(ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__device__fingerprint_of_impl(ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__crypto__sas_symbols_impl(ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__device__fingerprint_of_impl(ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__crypto__sas_symbols_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3312,6 +3409,16 @@ impl SseEncode for Option<u8> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <u8>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <Vec<u8>>::sse_encode(value, serializer);
         }
     }
 }

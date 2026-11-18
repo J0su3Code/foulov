@@ -7,12 +7,29 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../src/rust/api/chat.dart';
+import '../backup/backup_service.dart';
 import '../../src/rust/api/crypto.dart';
 import '../../src/rust/api/device.dart';
 
 /// État du couple vu par ce téléphone.
 class CoupleState {
-  const CoupleState({this.coupleId, this.partnerId, this.partnerIdentity, this.verified = false, this.since});
+  const CoupleState({
+    this.coupleId,
+    this.partnerId,
+    this.partnerIdentity,
+    this.verified = false,
+    this.since,
+    this.keyChanged = false,
+    this.restoreFrom,
+  });
+
+  /// La clé publiée par le partenaire n'est plus celle en laquelle ce téléphone a confiance (nouveau téléphone,
+  /// réinstallation… ou substitution par le serveur) : rien de nouveau n'est lu avant une nouvelle vérification.
+  final bool keyChanged;
+
+  /// Une sauvegarde chiffrée existe pour ce compte et ce téléphone n'a encore aucun historique : on propose de la
+  /// restaurer (date de la sauvegarde).
+  final DateTime? restoreFrom;
 
   final String? coupleId;
 
@@ -77,13 +94,66 @@ class CoupleService {
     if (partner == null) return CoupleState(coupleId: coupleId, since: since);
     final dev = await _db.from('devices').select('identity_key').eq('user_id', partner).maybeSingle();
     final identity = dev == null ? null : _bytes(dev['identity_key']);
+    final trusted = await deviceTrustedIdentity(partner: partner);
+    final keyChanged = identity != null && trusted != null && !_same(trusted, identity);
+    DateTime? restoreFrom;
+    if (identity != null && !keyChanged) {
+      restoreFrom = await _restoreOffer();
+      // Nouveau téléphone ou réinstallation : on rouvre la session chiffrée (après la restauration éventuelle).
+      if (restoreFrom == null) await _ensureSession(partner);
+    }
     return CoupleState(
       coupleId: coupleId,
       since: since,
       partnerId: partner,
       partnerIdentity: identity,
-      verified: identity != null && await deviceIsVerified(partner: partner),
+      verified: identity != null && !keyChanged && await deviceIsVerified(partner: partner),
+      keyChanged: keyChanged,
+      restoreFrom: restoreFrom,
     );
+  }
+
+  static const _restoreOfferedKey = 'foulov.restore_offered';
+
+  /// Proposée une seule fois : sur un téléphone sans historique, quand une sauvegarde existe pour ce compte.
+  Future<DateTime?> _restoreOffer() async {
+    if (await _keyStore.read(key: _restoreOfferedKey) != null) return null;
+    if ((await chatMessages(limit: 1)).isNotEmpty) {
+      await _keyStore.write(key: _restoreOfferedKey, value: 'non');
+      return null;
+    }
+    final DateTime? at;
+    try {
+      at = await BackupService.instance.remoteBackupDate(_db);
+    } catch (e) {
+      // Réseau indisponible : on reposera la question au prochain chargement, sans rien conclure.
+      if (kDebugMode) debugPrint('[FOULOVE] sauvegarde distante : $e');
+      return null;
+    }
+    if (at == null) await _keyStore.write(key: _restoreOfferedKey, value: 'non');
+    return at;
+  }
+
+  /// Après la restauration, ou si l'utilisateur la refuse : on ne la repropose plus.
+  Future<void> restoreDone() => _keyStore.write(key: _restoreOfferedKey, value: 'oui');
+
+  /// Aucune session avec le partenaire (nouveau téléphone) : d'abord lire ce qui attend sur le serveur (son premier
+  /// message peut l'ouvrir), sinon l'ouvrir nous-mêmes à partir de ses clés publiées.
+  Future<void> _ensureSession(String partner) async {
+    if (await deviceHasSession(partner: partner)) return;
+    try {
+      await receiveHello(partner);
+      if (await deviceHasSession(partner: partner)) return;
+      await _openSession();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FOULOVE] session : $e');
+    }
+  }
+
+  /// Nouvelle clé du partenaire acceptée après comparaison des 7 symboles : les messages en attente se lisent.
+  Future<void> acceptPartnerKey(String partner, Uint8List identity) async {
+    await deviceAcceptPartnerKey(partner: partner, identityKey: identity);
+    await deviceMarkVerified(partner: partner);
   }
 
   // ------------------------------------------------------------------ créer / rejoindre
@@ -136,7 +206,13 @@ class CoupleService {
     await ensureKeysPublished();
     final coupleId = await _db.rpc<String?>('join_couple', params: {'token': code});
     if (coupleId == null) return JoinResult.invalidCode;
+    return _openSession(expectedFp: expectedFp);
+  }
 
+  /// Ouvre la session à partir des clés publiées du partenaire (PQXDH), puis lui envoie le premier message chiffré,
+  /// qui ouvre la session de son côté. Avec un QR code, la clé est vérifiée contre son empreinte.
+  Future<JoinResult> _openSession({Uint8List? expectedFp}) async {
+    final coupleId = (await _db.from('couple_members').select('couple_id').limit(1).single())['couple_id'] as String;
     final rows = await _db.rpc<List<dynamic>>('claim_partner_bundle');
     final r = rows.first as Map<String, dynamic>;
     final partner = r['user_id'] as String;
@@ -233,6 +309,9 @@ class CoupleService {
       'kyber_prekey_sig': _hex(b.kyberPrekeySig),
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    // Nouveau téléphone (ou nouvelle identité) : les pré-clés de l'ancien ne servent plus et porteraient les mêmes
+    // numéros. On les retire, pour que le partenaire n'en tire jamais une qui ne mène nulle part.
+    await _db.from('one_time_prekeys').delete().eq('user_id', _me);
     await _db.from('one_time_prekeys').insert([
       for (final k in b.oneTimePrekeys) {'user_id': _me, 'prekey_id': k.id, 'public_key': _hex(k.publicKey)},
     ]);

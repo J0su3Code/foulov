@@ -8,10 +8,12 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../src/rust/api/crypto.dart';
+import '../../src/rust/api/device.dart';
 import '../../ui/love.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth/auth_service.dart';
+import '../backup/backup_service.dart';
 import '../chat/home_shell.dart';
 import '../chat/chat_service.dart';
 import 'couple_service.dart';
@@ -36,8 +38,27 @@ class CoupleGate extends StatefulWidget {
   State<CoupleGate> createState() => _CoupleGateState();
 }
 
-class _CoupleGateState extends State<CoupleGate> {
+class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
   late Future<CoupleState> _state = widget.couple.load();
+  CoupleState? _last;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Écran « la clé a changé » : au retour dans l'app, on relit la clé publiée (elle a pu changer encore).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && (_last?.keyChanged ?? false)) _reload();
+  }
   // Après avoir rejoint par QR code, ce téléphone est déjà vérifié, mais il affiche quand même les symboles :
   // le partenaire en a besoin pour vérifier de son côté.
   bool _showSymbols = false;
@@ -47,10 +68,13 @@ class _CoupleGateState extends State<CoupleGate> {
     _reload();
   }
 
-  // Le chargement est lancé hors de setState : setState n'accepte qu'une mise à jour synchrone.
+  // Le chargement est lancé hors de setState, et l'affectation est dans un bloc : avec une flèche, « _state = next »
+  // renverrait le Future lui-même, ce que setState refuse (et l'écran ne se redessinerait pas).
   void _reload() {
     final next = widget.couple.load();
-    setState(() => _state = next);
+    setState(() {
+      _state = next;
+    });
   }
 
   @override
@@ -67,10 +91,23 @@ class _CoupleGateState extends State<CoupleGate> {
         }
         final s = snap.data;
         if (s == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        _last = s;
         if (!s.hasCouple) {
           return ChoiceScreen(couple: widget.couple, onDone: _reload, onJoined: _joined, auth: widget.auth);
         }
         if (!s.complete || s.partnerIdentity == null) return InviteScreen(couple: widget.couple, onPartner: _reload);
+        // Nouvelle clé du partenaire : avant tout le reste, une nouvelle comparaison des symboles.
+        if (s.keyChanged) {
+          return KeyChangeScreen(
+            couple: widget.couple,
+            partnerId: s.partnerId!,
+            newIdentity: s.partnerIdentity!,
+            onDone: _reload,
+          );
+        }
+        if (s.restoreFrom != null) {
+          return RestoreScreen(couple: widget.couple, backupDate: s.restoreFrom!, onDone: _reload);
+        }
         if (!s.verified || _showSymbols) {
           return VerifyScreen(
             couple: widget.couple,
@@ -87,7 +124,11 @@ class _CoupleGateState extends State<CoupleGate> {
           key: ValueKey(s.coupleId),
           state: s,
           auth: widget.auth,
-          onShowSymbols: () => setState(() => _showSymbols = true),
+          // Rechargé : une clé changée (bandeau de la conversation) mène à la nouvelle vérification.
+          onShowSymbols: () {
+            _showSymbols = true;
+            _reload();
+          },
         );
       },
     );
@@ -796,6 +837,239 @@ class CelebrationScreen extends StatelessWidget {
               ),
             ),
             const Positioned.fill(child: PetalBurst()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ===================================================================== nouveau téléphone du partenaire
+
+/// La clé publiée par le partenaire a changé. Ses nouveaux messages restent en attente, illisibles, jusqu'à ce que
+/// vous compariez les 7 symboles de cette nouvelle clé.
+class KeyChangeScreen extends StatefulWidget {
+  const KeyChangeScreen({
+    super.key,
+    required this.couple,
+    required this.partnerId,
+    required this.newIdentity,
+    required this.onDone,
+  });
+
+  final CoupleService couple;
+  final String partnerId;
+  final Uint8List newIdentity;
+  final VoidCallback onDone;
+
+  @override
+  State<KeyChangeScreen> createState() => _KeyChangeScreenState();
+}
+
+class _KeyChangeScreenState extends State<KeyChangeScreen> {
+  late final Future<List<SasSymbol>> _symbols = deviceSasWith(partnerIdentity: widget.newIdentity);
+  bool _mismatch = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(Icons.phonelink_lock_rounded, size: 44, color: cs.secondary),
+              const SizedBox(height: 12),
+              Text('La clé de ton amour a changé', style: _title(context)),
+              const SizedBox(height: 8),
+              Text(
+                'C\'est normal après un nouveau téléphone ou une réinstallation. Pour être sûrs que personne ne s\'est '
+                'glissé entre vous, comparez ensemble ces 7 symboles, à voix haute ou en appel vidéo. '
+                'Ses nouveaux messages attendent, chiffrés, jusque-là.',
+                style: _soft(context),
+              ),
+              const SizedBox(height: 22),
+              FutureBuilder<List<SasSymbol>>(
+                future: _symbols,
+                builder: (context, snap) {
+                  final s = snap.data;
+                  if (s == null) return const Center(child: CircularProgressIndicator());
+                  return Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      for (final x in s)
+                        Container(
+                          width: 92,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainer,
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(x.emoji, style: const TextStyle(fontSize: 38)),
+                              const SizedBox(height: 4),
+                              Text(x.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const Spacer(),
+              if (_mismatch)
+                Text(
+                  'N\'acceptez pas cette clé. Quelqu\'un pourrait s\'être glissé entre vous : parlez-en de vive voix et '
+                  'refaites la comparaison quand vous êtes côte à côte.',
+                  style: TextStyle(color: cs.error),
+                )
+              else ...[
+                FilledButton.icon(
+                  icon: const Icon(Icons.favorite),
+                  label: const Text('Ce sont les mêmes'),
+                  onPressed: () async {
+                    await widget.couple.acceptPartnerKey(widget.partnerId, widget.newIdentity);
+                    HapticFeedback.heavyImpact();
+                    widget.onDone();
+                  },
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _mismatch = true),
+                  child: const Text('Un symbole est différent'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===================================================================== restauration
+
+/// Nouveau téléphone : retrouver ses échanges avec sa phrase de 24 mots.
+class RestoreScreen extends StatefulWidget {
+  const RestoreScreen({super.key, required this.couple, required this.backupDate, required this.onDone});
+
+  final CoupleService couple;
+  final DateTime backupDate;
+  final VoidCallback onDone;
+
+  @override
+  State<RestoreScreen> createState() => _RestoreScreenState();
+}
+
+class _RestoreScreenState extends State<RestoreScreen> {
+  final _phrase = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // La phrase s'affiche pendant qu'on la tape : ni capture d'écran, ni aperçu dans les apps récentes.
+    _secure(true);
+  }
+
+  @override
+  void dispose() {
+    _secure(false);
+    _phrase.dispose();
+    super.dispose();
+  }
+
+  static Future<void> _secure(bool on) async {
+    try {
+      await const MethodChannel('foulove/notifications').invokeMethod<void>('secure', on);
+    } catch (_) {}
+  }
+
+  Future<void> _restore() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final sum = await BackupService.instance.restore(_phrase.text, Supabase.instance.client);
+      await widget.couple.restoreDone();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${sum.messages} messages et ${sum.media} photos, vidéos ou vocaux retrouvés.')),
+      );
+      widget.onDone();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FOULOVE] restauration : $e');
+      final m = e.toString();
+      setState(() {
+        _busy = false;
+        _error = m.contains('phrase de récupération invalide')
+            ? 'Cette phrase n\'est pas valable : vérifie chaque mot et leur ordre.'
+            : m.contains('illisible')
+            ? 'Cette phrase ne correspond pas à ta sauvegarde.'
+            : 'La restauration n\'a pas abouti. Vérifie ta connexion puis réessaie.';
+      });
+    }
+  }
+
+  Future<void> _skip() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Continuer sans restaurer ?'),
+        content: const Text(
+          'Tes anciens échanges ne seront pas sur ce téléphone. Tu ne pourras plus les restaurer ensuite.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Retour')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continuer')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await widget.couple.restoreDone();
+    widget.onDone();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final d = widget.backupDate;
+    final when =
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} à '
+        '${d.hour.toString().padLeft(2, '0')} h ${d.minute.toString().padLeft(2, '0')}';
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+          children: [
+            Icon(Icons.cloud_download_outlined, size: 44, color: cs.secondary),
+            const SizedBox(height: 12),
+            Text('Retrouver vos échanges', style: _title(context)),
+            const SizedBox(height: 8),
+            Text(
+              'Une sauvegarde chiffrée existe (du $when). Tape ta phrase de 24 mots pour la retrouver sur ce téléphone. '
+              'Les accents sont facultatifs.',
+              style: _soft(context),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _phrase,
+              minLines: 4,
+              maxLines: 6,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: const InputDecoration(hintText: 'mot1 mot2 mot3 … mot24'),
+            ),
+            if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: TextStyle(color: cs.error))],
+            const SizedBox(height: 18),
+            FilledButton(onPressed: _busy ? null : _restore, child: Text(_busy ? 'Restauration…' : 'Restaurer')),
+            TextButton(onPressed: _busy ? null : _skip, child: const Text('Continuer sans restaurer')),
           ],
         ),
       ),

@@ -14,12 +14,10 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 Future<void> deviceOpen({required String path, required List<int> dbKey}) =>
     RustLib.instance.api.crateApiDeviceDeviceOpen(path: path, dbKey: dbKey);
 
-Future<Uint8List> deviceIdentityKey() =>
-    RustLib.instance.api.crateApiDeviceDeviceIdentityKey();
+Future<Uint8List> deviceIdentityKey() => RustLib.instance.api.crateApiDeviceDeviceIdentityKey();
 
 /// Empreinte de la clé d'identité, placée dans le QR code d'invitation.
-Future<Uint8List> deviceFingerprint() =>
-    RustLib.instance.api.crateApiDeviceDeviceFingerprint();
+Future<Uint8List> deviceFingerprint() => RustLib.instance.api.crateApiDeviceDeviceFingerprint();
 
 /// Empreinte d'une clé d'identité reçue du serveur, à comparer avec celle du QR code.
 Uint8List fingerprintOf({required List<int> identityKey}) =>
@@ -30,44 +28,35 @@ Future<KeyBundle> deviceGenerateBundle({required int oneTime}) =>
     RustLib.instance.api.crateApiDeviceDeviceGenerateBundle(oneTime: oneTime);
 
 /// Ouvre la session à partir des clés du partenaire (`one_time_prekeys` : zéro ou une pré-clé).
-Future<void> deviceStartSession({
-  required String partner,
-  required KeyBundle bundle,
-}) => RustLib.instance.api.crateApiDeviceDeviceStartSession(
-  partner: partner,
-  bundle: bundle,
-);
+Future<void> deviceStartSession({required String partner, required KeyBundle bundle}) =>
+    RustLib.instance.api.crateApiDeviceDeviceStartSession(partner: partner, bundle: bundle);
 
 Future<bool> deviceHasSession({required String partner}) =>
     RustLib.instance.api.crateApiDeviceDeviceHasSession(partner: partner);
 
-Future<Envelope> deviceEncrypt({
-  required String partner,
-  required List<int> plaintext,
-}) => RustLib.instance.api.crateApiDeviceDeviceEncrypt(
-  partner: partner,
-  plaintext: plaintext,
-);
+Future<Envelope> deviceEncrypt({required String partner, required List<int> plaintext}) =>
+    RustLib.instance.api.crateApiDeviceDeviceEncrypt(partner: partner, plaintext: plaintext);
 
-Future<Uint8List> deviceDecrypt({
-  required String partner,
-  required Envelope envelope,
-}) => RustLib.instance.api.crateApiDeviceDeviceDecrypt(
-  partner: partner,
-  envelope: envelope,
-);
+Future<Uint8List> deviceDecrypt({required String partner, required Envelope envelope}) =>
+    RustLib.instance.api.crateApiDeviceDeviceDecrypt(partner: partner, envelope: envelope);
 
 /// Les 7 symboles à comparer avec le partenaire.
 Future<List<SasSymbol>> deviceSasWith({required List<int> partnerIdentity}) =>
-    RustLib.instance.api.crateApiDeviceDeviceSasWith(
-      partnerIdentity: partnerIdentity,
-    );
+    RustLib.instance.api.crateApiDeviceDeviceSasWith(partnerIdentity: partnerIdentity);
 
 Future<void> deviceMarkVerified({required String partner}) =>
     RustLib.instance.api.crateApiDeviceDeviceMarkVerified(partner: partner);
 
 Future<bool> deviceIsVerified({required String partner}) =>
     RustLib.instance.api.crateApiDeviceDeviceIsVerified(partner: partner);
+
+/// Clé du partenaire en laquelle ce téléphone a confiance (`None` : jamais vue).
+Future<Uint8List?> deviceTrustedIdentity({required String partner}) =>
+    RustLib.instance.api.crateApiDeviceDeviceTrustedIdentity(partner: partner);
+
+/// Accepte la nouvelle clé du partenaire (nouveau téléphone), après comparaison des 7 symboles.
+Future<void> deviceAcceptPartnerKey({required String partner, required List<int> identityKey}) =>
+    RustLib.instance.api.crateApiDeviceDeviceAcceptPartnerKey(partner: partner, identityKey: identityKey);
 
 class Envelope {
   final int kind;
@@ -81,10 +70,7 @@ class Envelope {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Envelope &&
-          runtimeType == other.runtimeType &&
-          kind == other.kind &&
-          body == other.body;
+      other is Envelope && runtimeType == other.runtimeType && kind == other.kind && body == other.body;
 }
 
 class KeyBundle {
@@ -154,8 +140,5 @@ class OneTimePreKey {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is OneTimePreKey &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          publicKey == other.publicKey;
+      other is OneTimePreKey && runtimeType == other.runtimeType && id == other.id && publicKey == other.publicKey;
 }

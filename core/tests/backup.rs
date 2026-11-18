@@ -101,3 +101,40 @@ fn mauvaise_phrase_ou_sauvegarde_alteree() {
     assert!(fresh.import_backup(&secret, &fs::read(&p).unwrap()).is_err());
     assert!(fresh.import_backup(&secret, &blob).is_ok());
 }
+
+#[test]
+fn changement_de_telephone_refuse_puis_accepte_apres_verification() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ines = Device::open(&dir.path().join("i.db"), &[1; 32]).unwrap();
+    let mut malik = Device::open(&dir.path().join("m.db"), &[2; 32]).unwrap();
+    let ib = ines.generate_bundle(5).unwrap();
+    malik.generate_bundle(5).unwrap();
+    malik.start_session(INES, &view(&ib)).unwrap();
+    let (_, o) = malik.send_text(INES, "avant", None).unwrap();
+    ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap();
+    let old = ines.trusted_identity(MALIK).unwrap().unwrap();
+    assert_eq!(old, malik.identity_key().unwrap());
+
+    // Malik change de téléphone : nouvelle identité, nouvelle session.
+    let mut malik2 = Device::open(&dir.path().join("m2.db"), &[3; 32]).unwrap();
+    malik2.generate_bundle(5).unwrap();
+    let ib2 = ines.generate_bundle(5).unwrap();
+    malik2.start_session(INES, &view(&ib2)).unwrap();
+    let (_, o) = malik2.send_text(INES, "nouveau téléphone", None).unwrap();
+    let new_key = malik2.identity_key().unwrap();
+    assert_ne!(new_key, old);
+
+    // Chez Inès : refusé tant que la nouvelle clé n'est pas acceptée, et l'enveloppe reste à relire.
+    assert!(matches!(
+        ines.receive(MALIK, &o.envelope_id, &o.envelope),
+        Err(foulov_core::device::DeviceError::PartnerKeyChanged)
+    ));
+    assert_eq!(ines.trusted_identity(MALIK).unwrap().unwrap(), old, "l'ancienne clé reste la clé de confiance");
+    // Après comparaison des symboles : acceptée (non vérifiée), puis marquée vérifiée.
+    ines.accept_partner_key(MALIK, &new_key).unwrap();
+    assert!(!ines.is_verified(MALIK).unwrap());
+    ines.mark_verified(MALIK).unwrap();
+    let Received::Message(m) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!("message attendu") };
+    assert_eq!(m.body, "nouveau téléphone");
+    assert_eq!(ines.trusted_identity(MALIK).unwrap().unwrap(), new_key);
+}
