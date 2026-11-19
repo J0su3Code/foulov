@@ -114,41 +114,7 @@ extension LoveContext on BuildContext {
   bool get night => Theme.of(this).brightness == Brightness.dark;
 }
 
-/// Couleurs des bulles au choix (« ta couleur »). Index partagé entre les deux téléphones : ne jamais réordonner.
-abstract final class BubbleColors {
-  static const List<(Color, Color)> all = [
-    (Color(0xFFE8417A), Color(0xFFC2185B)), // framboise
-    (Color(0xFFFF7A9C), Color(0xFFE8417A)), // rose
-    (Color(0xFFF39C6B), Color(0xFFE8417A)), // pêche
-    (Color(0xFFF5B342), Color(0xFFE07A2E)), // soleil
-    (Color(0xFFB06AD9), Color(0xFF7B3FA8)), // lilas
-    (Color(0xFF9B59B6), Color(0xFF6C3483)), // prune
-    (Color(0xFF5C7CFA), Color(0xFF3B4FC4)), // nuit bleue
-    (Color(0xFF2EC4B6), Color(0xFF1A7F8E)), // lagon
-    (Color(0xFF3FAE7A), Color(0xFF237A55)), // menthe
-    (Color(0xFF6D6875), Color(0xFF3D3842)), // ardoise
-  ];
-
-  static (Color, Color) of(int? i) => all[(i ?? 0).clamp(0, all.length - 1)];
-}
-
-/// Fonds de conversation (index partagé : ne jamais réordonner). Chaque fond a une version jour et nuit.
-abstract final class Wallpapers {
-  static const List<(String, List<Color>, List<Color>)> all = [
-    ('Douceur', [Color(0xFFFFF8F5), Color(0xFFFFEDEF)], [Color(0xFF140C14), Color(0xFF1E1220)]),
-    ('Pêche', [Color(0xFFFFD6E0), Color(0xFFFFEBDD)], [Color(0xFF2A1420), Color(0xFF3A1E24)]),
-    ('Crépuscule', [Color(0xFFFFE0EC), Color(0xFFE9DEFF)], [Color(0xFF2C1A3D), Color(0xFF4A1F45)]),
-    ('Velours', [Color(0xFFF6D5E4), Color(0xFFE7C3DA)], [Color(0xFF2C1A3D), Color(0xFF7A2E5A)]),
-    ('Lagon', [Color(0xFFDDF3F0), Color(0xFFE4ECFF)], [Color(0xFF0B2A3C), Color(0xFF14505A)]),
-    ('Miel', [Color(0xFFFFF3D9), Color(0xFFFFE2D1)], [Color(0xFF2A1E10), Color(0xFF3A2414)]),
-    ('Brume', [Color(0xFFF1EEF4), Color(0xFFFBF3F1)], [Color(0xFF16141C), Color(0xFF221C26)]),
-  ];
-
-  static List<Color> colors(int i, bool night) {
-    final w = all[i.clamp(0, all.length - 1)];
-    return night ? w.$3 : w.$2;
-  }
-}
+// Couleurs des bulles, fonds, motifs et thèmes de la conversation : voir features/chat/bubble_look.dart.
 
 /// Fonds des instants texte (index partagé : ne jamais réordonner).
 abstract final class MomentStyles {
