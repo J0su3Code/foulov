@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../account/privacy_screen.dart';
 import 'auth_service.dart';
 
 /// Connexion sans mot de passe : Google, ou code à 8 chiffres reçu par e-mail.
@@ -155,6 +156,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 FilledButton(onPressed: _code.text.length == 8 ? _verifyCode : null, child: const Text('Valider')),
                 TextButton(onPressed: _sendCode, child: const Text('Renvoyer un code')),
               ],
+              // Avant même de créer un compte : ce que nous voyons, et ce que nous ne voyons jamais.
+              TextButton(
+                onPressed: () => PrivacyScreen.open(context),
+                child: Text(
+                  'Confidentialité : ce que le serveur voit',
+                  style: TextStyle(fontSize: 12.5, color: c.onSurfaceVariant),
+                ),
+              ),
             ],
           ),
         ),

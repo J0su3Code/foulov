@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../backup/backup_service.dart';
 import '../backup/phrase_screen.dart';
 import '../account/danger_screen.dart';
+import '../account/privacy_screen.dart';
 import '../lock/app_lock.dart';
 import '../../theme/theme_mode.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -95,6 +96,13 @@ class SpaceScreen extends StatelessWidget {
               const _Section('Confidentialité'),
               _Card(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.shield_moon_outlined),
+                    title: const Text('Ce que le serveur voit'),
+                    subtitle: const Text('Ce qui reste entre vous, ce que nous voyons, et pourquoi.'),
+                    trailing: Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+                    onTap: () => PrivacyScreen.open(context),
+                  ),
                   SwitchListTile(
                     secondary: const Icon(Icons.wifi_tethering_rounded),
                     title: const Text('« En ligne » et « écrit… »'),
