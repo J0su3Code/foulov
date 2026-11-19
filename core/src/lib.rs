@@ -10,6 +10,7 @@ pub mod chat_media;
 pub mod dates;
 pub mod device;
 pub mod media;
+pub mod pin;
 pub mod sas;
 pub mod space;
 pub mod store;

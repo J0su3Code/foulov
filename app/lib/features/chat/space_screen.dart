@@ -108,21 +108,28 @@ class SpaceScreen extends StatelessWidget {
               const _Section('Sécurité'),
               _Card(
                 children: [
+                  ListTile(
+                    leading: Icon(lock.hasPin ? Icons.pin_rounded : Icons.pin_outlined),
+                    title: const Text('Code FouLove'),
+                    subtitle: Text(
+                      lock.hasPin
+                          ? 'Activé : demandé à l\'ouverture et après une minute en arrière-plan.'
+                          : '6 chiffres propres à l\'app, même si ton téléphone n\'a pas de verrouillage.',
+                    ),
+                    trailing: Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+                    onTap: () => _pin(context),
+                  ),
                   if (lock.supported)
                     SwitchListTile(
-                      secondary: Icon(lock.enabled ? Icons.lock_rounded : Icons.lock_open_rounded),
-                      title: const Text('Verrouillage de l\'app'),
-                      subtitle: const Text('Empreinte, visage ou code du téléphone, à l\'ouverture.'),
-                      value: lock.enabled,
-                      onChanged: lock.setEnabled,
-                    )
-                  else
-                    const ListTile(
-                      leading: Icon(Icons.lock_open_rounded),
-                      title: Text('Verrouillage indisponible'),
+                      secondary: const Icon(Icons.fingerprint_rounded),
+                      title: const Text('Empreinte ou visage'),
                       subtitle: Text(
-                        'Active d\'abord un code, une empreinte ou le visage dans les réglages de ton téléphone.',
+                        lock.hasPin
+                            ? 'Pour ouvrir plus vite, à la place du code FouLove.'
+                            : 'Ouvre FouLove avec l\'empreinte, le visage ou le code du téléphone.',
                       ),
+                      value: lock.biometrics,
+                      onChanged: lock.setBiometrics,
                     ),
                   ListTile(
                     leading: const Icon(Icons.sync_rounded),
@@ -170,6 +177,43 @@ class SpaceScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _pin(BuildContext context) async {
+    final lock = AppLock.instance;
+    if (!lock.hasPin) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PinSetupScreen()));
+      return;
+    }
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Changer le code'),
+              onTap: () => Navigator.pop(context, 'change'),
+            ),
+            ListTile(
+              leading: Icon(Icons.lock_open_rounded, color: Theme.of(context).colorScheme.error),
+              title: Text('Retirer le code', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              onTap: () => Navigator.pop(context, 'remove'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !context.mounted) return;
+    // Toujours le code actuel d'abord : quelqu'un qui tient le téléphone ouvert ne peut pas le changer.
+    if (!await askCurrentPin(context) || !context.mounted) return;
+    if (action == 'change') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PinSetupScreen()));
+    } else {
+      await lock.removePin();
+    }
   }
 
   Future<void> _pickDate(BuildContext context, String? current) async {
@@ -413,7 +457,10 @@ class _BackupCard extends StatelessWidget {
           title: const Text('Revoir ma phrase de 24 mots'),
           onTap: () async {
             // Si le verrouillage est possible, on demande d'abord l'empreinte ou le code.
-            if (AppLock.instance.supported && !await AppLock.instance.confirm('Confirme pour afficher ta phrase')) {
+            if (!await AppLock.instance.confirm(
+              'Confirme pour afficher ta phrase',
+              askPin: () => askCurrentPin(context),
+            )) {
               return;
             }
             final p = await b.phrase();

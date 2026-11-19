@@ -23,6 +23,7 @@ thiserror = "2"
 bip39 = { version = "3", features = ["french"] }
 hkdf = "0.13"
 unicode-normalization = "0.1"
+argon2 = "0.6"
 
 [dev-dependencies]
 futures-util = "0.3"

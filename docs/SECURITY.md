@@ -151,6 +151,16 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
 - **Restauration** sur un nouveau téléphone : après la connexion, l'app propose la phrase si une sauvegarde existe et que le téléphone n'a aucun historique (écran protégé contre les captures). Le téléphone crée une **nouvelle identité**, rouvre une session avec le partenaire et le couple compare ses 7 symboles.
 - **Côté partenaire** : à chaque chargement, l'app compare la clé publiée par le serveur à celle en laquelle elle a confiance. Si elles diffèrent, l'écran « La clé de ton amour a changé » s'affiche avant tout le reste ; les nouveaux messages restent chiffrés et illisibles jusqu'à la comparaison des 7 symboles de la nouvelle clé. Une substitution par le serveur se verrait ainsi immédiatement.
 
+### Code FouLove (`core/src/pin.rs`, `app/lib/features/lock/app_lock.dart`)
+
+- Six chiffres propres à l'app, utilisables même si le téléphone n'a aucun verrouillage d'écran.
+- Seule une empreinte **Argon2id** est gardée (sel aléatoire de 128 bits, 46 Mio, 1 passe, réglage OWASP), dans le
+  coffre du système. Six chiffres ne font que 10⁶ possibilités : la protection vient de l'empreinte enfermée dans le
+  coffre et des **délais** imposés après 5 erreurs (30 s, puis doublés jusqu'à 1 h), conservés même si l'app est
+  fermée. C'est un verrou d'interface, comme celui du téléphone ; la base locale reste chiffrée par sa propre clé.
+- Changer ou retirer le code demande le code actuel. **Code oublié** : reconnexion par e-mail, puis le code est retiré.
+- L'empreinte ou le visage peuvent servir de raccourci.
+
 ## 8. Serveur (Supabase)
 
 - **Comptes** : Supabase Auth, avec Google, Apple ou code à usage unique par e-mail. Aucun mot de passe.

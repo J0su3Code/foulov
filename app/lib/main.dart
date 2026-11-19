@@ -29,7 +29,10 @@ Future<void> main() async {
   await ThemeModeSetting.instance.load();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  runApp(FouLovApp(auth: AuthService(Supabase.instance.client)));
+  final auth = AuthService(Supabase.instance.client);
+  // Code FouLove oublié : on se reconnecte par e-mail.
+  AppLock.instance.onForgot = auth.signOut;
+  runApp(FouLovApp(auth: auth));
 }
 
 class FouLovApp extends StatelessWidget {
