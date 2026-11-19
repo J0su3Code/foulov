@@ -6,7 +6,7 @@ FouLove est une messagerie privée pour les couples. Elle est conçue pour que *
 pas même nous, ne puisse lire ce que vous partagez. Cette page explique, sans jargon, ce que nous recevons, ce que
 nous ne recevons jamais, et ce que vous pouvez faire.
 
-**Éditeur et contact** : [NOM DE L'ÉDITEUR] — [ADRESSE E-MAIL DE CONTACT]
+**Éditeur et contact** : FouLove — josuecode@yahoo.com
 
 ---
 
@@ -83,7 +83,7 @@ Ces services ne reçoivent que des données chiffrées ou les informations techn
 - **Indicateurs « en ligne » et « écrit… »** : désactivables dans les réglages.
 - Conformément au RGPD, vous pouvez demander l'accès, la rectification ou l'effacement des données vous concernant, et
   introduire une réclamation auprès de l'autorité de protection des données de votre pays (en France, la CNIL).
-  Écrivez-nous : [ADRESSE E-MAIL DE CONTACT].
+  Écrivez-nous : josuecode@yahoo.com.
 
 Comme vos échanges sont chiffrés de bout en bout, ils ne sont lisibles que sur vos téléphones : si vous perdez vos deux
 téléphones sans votre phrase de récupération, personne ne peut les récupérer, pas même nous.

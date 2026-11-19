@@ -9,7 +9,7 @@
 
 ## Sans l'app
 
-Écrivez à **[ADRESSE E-MAIL DE CONTACT]** depuis l'adresse de votre compte, avec pour objet « Suppression de compte ».
+Écrivez à **josuecode@yahoo.com** depuis l'adresse de votre compte, avec pour objet « Suppression de compte ».
 Nous supprimons le compte sous 30 jours au plus, et vous le confirmons par e-mail.
 
 ## Ce qui est supprimé

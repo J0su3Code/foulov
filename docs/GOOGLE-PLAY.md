@@ -13,7 +13,7 @@ Tout est prêt à copier-coller dans la [Play Console](https://play.google.com/c
 | Type | Application, gratuite |
 | Catégorie | Communication |
 | Tags | Messagerie, Couple, Vie privée |
-| E-mail de contact | [ADRESSE E-MAIL DE CONTACT] |
+| E-mail de contact | josuecode@yahoo.com |
 | Site web | https://github.com/J0su3Code/foulov |
 | Politique de confidentialité | https://github.com/J0su3Code/foulov/blob/main/docs/CONFIDENTIALITE.md |
 | Suppression du compte (lien) | https://github.com/J0su3Code/foulov/blob/main/docs/SUPPRESSION-COMPTE.md |
@@ -128,7 +128,7 @@ Signature : clé d'envoi `~/.foulove/foulove-upload.jks` (mot de passe dans `app
 copie de sauvegarde dans le dossier `Secret Keys`). Activer la **signature d'application par Google Play** à la
 première version : Google garde la clé de signature finale, et la clé d'envoi peut être remplacée si elle est perdue.
 
-**Connexion Google** : ajouter dans Firebase (Paramètres du projet → app Android `org.foulov.app` → Empreintes) :
+**Connexion Google** : *fait le 19 nov. 2026 pour la clé d'envoi.* Ajouter dans Firebase (Paramètres du projet → app Android `org.foulov.app` → Empreintes) :
 - l'empreinte SHA-1 de la clé d'envoi : `20:5B:76:FD:9C:2F:7E:6A:94:84:22:D4:22:66:C6:EC:48:D4:68:20` ;
 - son SHA-256 : `11:9B:18:CC:CF:FD:3E:65:99:44:16:1A:68:35:DE:ED:3F:4F:DF:A8:D4:49:62:43:07:6E:D8:20:B2:DF:26:14` ;
 - après le premier envoi, l'empreinte de la **clé de signature d'application** indiquée par la Play Console
