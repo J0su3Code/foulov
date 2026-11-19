@@ -134,6 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _replyTo = null);
     try {
       await _s.send(text, replyTo: reply);
+      ChatWallpaper.bump(); // le fond glisse doucement, comme une respiration
       _toBottom();
     } catch (e) {
       _input.text = text;
@@ -870,7 +871,10 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
                   crossAxisAlignment: WrapCrossAlignment.end,
                   spacing: 8,
                   children: [
-                    Text(m.body, style: TextStyle(color: fg, fontSize: 15.5, height: 1.32)),
+                    Text(
+                      m.body,
+                      style: TextStyle(color: fg, fontSize: BubbleLook.of(context).fontSize, height: 1.32),
+                    ),
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
                       child: Row(
@@ -1432,7 +1436,10 @@ class _MediaBubble extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.end,
                 spacing: 8,
                 children: [
-                  Text(m.body, style: TextStyle(color: fg, fontSize: 15.5, height: 1.32)),
+                  Text(
+                    m.body,
+                    style: TextStyle(color: fg, fontSize: BubbleLook.of(context).fontSize, height: 1.32),
+                  ),
                   time,
                 ],
               ),

@@ -6,6 +6,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../src/rust/api/chat.dart';
 import '../../src/rust/api/space.dart';
+import '../chat/bubble_look.dart';
 import '../chat/chat_service.dart';
 
 /// « Notre espace » : profil du couple, photos, instants, lettres, albums, chiffres.
@@ -121,6 +122,49 @@ class SpaceService extends ChangeNotifier {
 
   /// Fond de la conversation : un dégradé (index) ou « photo ».
   String get wallpaper => settings['s.wallpaper'] ?? '0';
+
+  int _int(String k, int def) => int.tryParse(settings[k] ?? '') ?? def;
+
+  /// Motif par-dessus le fond (0 aucun) et son intensité (0–100).
+  int get pattern => _int('s.pattern', 1);
+  int get patternOpacity => _int('s.pattern_opacity', 9);
+
+  /// Votre photo en fond : flou (0–40) et assombrissement (0–100).
+  int get photoBlur => _int('s.photo_blur', 12);
+  int get photoDim => _int('s.photo_dim', 25);
+
+  /// Bulles : 0 dégradé, 1 uni, 2 verre dépoli, 3 contour.
+  int get bubbleStyle => _int('s.bubble_style', 0);
+
+  /// Taille du texte des messages (propre à ce téléphone) : 0 petit, 1 normal, 2 grand.
+  int get textSize => _int('me.text_size', 1).clamp(0, 2);
+
+  /// Thème choisi (pour le mettre en évidence) ; -1 si réglé à la main.
+  int get theme => _int('s.theme', -1);
+
+  /// Applique un thème complet d'un coup (fond, motif, bulles) ; la couleur des bulles est la tienne.
+  Future<void> applyTheme(int i, ChatTheme t) async {
+    for (final (k, v, personal) in [
+      ('wallpaper', '${t.wallpaper}', false),
+      ('pattern', '${t.pattern}', false),
+      ('pattern_opacity', '${t.opacity}', false),
+      ('bubble_style', '${t.style}', false),
+      ('bubble_shape', '${t.shape}', false),
+      ('bubble_color', '${t.color}', true),
+      ('theme', '$i', false),
+    ]) {
+      await spaceSetSetting(partner: _partner, key: k, value: v, personal: personal);
+    }
+    await _settings();
+    _notify();
+    unawaited(chat.flush());
+  }
+
+  /// Réglage choisi à la main : le thème n'est plus « tel quel ».
+  Future<void> tweak(String key, String value, {bool personal = false}) async {
+    await set(key, value, personal: personal);
+    if (theme != -1 && key != 'text_size') await set('theme', '');
+  }
 
   Future<void> set(String key, String value, {bool personal = false}) async {
     await spaceSetSetting(partner: _partner, key: key, value: value, personal: personal);

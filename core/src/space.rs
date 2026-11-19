@@ -61,8 +61,11 @@ fn no_controls(s: &str) -> bool {
 
 // ------------------------------------------------------------------ réglages
 
-const SHARED_KEYS: &[&str] = &["bio", "story_title", "story", "bubble_shape", "wallpaper"];
-const PERSONAL_KEYS: &[&str] = &["birthday", "bubble_color"];
+const SHARED_KEYS: &[&str] = &[
+    "bio", "story_title", "story", "bubble_shape", "wallpaper", "pattern", "pattern_opacity", "photo_blur", "photo_dim",
+    "bubble_style", "theme",
+];
+const PERSONAL_KEYS: &[&str] = &["birthday", "bubble_color", "text_size"];
 
 /// Anniversaire : « MM-JJ » (année gardée pour soi) ou « AAAA-MM-JJ ».
 fn valid_birthday(v: &str) -> bool {
@@ -75,7 +78,7 @@ fn valid_birthday(v: &str) -> bool {
 
 fn valid_setting(key: &str, v: &str, personal: bool) -> bool {
     let n = v.chars().count();
-    let small = |max: u32| v.parse::<u32>().is_ok_and(|x| x < max) && v.len() <= 2;
+    let small = |max: u32| v.len() <= 3 && v.bytes().all(|b| b.is_ascii_digit()) && v.parse::<u32>().is_ok_and(|x| x < max);
     no_controls(v)
         && match (personal, key) {
             (false, "bio") => n <= 160 && !v.contains('\n'),
@@ -83,6 +86,12 @@ fn valid_setting(key: &str, v: &str, personal: bool) -> bool {
             (false, "story") => n <= 4000,
             (false, "bubble_shape") => small(3),
             (false, "wallpaper") => v == "photo" || small(STYLES),
+            (false, "pattern") => small(STYLES),
+            (false, "pattern_opacity") | (false, "photo_dim") => small(101),
+            (false, "photo_blur") => small(41),
+            (false, "bubble_style") => small(4),
+            (false, "theme") => small(STYLES),
+            (true, "text_size") => small(3),
             (true, "birthday") => valid_birthday(v),
             (true, "bubble_color") => small(STYLES),
             _ => false,
@@ -1095,5 +1104,10 @@ mod tests {
         assert!(!valid_setting("wallpaper", "99", false));
         assert!(!valid_setting("bubble_shape", "3", false));
         assert!(!valid_setting("inconnu", "x", false));
+        assert!(valid_setting("pattern_opacity", "100", false) && !valid_setting("pattern_opacity", "101", false));
+        assert!(valid_setting("photo_blur", "40", false) && !valid_setting("photo_blur", "-1", false));
+        assert!(valid_setting("bubble_style", "3", false) && !valid_setting("bubble_style", "4", false));
+        assert!(valid_setting("text_size", "2", true) && !valid_setting("text_size", "2", false));
+        assert!(!valid_setting("pattern", "007", false) || valid_setting("pattern", "7", false));
     }
 }
