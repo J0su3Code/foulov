@@ -23,6 +23,11 @@ pub fn device_open(path: String, db_key: Vec<u8>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Ferme la base locale (avant de l'effacer : bulle fermée, compte supprimé). Les clés en mémoire disparaissent.
+pub fn device_close() {
+    *DEVICE.lock().unwrap_or_else(|e| e.into_inner()) = None;
+}
+
 pub fn device_identity_key() -> anyhow::Result<Vec<u8>> {
     with_device(|d| Ok(d.identity_key()?))
 }

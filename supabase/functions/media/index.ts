@@ -54,6 +54,12 @@ Deno.serve(async (req) => {
       return json({ url: await presign(r2, "PUT", key, { contentLength: size }) });
     }
     if (body.action === "backup_download") return json({ url: await presign(r2, "GET", key) });
+    // Bulle fermée par l'autre : la sauvegarde de ce compte ne sert plus, elle est retirée.
+    if (body.action === "backup_delete") {
+      const r = await fetch(await presign(r2, "DELETE", key), { method: "DELETE" });
+      if (!r.ok && r.status !== 404) return json({ error: "stockage indisponible" }, 502);
+      return json({ ok: true });
+    }
     if (body.action === "backup_status") {
       const r = await fetch(await presign(r2, "HEAD", key), { method: "HEAD" });
       if (r.status === 404) return json({ exists: false });

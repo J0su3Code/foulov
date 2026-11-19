@@ -14,6 +14,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 Future<void> deviceOpen({required String path, required List<int> dbKey}) =>
     RustLib.instance.api.crateApiDeviceDeviceOpen(path: path, dbKey: dbKey);
 
+/// Ferme la base locale (avant de l'effacer : bulle fermée, compte supprimé). Les clés en mémoire disparaissent.
+Future<void> deviceClose() => RustLib.instance.api.crateApiDeviceDeviceClose();
+
 Future<Uint8List> deviceIdentityKey() =>
     RustLib.instance.api.crateApiDeviceDeviceIdentityKey();
 

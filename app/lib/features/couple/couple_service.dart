@@ -21,7 +21,12 @@ class CoupleState {
     this.since,
     this.keyChanged = false,
     this.restoreFrom,
+    this.ended = false,
   });
+
+  /// Ce téléphone avait un espace, et le serveur dit qu'il n'existe plus : l'autre a fermé la bulle (ou supprimé
+  /// son compte). L'historique est encore ici, à effacer avant de recommencer.
+  final bool ended;
 
   /// La clé publiée par le partenaire n'est plus celle en laquelle ce téléphone a confiance (nouveau téléphone,
   /// réinstallation… ou substitution par le serveur) : rien de nouveau n'est lu avant une nouvelle vérification.
@@ -140,9 +145,17 @@ class CoupleService {
 
   /// État à jour, lu sur le serveur (et gardé pour la prochaine ouverture).
   Future<CoupleState> load() async {
+    final hadCouple = await _keyStore.read(key: _cacheName) != null;
     final s = await _load();
+    if (!s.hasCouple && hadCouple) return const CoupleState(ended: true);
     await _remember(s);
     return s;
+  }
+
+  /// Après une remise à zéro (bulle fermée) : la prochaine ouverture crée une base et des clés neuves.
+  void reset() {
+    _opened = false;
+    joinedWithInvitation = false;
   }
 
   Future<CoupleState> _load() async {
