@@ -582,6 +582,12 @@ class Received {
   final bool lettersChanged;
   final bool albumsChanged;
 
+  /// Son nouveau téléphone demande notre historique.
+  final bool historyRequested;
+
+  /// Notre historique arrive (à télécharger puis importer).
+  final bool historyOffered;
+
   const Received({
     this.message,
     required this.updated,
@@ -591,6 +597,8 @@ class Received {
     required this.momentsChanged,
     required this.lettersChanged,
     required this.albumsChanged,
+    required this.historyRequested,
+    required this.historyOffered,
   });
 
   @override
@@ -602,7 +610,9 @@ class Received {
       datesChanged.hashCode ^
       momentsChanged.hashCode ^
       lettersChanged.hashCode ^
-      albumsChanged.hashCode;
+      albumsChanged.hashCode ^
+      historyRequested.hashCode ^
+      historyOffered.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -616,7 +626,9 @@ class Received {
           datesChanged == other.datesChanged &&
           momentsChanged == other.momentsChanged &&
           lettersChanged == other.lettersChanged &&
-          albumsChanged == other.albumsChanged;
+          albumsChanged == other.albumsChanged &&
+          historyRequested == other.historyRequested &&
+          historyOffered == other.historyOffered;
 }
 
 class SavedDate {

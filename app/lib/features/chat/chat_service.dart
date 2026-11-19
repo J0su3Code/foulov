@@ -242,6 +242,14 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
 
   // ------------------------------------------------------------------ historique
 
+  /// Après un import (historique reçu de l'autre téléphone) : on relit la conversation depuis le début.
+  Future<void> reloadMessages() async {
+    messages.clear();
+    _byId.clear();
+    hasMore = true;
+    await _loadPage();
+  }
+
   Future<void> _loadPage() async {
     final last = messages.isEmpty ? null : messages.last;
     final page = await chatMessages(beforeSentAt: last?.sentAt, beforeId: last?.id, limit: _page);
@@ -767,7 +775,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
             }
             if (res.datesChanged) await _reloadDates();
             await space.onReceived(res);
-            if (res.momentsChanged || res.profileChanged) _hasDownloads = true;
+            if (res.momentsChanged || res.profileChanged || res.historyOffered) _hasDownloads = true;
           } catch (e) {
             if (e.toString().contains('clé de ton partenaire a changé')) {
               partnerKeyChanged = true;

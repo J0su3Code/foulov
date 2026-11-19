@@ -250,6 +250,19 @@ pub struct RestoreSummary {
 impl Device {
     /// Construit la sauvegarde chiffrée (octets à déposer sur R2).
     pub fn export_backup(&self, secret: &[u8; 32]) -> R<Vec<u8>> {
+        let b = self.snapshot()?;
+        let mut salt = [0u8; SALT];
+        OsRng.try_fill_bytes(&mut salt).expect("générateur du système");
+        let body = media::encrypt_with_key(&subkey(secret, &salt), &b.encode_to_vec()).map_err(|_| BackupError::Unreadable)?;
+        let mut out = Vec::with_capacity(MAGIC.len() + SALT + body.len());
+        out.extend_from_slice(MAGIC);
+        out.extend_from_slice(&salt);
+        out.extend_from_slice(&body);
+        Ok(out)
+    }
+
+    /// Instantané de l'historique (sans clés Signal ni instants) : sert à la sauvegarde et au transfert d'historique.
+    pub(crate) fn snapshot(&self) -> R<bpb::Backup> {
         let b = {
             let c = self.store.conn.lock();
             let mut b = bpb::Backup { version: 1, created_at: crate::chat::now_ms() as u64, ..Default::default() };
@@ -362,14 +375,7 @@ impl Device {
                 .map_err(db)?;
             b
         };
-        let mut salt = [0u8; SALT];
-        OsRng.try_fill_bytes(&mut salt).expect("générateur du système");
-        let body = media::encrypt_with_key(&subkey(secret, &salt), &b.encode_to_vec()).map_err(|_| BackupError::Unreadable)?;
-        let mut out = Vec::with_capacity(MAGIC.len() + SALT + body.len());
-        out.extend_from_slice(MAGIC);
-        out.extend_from_slice(&salt);
-        out.extend_from_slice(&body);
-        Ok(out)
+        Ok(b)
     }
 
     /// Remet en place une sauvegarde sur ce téléphone (sans toucher aux clés Signal, toutes neuves).
@@ -384,6 +390,11 @@ impl Device {
         if b.version != 1 {
             return Err(BackupError::Unreadable.into());
         }
+        self.import_snapshot(&b)
+    }
+
+    /// Ajoute un instantané à la base (ce qui existe déjà est gardé tel quel).
+    pub(crate) fn import_snapshot(&mut self, b: &bpb::Backup) -> R<RestoreSummary> {
         let tx = self.store.conn.clone();
         tx.atomically(|| {
             let c = self.store.conn.lock();

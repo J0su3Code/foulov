@@ -33,7 +33,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18")]
         pub body: Option<Body>,
     }
 
@@ -71,6 +71,20 @@ pub mod pb {
         LetterRead(Ref),
         #[prost(message, tag = "16")]
         MomentGone(Ref),
+        #[prost(message, tag = "17")]
+        HistoryRequest(Ref),
+        #[prost(message, tag = "18")]
+        HistoryOffer(HistoryOffer),
+    }
+
+    /// Réponse à une demande d'historique : le fichier chiffré déposé sur R2 et sa clé.
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct HistoryOffer {
+        /// Identifiant de la demande.
+        #[prost(bytes = "vec", tag = "1")]
+        pub request: Vec<u8>,
+        #[prost(message, optional, tag = "2")]
+        pub file: Option<FileRef>,
     }
 
     /// Une petite valeur de « Notre espace » (bio, histoire, style des bulles, anniversaire…).
@@ -405,6 +419,10 @@ pub enum Received {
     Letters,
     /// Les albums ont changé.
     Albums,
+    /// Son nouveau téléphone demande notre historique (à accepter ou refuser).
+    HistoryRequested,
+    /// Notre historique arrive (à télécharger, puis à importer).
+    HistoryOffered,
     /// Rien à afficher : doublon, message d'appairage, contenu d'une version future.
     Nothing,
     /// Enveloppe illisible (altérée ou corrompue) : écartée, jamais affichée.
@@ -560,7 +578,13 @@ impl Device {
         // Une suppression ne réveille pas le téléphone : elle s'appliquera à la prochaine ouverture.
         let urgent = matches!(
             body,
-            pb::Body::Text(_) | pb::Body::Reaction(_) | pb::Body::Media(_) | pb::Body::Letter(_) | pb::Body::Moment(_)
+            pb::Body::Text(_)
+                | pb::Body::Reaction(_)
+                | pb::Body::Media(_)
+                | pb::Body::Letter(_)
+                | pb::Body::Moment(_)
+                | pb::Body::HistoryRequest(_)
+                | pb::Body::HistoryOffer(_)
         );
         let envelope = self.encrypt(partner, &encode(body))?;
         let envelope_id = uuid_v4();
@@ -860,6 +884,8 @@ impl Device {
             pb::Body::Album(x) => crate::space::apply_album(&c, x),
             pb::Body::Letter(x) => crate::space::apply_letter(&c, x),
             pb::Body::LetterRead(x) => crate::space::apply_letter_read(&c, x),
+            pb::Body::HistoryRequest(x) => crate::transfer::apply_request(&c, x),
+            pb::Body::HistoryOffer(x) => crate::transfer::apply_offer(&c, x),
             pb::Body::Delete(d) => {
                 let id = id_from_wire(&d.target).ok_or(DeviceError::BadMessage)?;
                 // Le partenaire ne peut retirer que ses propres messages, jamais les nôtres.

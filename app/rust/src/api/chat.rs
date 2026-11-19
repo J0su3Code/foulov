@@ -98,6 +98,10 @@ pub struct Received {
     pub moments_changed: bool,
     pub letters_changed: bool,
     pub albums_changed: bool,
+    /// Son nouveau téléphone demande notre historique.
+    pub history_requested: bool,
+    /// Notre historique arrive (à télécharger puis importer).
+    pub history_offered: bool,
 }
 
 /// Profil du couple, jamais visible du serveur.
@@ -170,6 +174,8 @@ pub fn chat_receive(partner: String, envelope_id: String, envelope: Envelope) ->
             moments_changed: false,
             letters_changed: false,
             albums_changed: false,
+            history_requested: false,
+            history_offered: false,
         };
         Ok(match d.receive(&partner, &envelope_id, &CoreEnvelope { kind: envelope.kind, body: envelope.body })? {
             core::Received::Message(m) => Received { message: Some(m.into()), ..none },
@@ -179,6 +185,8 @@ pub fn chat_receive(partner: String, envelope_id: String, envelope: Envelope) ->
             core::Received::Moments => Received { moments_changed: true, ..none },
             core::Received::Letters => Received { letters_changed: true, ..none },
             core::Received::Albums => Received { albums_changed: true, ..none },
+            core::Received::HistoryRequested => Received { history_requested: true, ..none },
+            core::Received::HistoryOffered => Received { history_offered: true, ..none },
             core::Received::Nothing => none,
             core::Received::Rejected => Received { rejected: true, ..none },
         })

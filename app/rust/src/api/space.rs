@@ -300,3 +300,36 @@ pub fn space_resync_if_needed(partner: String) -> anyhow::Result<u32> {
 pub fn space_resync_now(partner: String) -> anyhow::Result<u32> {
     with_device(|d| Ok(d.resync_now(&partner)?))
 }
+
+// ------------------------------------------------------------------ historique depuis l'autre téléphone
+
+pub struct HistoryState {
+    pub asked: bool,
+    pub waiting: bool,
+    pub incoming: bool,
+    pub ready: bool,
+}
+
+pub fn space_history_state() -> anyhow::Result<HistoryState> {
+    with_device(|d| {
+        let s = d.history_state()?;
+        Ok(HistoryState { asked: s.asked, waiting: s.waiting, incoming: s.incoming, ready: s.ready })
+    })
+}
+
+pub fn space_request_history(partner: String) -> anyhow::Result<Outgoing> {
+    with_device(|d| Ok(d.request_history(&partner)?.into()))
+}
+
+pub fn space_decline_history() -> anyhow::Result<()> {
+    with_device(|d| Ok(d.decline_history()?))
+}
+
+pub fn space_offer_history(dir: String) -> anyhow::Result<PendingUpload> {
+    with_device(|d| Ok(upload(d.offer_history(Path::new(&dir))?)))
+}
+
+/// Importe l'historique reçu s'il est téléchargé : nombre de messages ajoutés, ou `None`.
+pub fn space_import_history() -> anyhow::Result<Option<u32>> {
+    with_device(|d| Ok(d.import_history()?.map(|s| s.messages)))
+}
