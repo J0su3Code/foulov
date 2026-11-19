@@ -769,6 +769,10 @@ impl Device {
         if plain == LEGACY_HELLO {
             return Ok(Received::Nothing);
         }
+        if plain.starts_with(crate::invite::HELLO_V2) {
+            crate::invite::store_proof(&self.store.conn.lock(), plain)?;
+            return Ok(Received::Nothing);
+        }
         let data = unpad(plain).ok_or(DeviceError::BadMessage)?;
         let (&version, rest) = data.split_first().ok_or(DeviceError::BadMessage)?;
         let content = if version == FORMAT_V1 { pb::Content::decode(rest).ok() } else { None };

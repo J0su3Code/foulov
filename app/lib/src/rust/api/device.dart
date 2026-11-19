@@ -82,6 +82,24 @@ Future<void> deviceAcceptPartnerKey({
   identityKey: identityKey,
 );
 
+/// Premier message de celui qui rejoint par invitation : « bonjour » et la preuve tirée du secret (clair, à chiffrer).
+Future<Uint8List> deviceJoinHello({
+  required String partner,
+  required List<int> secret,
+}) => RustLib.instance.api.crateApiDeviceDeviceJoinHello(
+  partner: partner,
+  secret: secret,
+);
+
+/// Chez celui qui a invité : vérifie la preuve reçue ; si elle est bonne, la clé de l'autre est marquée vérifiée.
+Future<bool> deviceVerifyJoinProof({
+  required String partner,
+  required List<int> secret,
+}) => RustLib.instance.api.crateApiDeviceDeviceVerifyJoinProof(
+  partner: partner,
+  secret: secret,
+);
+
 class Envelope {
   final int kind;
   final Uint8List body;

@@ -60,7 +60,16 @@ class CoupleService {
   static const _dbKeyName = 'foulov.device.db_key';
   static const _hello = 'FOULOVE:BONJOUR:1';
   static const qrPrefix = 'foulove:1:';
+
+  /// Invitation complète (QR code ou message) : code, empreinte de la clé de celui qui invite, secret (§5).
+  static const invitePrefix = 'foulove:2:';
+
+  /// Lien de retrouvailles : l'empreinte de la clé de ce téléphone, à envoyer par une autre messagerie.
+  static const idPrefix = 'foulove:id:';
   bool _opened = false;
+
+  /// Le dernier « rejoindre » s'est fait avec l'invitation complète : les deux clés se vérifient sans symboles.
+  bool joinedWithInvitation = false;
 
   String get _me => _db.auth.currentUser!.id;
 
@@ -164,7 +173,7 @@ class CoupleService {
     // Les clés publiques d'abord : sans elles, le partenaire ne pourrait pas ouvrir de session.
     await ensureKeysPublished();
     final code = await _db.rpc<String>('create_couple');
-    await _keyStore.write(key: _inviteName, value: '$code|${DateTime.now().toIso8601String()}');
+    await _saveInvitation(code);
     return code;
   }
 
@@ -176,42 +185,122 @@ class CoupleService {
     final saved = await _keyStore.read(key: _inviteName);
     if (!forceNew && saved != null) {
       final parts = saved.split('|');
-      final created = DateTime.tryParse(parts.last);
-      if (parts.length == 2 && created != null && DateTime.now().difference(created) < const Duration(hours: 23)) {
-        return parts.first;
-      }
+      final created = parts.length == 3 ? DateTime.tryParse(parts[1]) : null;
+      if (created != null && DateTime.now().difference(created) < const Duration(hours: 23)) return parts.first;
     }
     final code = await _db.rpc<String>('renew_invitation');
-    await _keyStore.write(key: _inviteName, value: '$code|${DateTime.now().toIso8601String()}');
+    await _saveInvitation(code);
     return code;
   }
 
-  /// Contenu du QR code : code d'invitation + empreinte de la clé d'identité de ce téléphone.
-  Future<String> qrPayload(String code) async {
-    final fp = await deviceFingerprint();
-    return '$qrPrefix$code:${base64Url.encode(fp).replaceAll('=', '')}';
+  /// Le code (dont le serveur ne garde que le hachage) et un secret de 128 bits qui ne quitte jamais ce téléphone,
+  /// sauf dans l'invitation elle-même.
+  Future<void> _saveInvitation(String code) async {
+    final r = Random.secure();
+    final secret = base64Url.encode(List<int>.generate(16, (_) => r.nextInt(256))).replaceAll('=', '');
+    await _keyStore.write(key: _inviteName, value: '$code|${DateTime.now().toIso8601String()}|$secret');
   }
 
-  /// Rejoint avec un code tapé ou scanné. Avec un QR code, la clé du partenaire est vérifiée automatiquement.
+  Future<Uint8List?> _inviteSecret() async {
+    final parts = (await _keyStore.read(key: _inviteName))?.split('|');
+    if (parts == null || parts.length != 3) return null;
+    return base64Url.decode(base64Url.normalize(parts[2]));
+  }
+
+  /// Invitation complète : code, empreinte de ma clé, secret. Sert au QR code et au message envoyé à distance.
+  Future<String> invitation(String code) async {
+    final fp = base64Url.encode(await deviceFingerprint()).replaceAll('=', '');
+    final secret = base64Url.encode(await _inviteSecret() ?? Uint8List(0)).replaceAll('=', '');
+    return '$invitePrefix$code:$fp:$secret';
+  }
+
+  /// Message à envoyer par WhatsApp, SMS… : il suffit de le copier puis de le coller dans FouLove.
+  Future<String> invitationText(String code) async =>
+      'Rejoins-moi sur FouLove 💞\n'
+      'Ouvre l\'app, touche « J\'ai un code d\'invitation », puis « Coller l\'invitation ».\n\n'
+      '${await invitation(code)}';
+
+  /// Chez celui qui a invité, après le premier message : la preuve reçue vient-elle de la personne qui a reçu
+  /// l'invitation ? Si oui, sa clé est vérifiée, sans symboles. L'invitation, utilisée, est oubliée.
+  Future<bool> verifyJoinProof(String partner) async {
+    final secret = await _inviteSecret();
+    if (secret == null) return false;
+    final ok = await deviceVerifyJoinProof(partner: partner, secret: secret);
+    if (ok) await _keyStore.delete(key: _inviteName);
+    return ok;
+  }
+
+  /// Lit une invitation dans un texte collé ou scanné : (code, empreinte attendue, secret), ou `null`.
+  static (String, Uint8List?, Uint8List?)? parseInvitation(String text) {
+    Uint8List b64(String s) => base64Url.decode(base64Url.normalize(s));
+    final v2 = RegExp(r'foulove:2:([0-9A-Za-z-]{10,11}):([A-Za-z0-9_-]{20,}):([A-Za-z0-9_-]{20,})').firstMatch(text);
+    if (v2 != null) {
+      try {
+        return (v2.group(1)!.replaceAll('-', ''), b64(v2.group(2)!), b64(v2.group(3)!));
+      } catch (_) {
+        return null;
+      }
+    }
+    final v1 = RegExp(r'foulove:1:([0-9A-Za-z-]{10,11}):([A-Za-z0-9_-]{20,})').firstMatch(text);
+    if (v1 != null) {
+      try {
+        return (v1.group(1)!.replaceAll('-', ''), b64(v1.group(2)!), null);
+      } catch (_) {
+        return null;
+      }
+    }
+    final code = text.toUpperCase().replaceAll(RegExp(r'[^0-9A-Z]'), '');
+    return code.length == 10 ? (code, null, null) : null;
+  }
+
+  // ------------------------------------------------------------------ retrouvailles (nouveau téléphone)
+
+  /// Mon lien de retrouvailles : l'empreinte de ma clé, à envoyer par une autre messagerie.
+  Future<String> fingerprintLink() async =>
+      'Voici mon lien FouLove 💞 Copie ce message, puis touche « Coller son lien » dans FouLove.\n\n'
+      '$idPrefix${base64Url.encode(await deviceFingerprint()).replaceAll('=', '')}';
+
+  /// Son lien de retrouvailles, collé : s'il correspond à sa clé, elle est acceptée et vérifiée sans symboles.
+  /// Renvoie faux si le lien ne correspond pas (ou n'en est pas un).
+  Future<bool> acceptByLink(String partner, Uint8List identity, String text, {bool keyChange = false}) async {
+    final m = RegExp(r'foulove:id:([A-Za-z0-9_-]{20,})').firstMatch(text);
+    if (m == null) return false;
+    final Uint8List fp;
+    try {
+      fp = base64Url.decode(base64Url.normalize(m.group(1)!));
+    } catch (_) {
+      return false;
+    }
+    if (!_same(fingerprintOf(identityKey: identity), fp)) return false;
+    if (keyChange) {
+      await acceptPartnerKey(partner, identity);
+    } else {
+      await deviceMarkVerified(partner: partner);
+    }
+    return true;
+  }
+
+  /// Contenu du QR code : l'invitation complète (le même contenu que le message envoyé à distance).
+  Future<String> qrPayload(String code) => invitation(code);
+
+  /// Rejoint avec une invitation collée ou scannée (ou un code tapé). Avec l'invitation complète, la clé de l'autre
+  /// est vérifiée ici automatiquement, et la preuve envoyée lui permet de vérifier la mienne : pas de symboles.
   Future<JoinResult> join(String input) async {
     await openDevice();
-    String code = input;
-    Uint8List? expectedFp;
-    if (input.startsWith(qrPrefix)) {
-      final parts = input.substring(qrPrefix.length).split(':');
-      if (parts.length != 2) return JoinResult.invalidCode;
-      code = parts[0];
-      expectedFp = base64Url.decode(base64Url.normalize(parts[1]));
-    }
+    final parsed = parseInvitation(input);
+    if (parsed == null) return JoinResult.invalidCode;
+    final (code, expectedFp, secret) = parsed;
     await ensureKeysPublished();
     final coupleId = await _db.rpc<String?>('join_couple', params: {'token': code});
     if (coupleId == null) return JoinResult.invalidCode;
-    return _openSession(expectedFp: expectedFp);
+    final r = await _openSession(expectedFp: expectedFp, secret: secret);
+    joinedWithInvitation = r == JoinResult.joined && secret != null && expectedFp != null;
+    return r;
   }
 
   /// Ouvre la session à partir des clés publiées du partenaire (PQXDH), puis lui envoie le premier message chiffré,
   /// qui ouvre la session de son côté. Avec un QR code, la clé est vérifiée contre son empreinte.
-  Future<JoinResult> _openSession({Uint8List? expectedFp}) async {
+  Future<JoinResult> _openSession({Uint8List? expectedFp, Uint8List? secret}) async {
     final coupleId = (await _db.from('couple_members').select('couple_id').limit(1).single())['couple_id'] as String;
     final rows = await _db.rpc<List<dynamic>>('claim_partner_bundle');
     final r = rows.first as Map<String, dynamic>;
@@ -239,7 +328,11 @@ class CoupleService {
     if (expectedFp != null) await deviceMarkVerified(partner: partner);
 
     // Premier message chiffré de bout en bout : il établit la session chez le partenaire.
-    final env = await deviceEncrypt(partner: partner, plaintext: utf8.encode(_hello));
+    // Avec une invitation complète, il porte aussi la preuve tirée de son secret.
+    final hello = secret != null && expectedFp != null
+        ? await deviceJoinHello(partner: partner, secret: secret)
+        : utf8.encode(_hello);
+    final env = await deviceEncrypt(partner: partner, plaintext: hello);
     await _db.from('envelopes').insert({
       'couple_id': coupleId,
       'sender_id': _me,

@@ -112,11 +112,21 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
    - si elles correspondent, la clé d'Inès est marquée « vérifiée » chez Malik, sans action de sa part ;
    - côté Inès, la vérification se fait en comparant les 7 symboles : ils sont côte à côte, il suffit de regarder les deux écrans.
    *Prévu* : un secret d'appairage de 128 bits, inclus dans le QR code et jamais envoyé au serveur, pour confirmer aussi automatiquement la clé de Malik chez Inès.
-3. **À distance : le code.** Inès dicte ou envoie le code, et Malik le tape. Les deux écrans affichent ensuite **7 symboles** :
-   - ils sont dérivés de `SHA-256("FouLov-SAS-v1" ‖ longueurs ‖ clé_identité_A ‖ clé_identité_B)`, avec les clés triées, puis tirés d'une liste de 64 symboles (42 bits) ;
-   - le couple les compare à voix haute ou en appel vidéo ;
-   - tant que ce n'est pas fait, l'app affiche « clés non vérifiées ».
-4. **Plus tard, lien d'invitation** (quand le domaine sera actif) : `https://foulove.org/rejoindre#K7Q4M9XHPT`. Le code est placé après le `#`, une partie du lien qui n'est jamais envoyée à un serveur web. Si le lien passe par une autre messagerie, celle-ci voit le code. Mais le code permet seulement de rejoindre, une seule fois, et la vérification par symboles détecte toute substitution de clé.
+3. **À distance : l'invitation complète** (`core/src/invite.rs`, tests `core/tests/invite.rs`). Inès l'envoie par une
+   autre messagerie (WhatsApp, SMS…) ; Malik la copie et la colle. Elle contient `foulove:2:<code>:<empreinte>:<secret>` :
+   - l'**empreinte** de la clé d'Inès : le téléphone de Malik la compare à la clé publiée par le serveur (comme le QR) ;
+   - un **secret de 128 bits**, tiré sur le téléphone d'Inès et jamais envoyé à notre serveur. Le premier message
+     chiffré de Malik contient `HMAC-SHA256(secret, « FouLove-join-v1 » ‖ clé de Malik ‖ clé d'Inès)` ; le téléphone
+     d'Inès la recalcule avec la clé de la session ouverte : si elle correspond, la clé de Malik est vérifiée.
+   - Résultat : **aucun symbole à comparer**, et un serveur malveillant ne peut pas se glisser entre vous sans le contenu
+     de l'invitation. Limite assumée : si la même personne contrôle notre serveur **et** la messagerie qui a transporté
+     l'invitation, elle pourrait le faire. Les 7 symboles restent alors la vérification ultime, en appel vidéo.
+   - Le QR code contient la même invitation : en personne aussi, les deux côtés sont vérifiés automatiquement.
+   - Le code seul (10 caractères tapés) marche toujours ; il faut alors comparer les 7 symboles
+     (`SHA-256("FouLov-SAS-v1" ‖ longueurs ‖ clés triées)`, 64 symboles, 42 bits).
+4. **Nouveau téléphone : liens de retrouvailles.** Chacun peut envoyer `foulove:id:<empreinte de sa clé>` par une autre
+   messagerie ; l'autre le colle, et la clé est acceptée si elle correspond exactement à celle reçue. Même modèle de
+   confiance que l'invitation (la messagerie qui transporte le lien doit être distincte de notre serveur).
 5. **Protection contre les essais au hasard** : 10 tentatives par heure et par compte. Un code invalide ne déclenche pas d'erreur, pour que la tentative soit bien comptée. Avec 50 bits, même un très grand nombre de comptes ne suffit pas pour tomber sur un code actif.
 6. **Plafond de deux membres** : la base refuse un troisième membre, par une contrainte en base et pas seulement dans l'app.
 7. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible et demande une nouvelle vérification.

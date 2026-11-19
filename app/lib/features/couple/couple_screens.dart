@@ -65,7 +65,17 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
   bool _showSymbols = false;
 
   void _joined() {
-    _showSymbols = true;
+    if (widget.couple.joinedWithInvitation) {
+      // Invitation complète : clés vérifiées des deux côtés, sans symboles. On fête ça.
+      Navigator.of(context).push(
+        PageRouteBuilder<void>(
+          transitionDuration: const Duration(milliseconds: 700),
+          pageBuilder: (_, a, _) => FadeTransition(opacity: a, child: const CelebrationScreen()),
+        ),
+      );
+    } else {
+      _showSymbols = true;
+    }
     _reload();
   }
 
@@ -341,7 +351,18 @@ class _InviteScreenState extends State<InviteScreen> {
       if (s.complete && s.partnerIdentity != null) {
         _poll?.cancel();
         await widget.couple.receiveHello(s.partnerId!);
+        // Invitation complète : la preuve reçue vérifie sa clé, sans symboles.
+        final verified = await widget.couple.verifyJoinProof(s.partnerId!);
         HapticFeedback.heavyImpact();
+        if (!mounted) return;
+        if (verified) {
+          await Navigator.of(context).push(
+            PageRouteBuilder<void>(
+              transitionDuration: const Duration(milliseconds: 700),
+              pageBuilder: (_, a, _) => FadeTransition(opacity: a, child: const CelebrationScreen()),
+            ),
+          );
+        }
         if (mounted) widget.onPartner();
       }
     } catch (e) {
@@ -382,7 +403,20 @@ class _InviteScreenState extends State<InviteScreen> {
             children: [
               Text('Invite ton amour', style: _title(context)),
               const SizedBox(height: 8),
-              Text('Montre-lui ce code à scanner, ou envoie-lui les 10 caractères.', style: _soft(context)),
+              Text(
+                'À distance : envoie-lui l\'invitation (WhatsApp, SMS…). À côté de toi : fais-lui scanner ce QR code. '
+                'Dans les deux cas, vos clés se vérifient toutes seules.',
+                style: _soft(context),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Envoyer l\'invitation'),
+                onPressed: _code == null
+                    ? null
+                    : () async =>
+                          SharePlus.instance.share(ShareParams(text: await widget.couple.invitationText(_code!))),
+              ),
               const SizedBox(height: 24),
               Center(
                 child: Container(
@@ -420,7 +454,13 @@ class _InviteScreenState extends State<InviteScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Center(child: Text('Valable 24 h, une seule fois', style: _soft(context)?.copyWith(fontSize: 13))),
+                Center(
+                  child: Text(
+                    'Le code seul, à taper, marche aussi (il faudra alors comparer 7 symboles). Valable 24 h, une fois.',
+                    textAlign: TextAlign.center,
+                    style: _soft(context)?.copyWith(fontSize: 13),
+                  ),
+                ),
                 Center(
                   child: TextButton(
                     onPressed: () => _newCode(forceNew: true),
@@ -433,19 +473,16 @@ class _InviteScreenState extends State<InviteScreen> {
                   children: [
                     OutlinedButton.icon(
                       icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: const Text('Copier'),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _pretty(_code!)));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copié')));
+                      label: const Text('Copier l\'invitation'),
+                      onPressed: () async {
+                        final text = await widget.couple.invitationText(_code!);
+                        await Clipboard.setData(ClipboardData(text: text));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(const SnackBar(content: Text('Invitation copiée')));
+                        }
                       },
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.ios_share_rounded, size: 18),
-                      label: const Text('Envoyer'),
-                      onPressed: () => SharePlus.instance.share(
-                        ShareParams(text: 'Rejoins-moi sur FouLove 💞\nCode d\'invitation : ${_pretty(_code!)}'),
-                      ),
                     ),
                   ],
                 ),
@@ -493,10 +530,19 @@ class _JoinScreenState extends State<JoinScreen> {
 
   void _onDetect(BarcodeCapture cap) {
     final v = cap.barcodes.firstOrNull?.rawValue;
-    if (v == null || !v.startsWith(CoupleService.qrPrefix) || _scanned != null) return;
+    if (v == null || !v.startsWith('foulove:') || _scanned != null) return;
     _scanned = v;
     _camera.stop();
     _submit(v);
+  }
+
+  Future<void> _paste() async {
+    final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+    if (CoupleService.parseInvitation(t) == null || !t.contains('foulove:')) {
+      setState(() => _error = 'Aucune invitation dans le presse-papiers. Copie d\'abord tout le message reçu.');
+      return;
+    }
+    await _submit(t);
   }
 
   void _rescan() {
@@ -558,7 +604,11 @@ class _JoinScreenState extends State<JoinScreen> {
                 SegmentedButton<bool>(
                   segments: const [
                     ButtonSegment(value: true, icon: Icon(Icons.qr_code_scanner), label: Text('Scanner')),
-                    ButtonSegment(value: false, icon: Icon(Icons.keyboard_outlined), label: Text('Saisir le code')),
+                    ButtonSegment(
+                      value: false,
+                      icon: Icon(Icons.content_paste_rounded),
+                      label: Text('Coller ou saisir'),
+                    ),
                   ],
                   selected: {_scan},
                   onSelectionChanged: (v) => setState(() => _scan = v.first),
@@ -589,7 +639,16 @@ class _JoinScreenState extends State<JoinScreen> {
                     ),
                   )
                 else ...[
-                  Text('Le code que ton amour t\'a envoyé', style: _soft(context)),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.content_paste_rounded),
+                    label: const Text('Coller l\'invitation'),
+                    onPressed: _busy ? null : _paste,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Copie le message que ton amour t\'a envoyé, puis touche ce bouton. Ou tape juste le code :',
+                    style: _soft(context),
+                  ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _code,
@@ -790,11 +849,97 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
                     onPressed: () => setState(() => _mismatch = true),
                     child: const Text('Un symbole est différent'),
                   ),
+                  if (!widget.alreadyVerified)
+                    LinkExchange(
+                      couple: widget.couple,
+                      partnerId: widget.partnerId,
+                      identity: widget.partnerIdentity,
+                      onVerified: _same,
+                    ),
                 ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// À distance, sans appel : chacun envoie son « lien de retrouvailles » (l'empreinte de sa clé) par une autre
+/// messagerie, et colle celui de l'autre. S'il correspond à la clé reçue, elle est vérifiée sans symboles.
+class LinkExchange extends StatelessWidget {
+  const LinkExchange({
+    super.key,
+    required this.couple,
+    required this.partnerId,
+    required this.identity,
+    required this.onVerified,
+    this.keyChange = false,
+  });
+
+  final CoupleService couple;
+  final String partnerId;
+  final Uint8List identity;
+  final bool keyChange;
+  final Future<void> Function() onVerified;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: Divider(color: cs.outline)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text('ou à distance, par vos liens', style: _soft(context)?.copyWith(fontSize: 12.5)),
+              ),
+              Expanded(child: Divider(color: cs.outline)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('Envoyer mon lien'),
+                  onPressed: () async => SharePlus.instance.share(ShareParams(text: await couple.fingerprintLink())),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.content_paste_rounded, size: 18),
+                  label: const Text('Coller son lien'),
+                  onPressed: () async {
+                    final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+                    final ok = await couple.acceptByLink(partnerId, identity, t, keyChange: keyChange);
+                    if (!context.mounted) return;
+                    if (ok) {
+                      HapticFeedback.heavyImpact();
+                      await onVerified();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            t.contains(CoupleService.idPrefix)
+                                ? 'Ce lien ne correspond pas à la clé reçue. N\'allez pas plus loin : parlez-en de vive voix.'
+                                : 'Copie d\'abord tout le message de ton amour, puis touche « Coller son lien ».',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -887,8 +1032,8 @@ class _KeyChangeScreenState extends State<KeyChangeScreen> {
               const SizedBox(height: 8),
               Text(
                 'C\'est normal après un nouveau téléphone ou une réinstallation. Pour être sûrs que personne ne s\'est '
-                'glissé entre vous, comparez ensemble ces 7 symboles, à voix haute ou en appel vidéo. '
-                'Ses nouveaux messages attendent, chiffrés, jusque-là.',
+                'glissé entre vous : comparez ces 7 symboles en appel vidéo, ou envoyez-vous vos liens par une autre '
+                'messagerie. Ses nouveaux messages attendent, chiffrés, jusque-là.',
                 style: _soft(context),
               ),
               const SizedBox(height: 22),
@@ -942,6 +1087,13 @@ class _KeyChangeScreenState extends State<KeyChangeScreen> {
                 TextButton(
                   onPressed: () => setState(() => _mismatch = true),
                   child: const Text('Un symbole est différent'),
+                ),
+                LinkExchange(
+                  couple: widget.couple,
+                  partnerId: widget.partnerId,
+                  identity: widget.newIdentity,
+                  keyChange: true,
+                  onVerified: () async => widget.onDone(),
                 ),
               ],
             ],
