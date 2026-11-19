@@ -575,7 +575,15 @@ class _Header extends StatelessWidget {
                   // « écrit… » ou « en ligne » d'abord ; sinon vos jours ensemble.
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
-                    child: service.partnerTyping
+                    child: !service.connected
+                        ? Text(
+                            'hors ligne · tes messages partiront dès le retour du réseau',
+                            key: const ValueKey('x'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
+                          )
+                        : service.partnerTyping
                         ? Text(
                             'écrit…',
                             key: const ValueKey('t'),

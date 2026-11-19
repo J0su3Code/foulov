@@ -39,13 +39,43 @@ class CoupleGate extends StatefulWidget {
 }
 
 class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
-  late Future<CoupleState> _state = widget.couple.load();
+  late Future<CoupleState> _state = _open();
   CoupleState? _last;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Ouverture instantanée : le dernier état connu s'affiche tout de suite (même hors ligne) ; le serveur est
+  /// interrogé en arrière-plan, et l'écran ne change que si quelque chose a vraiment changé (nouvelle clé, etc.).
+  Future<CoupleState> _open() async {
+    final cached = await widget.couple.cached();
+    if (cached == null) return widget.couple.load();
+    unawaited(_refreshInBackground(cached));
+    return cached;
+  }
+
+  Future<void> _refreshInBackground(CoupleState shown) async {
+    try {
+      final fresh = await widget.couple.load();
+      final same =
+          fresh.coupleId == shown.coupleId &&
+          fresh.partnerId == shown.partnerId &&
+          fresh.verified == shown.verified &&
+          !fresh.keyChanged &&
+          fresh.restoreFrom == null &&
+          fresh.complete;
+      if (!same && mounted) {
+        setState(() {
+          _state = Future.value(fresh);
+        });
+      }
+    } catch (e) {
+      // Hors ligne : on reste sur l'état connu ; la messagerie réessaiera d'elle-même.
+      if (kDebugMode) debugPrint('[FOULOVE] hors ligne au démarrage : $e');
+    }
   }
 
   @override
