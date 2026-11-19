@@ -7,6 +7,7 @@ import 'api/backup.dart';
 import 'api/chat.dart';
 import 'api/crypto.dart';
 import 'api/device.dart';
+import 'api/lock.dart';
 import 'api/space.dart';
 import 'dart:async';
 import 'dart:convert';
