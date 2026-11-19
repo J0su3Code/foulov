@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../src/rust/api/chat.dart';
+import '../account/account_service.dart';
 import '../backup/backup_service.dart';
 import '../../src/rust/api/crypto.dart';
 import '../../src/rust/api/device.dart';
@@ -144,10 +145,28 @@ class CoupleService {
   Future<void> forgetCache() => _keyStore.delete(key: _cacheName);
 
   /// État à jour, lu sur le serveur (et gardé pour la prochaine ouverture).
+  /// À qui appartient ce que contient ce téléphone : « compte|espace ». Gardé même après une déconnexion (l'historique
+  /// reste sur le téléphone) ; effacé seulement avec ces données (`AccountService.wipeLocal`).
+  static const ownerName = 'foulov.local_owner';
+
   Future<CoupleState> load() async {
-    final hadCouple = await _keyStore.read(key: _cacheName) != null;
+    final owner = (await _keyStore.read(key: ownerName))?.split('|');
+    if (owner != null && owner.first != _me) {
+      // Un autre compte se connecte sur ce téléphone : il ne doit jamais voir l'historique du précédent.
+      await AccountService.wipeLocal();
+      reset();
+      return load();
+    }
     final s = await _load();
-    if (!s.hasCouple && hadCouple) return const CoupleState(ended: true);
+    // Ce téléphone garde l'historique d'un espace qui n'existe plus (ou d'un autre espace) : à effacer d'abord.
+    if (owner != null && (!s.hasCouple || (s.complete && owner.last != s.coupleId))) {
+      return const CoupleState(ended: true);
+    }
+    // Téléphone installé avant ce suivi : pas d'espace, mais un ancien historique encore là.
+    if (owner == null && !s.hasCouple && (await chatMessages(limit: 1)).isNotEmpty) {
+      return const CoupleState(ended: true);
+    }
+    if (s.complete) await _keyStore.write(key: ownerName, value: '$_me|${s.coupleId}');
     await _remember(s);
     return s;
   }

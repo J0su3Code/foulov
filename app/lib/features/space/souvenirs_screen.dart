@@ -147,12 +147,16 @@ class _MediaGridState extends State<MediaGrid> {
   Future<void> _reload() async {
     final only = widget.only;
     List<ChatMessage> first;
-    if (only != null) {
-      first = [
-        for (final id in only) ?await widget.chat.lookup(id),
-      ].where((m) => m.media != null && !m.deleted).toList();
-    } else {
-      first = await chatMediaGallery(limit: _page, kind: widget.kind);
+    try {
+      if (only != null) {
+        first = [
+          for (final id in only) ?await widget.chat.lookup(id),
+        ].where((m) => m.media != null && !m.deleted).toList();
+      } else {
+        first = await chatMediaGallery(limit: _page, kind: widget.kind);
+      }
+    } catch (_) {
+      return; // base fermée (bulle fermée pendant la lecture) : l'écran va disparaître
     }
     if (!mounted) return;
     setState(() {
