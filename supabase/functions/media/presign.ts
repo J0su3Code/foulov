@@ -30,14 +30,15 @@ export async function presign(
   r2: R2,
   method: "PUT" | "GET" | "DELETE" | "HEAD",
   key: string,
-  opts: { contentLength?: number; expires?: number; now?: Date } = {},
+  opts: { contentLength?: number; expires?: number; now?: Date; query?: [string, string][] } = {},
 ): Promise<string> {
   const host = `${r2.account}.r2.cloudflarestorage.com`;
   const now = opts.now ?? new Date();
   const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); // AAAAMMJJTHHMMSSZ
   const day = amzDate.slice(0, 8);
   const scope = `${day}/auto/s3/aws4_request`;
-  const path = `/${r2.bucket}/${key}`;
+  // Clé vide : le seau lui-même (liste des objets, avec `query`).
+  const path = key ? `/${r2.bucket}/${key}` : `/${r2.bucket}`;
 
   const headers: [string, string][] = [["host", host]];
   if (opts.contentLength !== undefined) headers.unshift(["content-length", String(opts.contentLength)]);
@@ -49,6 +50,7 @@ export async function presign(
     ["X-Amz-Date", amzDate],
     ["X-Amz-Expires", String(opts.expires ?? 300)],
     ["X-Amz-SignedHeaders", signedHeaders],
+    ...(opts.query ?? []),
   ];
   const canonicalQuery = query
     .map(([k, v]) => [uri(k), uri(v)])

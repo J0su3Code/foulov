@@ -8,6 +8,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../src/rust/api/crypto.dart';
+import '../account/account_service.dart';
+import '../account/danger_screen.dart';
 import '../../src/rust/api/device.dart';
 import '../../ui/love.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,6 +36,9 @@ class CoupleGate extends StatefulWidget {
   final AuthService auth;
   final CoupleService couple;
 
+  /// Fermer la bulle ou supprimer le compte depuis n'importe quel écran (réglages, accueil sans espace).
+  static Future<void> end(Future<void> Function() action) => _CoupleGateState._end(action);
+
   @override
   State<CoupleGate> createState() => _CoupleGateState();
 }
@@ -42,9 +47,33 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
   late Future<CoupleState> _state = _open();
   CoupleState? _last;
 
+  /// Écran en cours (un seul à la fois) : pour fermer la bulle depuis les réglages.
+  static _CoupleGateState? _current;
+
+  /// Fermer la bulle ou supprimer le compte : la messagerie est d'abord arrêtée (plus d'écriture dans la base),
+  /// puis `action` s'exécute (serveur et remise à zéro), et l'aiguillage repart de zéro. Lève l'erreur de `action`.
+  static Future<void> _end(Future<void> Function() action) async {
+    final g = _current;
+    if (g == null) return action();
+    g.setState(() => g._closing = true);
+    await WidgetsBinding.instance.endOfFrame; // la messagerie est démontée (abonnements fermés)
+    try {
+      await action();
+      g.widget.couple.reset();
+    } finally {
+      if (g.mounted) {
+        g._closing = false;
+        g._reload();
+      }
+    }
+  }
+
+  bool _closing = false;
+
   @override
   void initState() {
     super.initState();
+    _current = this;
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -66,6 +95,7 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
           fresh.verified == shown.verified &&
           !fresh.keyChanged &&
           fresh.restoreFrom == null &&
+          !fresh.ended &&
           fresh.complete;
       if (!same && mounted) {
         setState(() {
@@ -80,6 +110,7 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    if (_current == this) _current = null;
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -131,8 +162,9 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
           );
         }
         final s = snap.data;
-        if (s == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (s == null || _closing) return const Scaffold(body: Center(child: CircularProgressIndicator()));
         _last = s;
+        if (s.ended) return _EndedScreen(couple: widget.couple, auth: widget.auth, onDone: _reload);
         if (!s.hasCouple) {
           return ChoiceScreen(couple: widget.couple, onDone: _reload, onJoined: _joined, auth: widget.auth);
         }
@@ -174,6 +206,73 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
       },
     );
   }
+}
+
+/// L'autre a fermé votre bulle (ou supprimé son compte) : l'historique est encore ici, plus rien ne peut partir.
+class _EndedScreen extends StatefulWidget {
+  const _EndedScreen({required this.couple, required this.auth, required this.onDone});
+
+  final CoupleService couple;
+  final AuthService auth;
+  final VoidCallback onDone;
+
+  @override
+  State<_EndedScreen> createState() => _EndedScreenState();
+}
+
+class _EndedScreenState extends State<_EndedScreen> {
+  bool _busy = false;
+
+  Future<void> _erase() async {
+    setState(() => _busy = true);
+    try {
+      await AccountService.forgetEndedCouple(Supabase.instance.client);
+      widget.couple.reset();
+      widget.onDone();
+    } catch (_) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('L\'effacement n\'a pas abouti. Réessaie.')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: LoveBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              Icon(Icons.heart_broken_outlined, size: 64, color: Theme.of(context).colorScheme.secondary),
+              const SizedBox(height: 16),
+              Text('Votre bulle a été fermée', style: _title(context), textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              Text(
+                'Ton amour a fermé votre bulle, ou supprimé son compte. Vos échanges sont encore sur ce téléphone, '
+                'mais plus rien ne peut être envoyé ni reçu.\n\nPour créer une nouvelle bulle, efface d\'abord celle-ci : '
+                'messages, photos, lettres et sauvegarde disparaîtront de ce téléphone et de nos serveurs.',
+                style: _soft(context),
+                textAlign: TextAlign.center,
+              ),
+              const Spacer(),
+              if (_busy)
+                const Center(child: CircularProgressIndicator())
+              else ...[
+                FilledButton(onPressed: _erase, child: const Text('Effacer et recommencer')),
+                TextButton(onPressed: widget.auth.signOut, child: const Text('Me déconnecter')),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Crée le service de messagerie pour la durée de l'écran (abonnement temps réel, boîte d'envoi).
@@ -298,7 +397,16 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
               children: [
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(onPressed: widget.auth.signOut, child: const Text('Se déconnecter')),
+                  child: PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    tooltip: 'Compte',
+                    onSelected: (v) =>
+                        v == 'out' ? widget.auth.signOut() : DangerScreen.open(context, deleteAccount: true),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'out', child: Text('Se déconnecter')),
+                      PopupMenuItem(value: 'delete', child: Text('Supprimer mon compte')),
+                    ],
+                  ),
                 ),
                 const Spacer(),
                 const Center(child: EntwinedHeart(size: 230)),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../backup/backup_service.dart';
 import '../backup/phrase_screen.dart';
+import '../account/danger_screen.dart';
 import '../lock/app_lock.dart';
 import '../../theme/theme_mode.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -178,6 +179,23 @@ class SpaceScreen extends StatelessWidget {
                       Navigator.of(context).pop();
                       onShowSymbols();
                     },
+                  ),
+                ],
+              ),
+              const _Section('Zone sensible'),
+              _Card(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.heart_broken_outlined, color: cs.error),
+                    title: Text('Fermer notre bulle', style: TextStyle(color: cs.error)),
+                    subtitle: const Text('Pour vous deux. Tout est effacé, ton compte reste.'),
+                    onTap: () => DangerScreen.open(context, deleteAccount: false, partnerName: service.partnerLabel),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.delete_forever_rounded, color: cs.error),
+                    title: Text('Supprimer mon compte', style: TextStyle(color: cs.error)),
+                    subtitle: const Text('Définitif : ton compte, votre bulle et tout son contenu.'),
+                    onTap: () => DangerScreen.open(context, deleteAccount: true, partnerName: service.partnerLabel),
                   ),
                 ],
               ),

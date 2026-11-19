@@ -131,6 +131,17 @@ abstract final class Reminders {
   };
 
   /// Reprogramme tous les rappels (après chaque changement de date ou de « ensemble depuis »).
+  /// Bulle fermée ou compte supprimé : plus aucun rappel de vos dates sur ce téléphone.
+  static Future<void> cancelAll() async {
+    await init();
+    if (!_ready) return;
+    try {
+      for (final p in await _plugin.pendingNotificationRequests()) {
+        if (p.id >= _first && p.id <= _last) await _plugin.cancel(id: p.id);
+      }
+    } catch (_) {}
+  }
+
   static Future<void> reschedule(
     List<DateEntry> dates,
     String? togetherSince, {

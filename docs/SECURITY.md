@@ -195,6 +195,12 @@ Pour un nouveau téléphone sans phrase de récupération :
 - Les opérations sensibles (rejoindre un couple, URL pré-signée) passent par des **fonctions serveur**, avec limitation des tentatives.
 - Les règles d'accès sont **testées automatiquement** : une suite de tests vérifie qu'un utilisateur A ne peut rien lire du couple B.
 - Les clés secrètes Supabase et R2 ne sont **jamais** dans l'app ni dans le dépôt.
+- **Fermer sa bulle / supprimer son compte** (`supabase/functions/account`, migration `…_fermer_bulle.sql`, tests
+  `fermer_bulle.test.sql`) : les fichiers chiffrés du couple (`c/<couple>/`) et la sauvegarde (`b/<compte>/`) sont
+  supprimés de R2, puis l'espace (cascade : membres, invitations, enveloppes) ; pour un compte, l'utilisateur lui-même
+  (cascade : tout le reste). Le téléphone est remis à zéro (base, fichiers, clés, rappels). L'autre téléphone voit
+  « Votre bulle a été fermée » et peut tout effacer à son tour (sa sauvegarde comprise).
+- **Nettoyage automatique** (pg_cron) : enveloppes jamais récupérées après 30 jours, tentatives d'appairage après 1 jour.
 
 ## 9. Notifications
 
