@@ -24,6 +24,8 @@ pub const KIND_PHOTO: u8 = 1;
 pub const KIND_VIDEO: u8 = 2;
 /// Message vocal (la « miniature » transporte alors la forme d'onde : jusqu'à 64 amplitudes de 0 à 255).
 pub const KIND_VOICE: u8 = 3;
+/// Archive chiffrée (transfert d'historique entre vos téléphones). Pas de miniature.
+pub const KIND_ARCHIVE: u8 = 5;
 /// Plafond du fichier chiffré (le serveur applique le même).
 pub const MAX_MEDIA_BYTES: u64 = 220 * 1024 * 1024;
 /// Plafond de la miniature, qui voyage dans le message chiffré.
@@ -33,6 +35,7 @@ pub const MAX_THUMB_BYTES: usize = 64 * 1024;
 pub(crate) const FOR_MESSAGE: i64 = 0;
 pub(crate) const FOR_PICTURE: i64 = 1;
 pub(crate) const FOR_MOMENT: i64 = 2;
+pub(crate) const FOR_TRANSFER: i64 = 3;
 
 /// Vérifie la description d'un fichier reçu (nom d'objet, clé, empreinte, taille, type, miniature).
 pub(crate) fn valid_file(f: &pb::FileRef, kinds: &[u8]) -> bool {
@@ -97,7 +100,7 @@ pub(crate) fn drop_file(c: &rusqlite::Connection, id: &str, trash: bool) -> R<()
     Ok(())
 }
 const MIMES: &[&str] =
-    &["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4", "video/quicktime", "audio/mp4", "audio/aac"];
+    &["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4", "video/quicktime", "audio/mp4", "audio/aac", "application/octet-stream"];
 
 /// Fichier à déposer sur R2.
 #[derive(Clone, Debug, PartialEq)]
@@ -147,8 +150,12 @@ pub(crate) fn check_meta(kind: u8, mime: &str, thumb: &[u8], caption: &str, w: u
         KIND_PHOTO => "image/",
         KIND_VIDEO => "video/",
         KIND_VOICE => "audio/",
+        KIND_ARCHIVE => "application/",
         _ => return false,
     };
+    if kind == KIND_ARCHIVE && !thumb.is_empty() {
+        return false;
+    }
     MIMES.contains(&mime)
         && mime.starts_with(family)
         && thumb.len() <= if kind == KIND_VOICE { 64 } else { MAX_THUMB_BYTES }
@@ -369,6 +376,7 @@ impl Device {
             None => return Err(invalid("rien à envoyer pour ce fichier")),
             Some(FOR_PICTURE) => return self.picture_uploaded(partner, message_id, object_key),
             Some(FOR_MOMENT) => return self.moment_uploaded(partner, message_id, object_key),
+            Some(FOR_TRANSFER) => return self.history_uploaded(partner, message_id, object_key),
             Some(FOR_MESSAGE) => {}
             Some(_) => return Err(invalid("usage inconnu")),
         }

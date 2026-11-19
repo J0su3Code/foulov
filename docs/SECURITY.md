@@ -171,6 +171,18 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
 - Changer ou retirer le code demande le code actuel. **Code oublié** : reconnexion par e-mail, puis le code est retiré.
 - L'empreinte ou le visage peuvent servir de raccourci.
 
+### Récupérer l'historique depuis l'autre téléphone (`core/src/transfer.rs`, tests `core/tests/transfer.rs`)
+
+Pour un nouveau téléphone sans phrase de récupération :
+- il **demande** l'historique par un message chiffré (identifiant aléatoire) ; seule une réponse à cette demande est
+  acceptée ;
+- l'autre téléphone ne propose d'accepter que si la clé du nouveau téléphone est **vérifiée** (symboles ou liens) ;
+- s'il accepte, son historique (messages, clés des photos et vidéos, dates, albums, lettres — jamais les clés Signal
+  ni les instants) est emballé **vu depuis l'autre côté**, chiffré avec une clé aléatoire (STREAM AES-256-GCM, Padmé),
+  déposé sur R2 comme une photo ; la clé et l'empreinte SHA-256 voyagent dans un message chiffré ;
+- le nouveau téléphone vérifie l'empreinte, importe, puis retire l'archive de R2. Le serveur ne voit qu'un fichier
+  illisible de taille arrondie.
+
 ## 8. Serveur (Supabase)
 
 - **Comptes** : Supabase Auth, avec Google, Apple ou code à usage unique par e-mail. Aucun mot de passe.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../src/rust/api/device.dart';
 import '../../src/rust/api/space.dart';
 import '../../theme/foulov_theme.dart';
 import '../chat/chat_service.dart';
@@ -144,6 +145,7 @@ class NousScreen extends StatelessWidget {
                           ),
                       ],
                     ),
+                    _HistoryCard(chat: chat),
                     SectionLabel('Vos instants'),
                     _MomentsRow(chat: chat),
                     const SizedBox(height: 18),
@@ -445,6 +447,128 @@ class _MomentsRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Historique entre vos téléphones : sa demande (accepter / refuser), notre demande en attente, l'arrivée, le résultat.
+/// Proposé aussi tant que ce téléphone n'a presque rien (nouveau téléphone sans phrase de récupération).
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({required this.chat});
+
+  final ChatService chat;
+
+  @override
+  Widget build(BuildContext context) {
+    final space = chat.space;
+    final h = space.history;
+    final name = chat.partnerLabel;
+    final cs = context.cs;
+    Widget card(IconData icon, String title, String body, {List<Widget> actions = const [], bool busy = false}) =>
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: LoveCard(
+            color: Color.lerp(cs.surfaceContainer, context.love.soft, .6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    busy
+                        ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.4))
+                        : Icon(icon, color: cs.primary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(body, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.35)),
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
+                ],
+              ],
+            ),
+          ),
+        );
+    Future<void> guard(Future<void> Function() f) async {
+      try {
+        await f();
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Ça n\'a pas marché. Vérifie ta connexion et réessaie.')));
+        }
+      }
+    }
+
+    if (space.historyImported != null) {
+      return card(
+        Icons.check_circle_rounded,
+        'Votre historique est de retour ♡',
+        '${space.historyImported} messages retrouvés. Les photos et vidéos se retéléchargent peu à peu.',
+        actions: [TextButton(onPressed: space.dismissHistoryImported, child: const Text('Super'))],
+      );
+    }
+    if (h.asked) {
+      return FutureBuilder<bool>(
+        future: deviceIsVerified(partner: chat.partnerId),
+        builder: (context, snap) {
+          final verified = snap.data ?? false;
+          return card(
+            Icons.devices_rounded,
+            '$name demande votre historique',
+            verified
+                ? 'Son nouveau téléphone n\'a pas vos échanges. Si tu acceptes, ils lui sont envoyés chiffrés '
+                      '(messages, photos, vidéos, lettres).'
+                : 'Vérifiez d\'abord vos clés (symboles ou liens, dans les réglages) : l\'historique ne part que vers '
+                      'un téléphone vérifié.',
+            actions: [
+              TextButton(onPressed: () => guard(space.declineHistory), child: const Text('Refuser')),
+              const SizedBox(width: 6),
+              FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size(64, 40)),
+                onPressed: verified ? () => guard(space.acceptHistory) : null,
+                child: const Text('Envoyer'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+    if (h.incoming) {
+      return card(
+        Icons.download_rounded,
+        'Votre historique arrive…',
+        'Envoyé chiffré par le téléphone de $name. Garde l\'app ouverte quelques instants.',
+        busy: true,
+      );
+    }
+    if (h.waiting) {
+      return card(
+        Icons.hourglass_top_rounded,
+        'Demande envoyée',
+        '$name doit l\'accepter sur son téléphone. Votre historique arrivera ensuite tout seul.',
+        busy: true,
+      );
+    }
+    if (chat.messages.length < 3) {
+      return card(
+        Icons.restore_rounded,
+        'Nouveau téléphone ?',
+        'Récupère votre historique depuis le téléphone de $name : il lui suffira d\'accepter.',
+        actions: [
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(64, 40)),
+            onPressed: () => guard(space.requestHistory),
+            child: const Text('Le demander'),
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
 

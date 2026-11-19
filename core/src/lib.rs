@@ -15,5 +15,6 @@ pub mod pin;
 pub mod sas;
 pub mod space;
 pub mod store;
+pub mod transfer;
 
 pub use libsignal_protocol;

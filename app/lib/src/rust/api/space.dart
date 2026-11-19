@@ -183,6 +183,22 @@ Future<int> spaceResyncIfNeeded({required String partner}) =>
 Future<int> spaceResyncNow({required String partner}) =>
     RustLib.instance.api.crateApiSpaceSpaceResyncNow(partner: partner);
 
+Future<HistoryState> spaceHistoryState() =>
+    RustLib.instance.api.crateApiSpaceSpaceHistoryState();
+
+Future<Outgoing> spaceRequestHistory({required String partner}) =>
+    RustLib.instance.api.crateApiSpaceSpaceRequestHistory(partner: partner);
+
+Future<void> spaceDeclineHistory() =>
+    RustLib.instance.api.crateApiSpaceSpaceDeclineHistory();
+
+Future<PendingUpload> spaceOfferHistory({required String dir}) =>
+    RustLib.instance.api.crateApiSpaceSpaceOfferHistory(dir: dir);
+
+/// Importe l'historique reçu s'il est téléchargé : nombre de messages ajoutés, ou `None`.
+Future<int?> spaceImportHistory() =>
+    RustLib.instance.api.crateApiSpaceSpaceImportHistory();
+
 class Album {
   final String id;
   final String title;
@@ -209,6 +225,34 @@ class Album {
           title == other.title &&
           items == other.items &&
           updatedAt == other.updatedAt;
+}
+
+class HistoryState {
+  final bool asked;
+  final bool waiting;
+  final bool incoming;
+  final bool ready;
+
+  const HistoryState({
+    required this.asked,
+    required this.waiting,
+    required this.incoming,
+    required this.ready,
+  });
+
+  @override
+  int get hashCode =>
+      asked.hashCode ^ waiting.hashCode ^ incoming.hashCode ^ ready.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HistoryState &&
+          runtimeType == other.runtimeType &&
+          asked == other.asked &&
+          waiting == other.waiting &&
+          incoming == other.incoming &&
+          ready == other.ready;
 }
 
 class Letter {

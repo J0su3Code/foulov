@@ -24,6 +24,7 @@ class SpaceService extends ChangeNotifier {
   List<Letter> letters = const [];
   List<Album> albums = const [];
   SpaceStats? stats;
+  HistoryState history = const HistoryState(asked: false, waiting: false, incoming: false, ready: false);
 
   Timer? _purge;
   bool _disposed = false;
@@ -32,7 +33,7 @@ class SpaceService extends ChangeNotifier {
 
   Future<void> load() async {
     await spacePurgeMoments().catchError((_) => 0);
-    await Future.wait([_settings(), _pictures(), _moments(), _letters(), _albums(), reloadStats()]);
+    await Future.wait([_settings(), _pictures(), _moments(), _letters(), _albums(), reloadStats(), _history()]);
     // Un instant expire à la minute près, même si rien n'arrive.
     _purge = Timer.periodic(const Duration(minutes: 1), (_) => _expire());
   }
@@ -58,6 +59,10 @@ class SpaceService extends ChangeNotifier {
 
   Future<void> _moments() async {
     moments = await spaceMoments();
+  }
+
+  Future<void> _history() async {
+    history = await spaceHistoryState();
   }
 
   Future<void> _letters() async {
@@ -97,13 +102,60 @@ class SpaceService extends ChangeNotifier {
     if (r.momentsChanged) await _moments();
     if (r.lettersChanged) await _letters();
     if (r.albumsChanged) await _albums();
+    if (r.historyRequested || r.historyOffered) {
+      await _history();
+      _notify();
+    }
     if (r.profileChanged || r.momentsChanged || r.lettersChanged || r.albumsChanged) _notify();
   }
 
   /// Un fichier vient d'être déposé ou téléchargé : s'il s'agit d'une photo du couple ou d'un instant, on rafraîchit.
   Future<void> onFile(String id) async {
-    await Future.wait([_pictures(), _moments()]);
+    await Future.wait([_pictures(), _moments(), _history()]);
+    if (history.ready) await _importHistory();
     _notify();
+  }
+
+  // ------------------------------------------------------------------ historique depuis l'autre téléphone
+
+  /// Messages ajoutés par le dernier import (pour l'annoncer), puis remis à zéro par l'écran.
+  int? historyImported;
+
+  void dismissHistoryImported() {
+    historyImported = null;
+    _notify();
+  }
+
+  /// Nouveau téléphone : demande notre historique au téléphone de l'autre.
+  Future<void> requestHistory() async {
+    await spaceRequestHistory(partner: _partner);
+    await _history();
+    _notify();
+    unawaited(chat.flush());
+  }
+
+  /// Accepter sa demande : notre historique, chiffré, part vers son nouveau téléphone.
+  Future<void> acceptHistory() async {
+    await spaceOfferHistory(dir: chat.mediaDir);
+    await _history();
+    _notify();
+    unawaited(chat.transfer());
+  }
+
+  Future<void> declineHistory() async {
+    await spaceDeclineHistory();
+    await _history();
+    _notify();
+  }
+
+  Future<void> _importHistory() async {
+    final n = await spaceImportHistory();
+    if (n == null) return;
+    historyImported = n;
+    await _history();
+    await Future.wait([_letters(), _albums(), reloadStats()]);
+    await chat.reloadMessages();
+    unawaited(chat.transfer()); // les photos et vidéos se retéléchargent, et l'archive quitte R2
   }
 
   /// Nouvelle activité (message envoyé ou reçu) : la flamme et les chiffres changent peut-être.

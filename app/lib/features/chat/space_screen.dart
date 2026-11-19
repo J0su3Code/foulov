@@ -132,6 +132,30 @@ class SpaceScreen extends StatelessWidget {
                       onChanged: lock.setBiometrics,
                     ),
                   ListTile(
+                    leading: const Icon(Icons.restore_rounded),
+                    title: const Text('Récupérer notre historique'),
+                    subtitle: const Text(
+                      'Nouveau téléphone sans phrase de récupération : ton amour accepte sur son téléphone, '
+                      'et vos échanges arrivent ici, chiffrés.',
+                    ),
+                    onTap: () async {
+                      try {
+                        await service.space.requestHistory();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Demande envoyée. Il suffit que ton amour accepte ♡')),
+                          );
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(const SnackBar(content: Text('La demande n\'a pas pu partir. Réessaie.')));
+                        }
+                      }
+                    },
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.sync_rounded),
                     title: const Text('Renvoyer notre espace'),
                     subtitle: const Text(
