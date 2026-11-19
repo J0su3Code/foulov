@@ -29,6 +29,7 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
+  DateTime? _backAt;
 
   void _go(int i) {
     if (i == _tab || !mounted) return;
@@ -40,16 +41,30 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final s = widget.service;
     return PopScope(
-      // Retour depuis un autre onglet : on revient d'abord à « Nous » ; depuis « Nous », l'app passe en
-      // arrière-plan sans se fermer (on la retrouve telle quelle).
+      // Retour depuis un autre onglet : on revient à « Nous ». Depuis « Nous » : un premier retour prévient,
+      // un second (dans les 2 s) ferme FouLove.
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_tab != 0) {
           _go(0);
-        } else {
-          const MethodChannel('foulove/notifications').invokeMethod<void>('background').catchError((_) {});
+          return;
         }
+        final now = DateTime.now();
+        if (_backAt != null && now.difference(_backAt!) < const Duration(seconds: 2)) {
+          SystemNavigator.pop();
+          return;
+        }
+        _backAt = now;
+        HapticFeedback.selectionClick();
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Appuie encore une fois pour quitter FouLove'),
+              duration: Duration(seconds: 2),
+            ),
+          );
       },
       child: Scaffold(
         // Les écrans gardent leur état (défilement, saisie en cours) d'un onglet à l'autre.
