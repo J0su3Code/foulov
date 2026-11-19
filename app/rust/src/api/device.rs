@@ -143,3 +143,13 @@ pub fn device_trusted_identity(partner: String) -> anyhow::Result<Option<Vec<u8>
 pub fn device_accept_partner_key(partner: String, identity_key: Vec<u8>) -> anyhow::Result<()> {
     with_device(|d| Ok(d.accept_partner_key(&partner, &identity_key)?))
 }
+
+/// Premier message de celui qui rejoint par invitation : « bonjour » et la preuve tirée du secret (clair, à chiffrer).
+pub fn device_join_hello(partner: String, secret: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    with_device(|d| Ok(d.join_hello(&partner, &secret)?))
+}
+
+/// Chez celui qui a invité : vérifie la preuve reçue ; si elle est bonne, la clé de l'autre est marquée vérifiée.
+pub fn device_verify_join_proof(partner: String, secret: Vec<u8>) -> anyhow::Result<bool> {
+    with_device(|d| Ok(d.verify_join_proof(&partner, &secret)?))
+}

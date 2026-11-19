@@ -825,6 +825,7 @@ dependencies = [
  "bip39",
  "futures-util",
  "hkdf",
+ "hmac",
  "libsignal-protocol",
  "prost",
  "rand 0.9.5",

@@ -9,6 +9,7 @@ pub mod chat;
 pub mod chat_media;
 pub mod dates;
 pub mod device;
+pub mod invite;
 pub mod media;
 pub mod pin;
 pub mod sas;
