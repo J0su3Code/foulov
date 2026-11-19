@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -64,6 +65,8 @@ class AuthService {
   Future<void> signOut() async {
     await PushService.unregister(_supabase);
     await BackupService.instance.forget();
+    // L'état du couple gardé pour l'ouverture rapide ne doit pas survivre au compte.
+    await const FlutterSecureStorage().delete(key: 'foulov.couple_cache');
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}

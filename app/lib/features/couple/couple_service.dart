@@ -91,7 +91,61 @@ class CoupleService {
 
   // ------------------------------------------------------------------ état
 
+  static const _cacheName = 'foulov.couple_cache';
+
+  /// Dernier état complet connu (couple, partenaire, sa clé, vérifiée) : de quoi ouvrir l'app tout de suite, même
+  /// hors ligne. Rangé dans le coffre du système. `null` s'il n'y en a pas, ou s'il faut repasser par le serveur.
+  Future<CoupleState?> cached() async {
+    await openDevice();
+    final raw = await _keyStore.read(key: _cacheName);
+    if (raw == null) return null;
+    try {
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      // Seulement pour le compte qui l'a enregistré.
+      if (j['user'] != _me) return null;
+      final identity = base64Decode(j['identity'] as String);
+      // La clé gardée doit toujours être celle en laquelle ce téléphone a confiance.
+      final trusted = await deviceTrustedIdentity(partner: j['partner'] as String);
+      if (trusted == null || !_same(trusted, identity)) return null;
+      return CoupleState(
+        coupleId: j['couple'] as String,
+        partnerId: j['partner'] as String,
+        partnerIdentity: identity,
+        verified: await deviceIsVerified(partner: j['partner'] as String),
+        since: DateTime.tryParse(j['since'] as String? ?? '')?.toLocal(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _remember(CoupleState s) async {
+    if (!s.complete || s.partnerIdentity == null || s.keyChanged || s.restoreFrom != null) {
+      await _keyStore.delete(key: _cacheName);
+      return;
+    }
+    await _keyStore.write(
+      key: _cacheName,
+      value: jsonEncode({
+        'user': _me,
+        'couple': s.coupleId,
+        'partner': s.partnerId,
+        'identity': base64Encode(s.partnerIdentity!),
+        'since': s.since?.toUtc().toIso8601String(),
+      }),
+    );
+  }
+
+  Future<void> forgetCache() => _keyStore.delete(key: _cacheName);
+
+  /// État à jour, lu sur le serveur (et gardé pour la prochaine ouverture).
   Future<CoupleState> load() async {
+    final s = await _load();
+    await _remember(s);
+    return s;
+  }
+
+  Future<CoupleState> _load() async {
     await openDevice();
     final rows = await _db.from('couple_members').select('couple_id, user_id');
     if (rows.isEmpty) return const CoupleState();

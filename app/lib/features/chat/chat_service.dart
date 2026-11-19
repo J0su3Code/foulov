@@ -89,6 +89,12 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
         .subscribe((status, error) {
           // À chaque (re)connexion, on rattrape ce qui est arrivé pendant la coupure.
           if (status == RealtimeSubscribeStatus.subscribed) pull();
+          // Connexion au serveur (pour le dire dans l'en-tête) : les envois attendent le réseau, sans rien perdre.
+          final up = status == RealtimeSubscribeStatus.subscribed;
+          if (up != connected) {
+            connected = up;
+            _notify();
+          }
         });
     unawaited(pull());
     unawaited(flush());
@@ -111,6 +117,9 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   static const _activityPref = 'foulov.show_activity';
   bool showActivity = true;
   bool partnerOnline = false;
+
+  /// Relié au serveur en temps réel. Faux hors ligne (les messages partiront au retour du réseau).
+  bool connected = true;
   bool partnerTyping = false;
   RealtimeChannel? _live;
   Timer? _typingOff, _partnerTypingOff;
