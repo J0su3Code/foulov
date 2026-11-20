@@ -93,6 +93,14 @@ class AuthService {
     );
   }
 
+  /// Comptes de démonstration seulement (examen Google Play) : ils ont un mot de passe, fixé dans le tableau de bord
+  /// Supabase. Les vrais comptes n'en ont pas : pour eux, cette connexion échoue toujours.
+  Future<User?> signInWithPassword(String email, String password) async {
+    final res = await _supabase.auth.signInWithPassword(email: email.trim(), password: password);
+    await clearPending();
+    return res.user;
+  }
+
   /// Vérifie le code reçu par e-mail et ouvre la session.
   Future<User?> verifyEmailCode(String email, String code) async {
     final res = await _supabase.auth.verifyOTP(type: OtpType.email, email: email.trim(), token: code.trim());
