@@ -14,10 +14,10 @@ Tout est prêt à copier-coller dans la [Play Console](https://play.google.com/c
 | Catégorie | Communication |
 | Tags | Messagerie, Couple, Vie privée |
 | E-mail de contact | hello@josuecode.com |
-| Site web | https://foulove.vercel.app |
-| Politique de confidentialité | https://foulove.vercel.app/confidentialite/ |
-| Suppression du compte (lien) | https://foulove.vercel.app/supprimer-mon-compte/ |
-| Normes de sécurité des enfants | https://foulove.vercel.app/securite-enfants/ |
+| Site web | https://foulove.josuecode.com |
+| Politique de confidentialité | https://foulove.josuecode.com/confidentialite/ |
+| Suppression du compte (lien) | https://foulove.josuecode.com/supprimer-mon-compte/ |
+| Normes de sécurité des enfants | https://foulove.josuecode.com/securite-enfants/ |
 | Point de contact sécurité des enfants | FouLove — hello@josuecode.com |
 
 ## 2. Fiche du Store
@@ -143,7 +143,7 @@ Ces empreintes sont publiques (elles ne permettent pas de signer).
 
 Play Console → Contenu de l'application → *Normes de sécurité des enfants* :
 
-- Normes publiées : https://foulove.vercel.app/securite-enfants/ (nomment l'app et l'éditeur, interdisent
+- Normes publiées : https://foulove.josuecode.com/securite-enfants/ (nomment l'app et l'éditeur, interdisent
   explicitement l'exploitation et les abus sexuels sur les enfants).
 - Mécanisme de signalement dans l'app : **Réglages → Aide → Signaler un problème** (choix « La sécurité d'un enfant »).
 - Traitement des contenus d'abus : suspension puis suppression du compte, signalement au NCMEC et à PHAROS.

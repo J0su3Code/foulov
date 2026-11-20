@@ -30,6 +30,7 @@ Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final auth = AuthService(Supabase.instance.client);
+  await auth.loadPending();
   // Code FouLove oublié : on se reconnecte par e-mail.
   AppLock.instance.onForgot = auth.signOut;
   runApp(FouLovApp(auth: auth));
@@ -74,6 +75,8 @@ class _AuthGate extends StatelessWidget {
       stream: auth.changes,
       builder: (context, _) {
         if (auth.session == null) {
+          // Un code vient d'être envoyé (l'app a été fermée entre-temps) : directement à la saisie du code.
+          if (auth.pendingEmail != null) return LoginScreen(auth: auth);
           return Builder(
             builder: (context) => IntroScreen(
               onStart: () =>

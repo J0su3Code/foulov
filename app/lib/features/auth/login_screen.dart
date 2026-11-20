@@ -27,6 +27,29 @@ class _LoginScreenState extends State<LoginScreen> {
   final _code = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // L'app a été fermée pendant qu'on cherchait le code : on reprend là où on en était.
+    final pending = widget.auth.pendingEmail;
+    if (pending != null) {
+      _email.text = pending;
+      _step = _Step.code;
+    }
+  }
+
+  /// Colle un code copié depuis l'e-mail (on garde seulement les chiffres).
+  Future<void> _pasteCode() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final digits = (data?.text ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 8) {
+      setState(() => _error = 'Aucun code à 8 chiffres dans le presse-papiers. Copie-le depuis l\'e-mail.');
+      return;
+    }
+    _code.text = digits.substring(0, 8);
+    _verifyCode();
+  }
+
+  @override
   void dispose() {
     _email.dispose();
     _code.dispose();
@@ -100,7 +123,9 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(switch (_step) {
                 _Step.choose => 'Aucun mot de passe à retenir. Ensuite, tu restes connecté sur ce téléphone.',
                 _Step.email => 'On t\'envoie un code à usage unique, valable 10 minutes.',
-                _Step.code => 'Saisis le code à 8 chiffres envoyé à ${_email.text.trim()}.',
+                _Step.code =>
+                  'Saisis le code à 8 chiffres envoyé à ${_email.text.trim()}. Tu peux quitter l\'app pour aller le '
+                      'chercher : elle t\'attendra ici.',
               }, style: t.textTheme.bodyLarge?.copyWith(color: c.onSurfaceVariant)),
               const SizedBox(height: 28),
               if (_step == _Step.email)
@@ -175,7 +200,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 FilledButton(onPressed: _emailOk ? _sendCode : null, child: const Text('Recevoir le code')),
               if (!_busy && _step == _Step.code) ...[
                 FilledButton(onPressed: _code.text.length == 8 ? _verifyCode : null, child: const Text('Valider')),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.content_paste_rounded),
+                  label: const Text('Coller le code'),
+                  onPressed: _pasteCode,
+                ),
                 TextButton(onPressed: _sendCode, child: const Text('Renvoyer un code')),
+                TextButton(
+                  onPressed: () async {
+                    await widget.auth.clearPending();
+                    setState(() => _step = _Step.email);
+                  },
+                  child: const Text('Changer d\'adresse'),
+                ),
               ],
               // Avant même de créer un compte : ce que nous voyons, et ce que nous ne voyons jamais.
               TextButton(
