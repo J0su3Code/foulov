@@ -1,0 +1,180 @@
+---
+// Pages de texte (confidentialité, conditions, etc.) : titre, date, sommaire, contenu lisible.
+import Base from './Base.astro';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+interface Props {
+  frontmatter?: { title: string; description?: string; eyebrow?: string; updated?: string; intro?: string };
+  headings?: Heading[];
+  title?: string;
+  description?: string;
+  eyebrow?: string;
+  updated?: string;
+  intro?: string;
+}
+const p = Astro.props;
+// Une page Markdown passe ses réglages dans `frontmatter` ; une page .astro les passe directement.
+const { title, description, eyebrow, updated, intro } = (p.frontmatter ?? p) as Required<Props>['frontmatter'];
+const toc = (p.headings ?? []).filter((h) => h.depth === 2);
+---
+
+<Base title={title} description={description}>
+  <header class="doc-head">
+    <div class="wrap">
+      {eyebrow && <span class="eyebrow">{eyebrow}</span>}
+      <h1>{title}</h1>
+      {intro && <p class="lead">{intro}</p>}
+      {updated && <p class="updated">Dernière mise à jour : {updated}</p>}
+    </div>
+  </header>
+  <div class:list={['wrap', 'doc', { 'has-toc': toc.length > 2 }]}>
+    {
+      toc.length > 2 && (
+        <nav class="toc" aria-label="Sommaire">
+          <p>Sommaire</p>
+          <ol>
+            {toc.map((h) => (
+              <li>
+                <a href={`#${h.slug}`}>{h.text}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )
+    }
+    <article class="prose">
+      <slot />
+    </article>
+  </div>
+</Base>
+
+<style>
+  .doc-head {
+    padding: clamp(44px, 7vw, 84px) 0 clamp(28px, 4vw, 44px);
+    background:
+      radial-gradient(60% 120% at 85% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
+      var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .doc-head h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    max-width: 20ch;
+  }
+  .updated {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 18px 0 0;
+  }
+  .doc {
+    display: grid;
+    gap: 56px;
+    padding-top: 48px;
+    padding-bottom: 96px;
+  }
+  .doc.has-toc {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+  .toc {
+    position: sticky;
+    top: 96px;
+    align-self: start;
+    font-size: 0.94rem;
+    max-height: calc(100vh - 120px);
+    overflow: auto;
+  }
+  .toc p {
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 2px solid var(--line);
+  }
+  .toc a {
+    display: block;
+    padding: 6px 0 6px 14px;
+    margin-left: -2px;
+    border-left: 2px solid transparent;
+    color: var(--muted);
+    text-decoration: none;
+    line-height: 1.35;
+  }
+  .toc a:hover {
+    color: var(--ink);
+    border-left-color: var(--accent);
+  }
+  @media (max-width: 960px) {
+    .doc.has-toc {
+      grid-template-columns: 1fr;
+      gap: 28px;
+    }
+    .toc {
+      position: static;
+      max-height: none;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px 20px 12px;
+    }
+  }
+  .prose {
+    max-width: 72ch;
+  }
+  .prose :global(h2) {
+    font-size: clamp(1.5rem, 2.6vw, 1.95rem);
+    margin-top: 2.2em;
+    padding-top: 0.2em;
+  }
+  .prose :global(h2:first-child) {
+    margin-top: 0;
+  }
+  .prose :global(h3) {
+    margin-top: 1.8em;
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.3em;
+    margin: 0 0 1.1em;
+  }
+  .prose :global(li) {
+    margin: 0.35em 0;
+  }
+  .prose :global(li::marker) {
+    color: var(--accent-ink);
+  }
+  .prose :global(table) {
+    display: block;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--card);
+    margin: 1.4em 0;
+  }
+  .prose :global(thead th) {
+    white-space: nowrap;
+  }
+  .prose :global(hr) {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 2.4em 0;
+  }
+  .prose :global(blockquote) {
+    margin: 1.4em 0;
+    padding: 16px 20px;
+    border-radius: 16px;
+    background: var(--soft);
+  }
+  .prose :global(blockquote p:last-child) {
+    margin: 0;
+  }
+</style>

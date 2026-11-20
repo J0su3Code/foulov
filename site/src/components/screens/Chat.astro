@@ -1,0 +1,202 @@
+---
+import Tabs from './Tabs.astro';
+---
+
+<div class="chat">
+  <div class="wall" aria-hidden="true"></div>
+  <div class="head">
+    <img src="/img/nous.webp" alt="" decoding="async" />
+    <div><b>Sami</b><small>en ligne</small></div>
+  </div>
+  <div class="msgs">
+    <div class="day">Aujourd'hui</div>
+    <div class="b them">Tu as vu le coucher de soleil ce soir ?</div>
+    <div class="b me">Je te l'ai gardé 🌅</div>
+    <div class="b me photo"><img src="/img/m1.webp" alt="" decoding="async" /></div>
+    <div class="b them">Magnifique. Vivement qu'on le voie ensemble.<span class="r">❤️</span></div>
+    <div class="b them voice"><span class="play"></span><span class="wave"></span><small>0:14</small></div>
+    <div class="b me">Plus que 3 dodos ✨</div>
+    <div class="typing"><i></i><i></i><i></i></div>
+  </div>
+  <div class="input">
+    <span class="field">Un mot doux…</span><span class="mic"></span>
+  </div>
+  <Tabs active={1} />
+</div>
+
+<style>
+  .chat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    font-size: 11.5px;
+    --status: #fff;
+  }
+  .wall {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(60% 40% at 20% 15%, #ff8fab55, transparent 70%),
+      radial-gradient(60% 45% at 85% 55%, #f5c26b40, transparent 70%),
+      radial-gradient(70% 50% at 30% 90%, #d6336c40, transparent 70%),
+      var(--p-bg);
+  }
+  .head,
+  .msgs,
+  .input {
+    position: relative;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 40px 14px 10px;
+    background: linear-gradient(135deg, #c2255c, #e8577f);
+    color: #fff;
+  }
+  .head img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .head small {
+    display: block;
+    font-size: 10px;
+    opacity: 0.85;
+  }
+  .msgs {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 12px;
+    overflow: hidden;
+  }
+  .day {
+    align-self: center;
+    font-size: 9.5px;
+    color: var(--p-muted);
+    background: var(--p-card);
+    border-radius: 99px;
+    padding: 2px 9px;
+    margin-bottom: 3px;
+  }
+  .b {
+    max-width: 76%;
+    padding: 7px 10px;
+    border-radius: 16px;
+    line-height: 1.3;
+    position: relative;
+  }
+  .them {
+    align-self: flex-start;
+    background: var(--p-card);
+    border-bottom-left-radius: 5px;
+    box-shadow: 0 1px 1px rgb(0 0 0 / 5%);
+  }
+  .me {
+    align-self: flex-end;
+    color: #fff;
+    background: linear-gradient(135deg, #e8417a, #f39c6b);
+    border-bottom-right-radius: 5px;
+  }
+  .photo {
+    padding: 3px;
+  }
+  .photo img {
+    width: 124px;
+    height: 92px;
+    object-fit: cover;
+    border-radius: 13px;
+  }
+  .r {
+    position: absolute;
+    right: -6px;
+    bottom: -9px;
+    font-size: 10px;
+    background: var(--p-card);
+    border-radius: 99px;
+    padding: 0 3px;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+  }
+  .voice {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 6px;
+  }
+  .voice small {
+    color: var(--p-muted);
+    font-size: 9.5px;
+  }
+  .play {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--p-accent);
+    position: relative;
+  }
+  .play::after {
+    content: '';
+    position: absolute;
+    left: 7.5px;
+    top: 5.5px;
+    border: 4.5px solid transparent;
+    border-left: 6.5px solid #fff;
+  }
+  .wave {
+    width: 74px;
+    height: 16px;
+    background: repeating-linear-gradient(90deg, var(--p-muted) 0 2px, transparent 2px 4.5px);
+    clip-path: polygon(0 40%, 10% 20%, 20% 50%, 30% 10%, 40% 35%, 50% 0, 60% 40%, 70% 15%, 80% 45%, 90% 30%, 100% 45%, 100% 60%, 90% 70%, 80% 55%, 70% 85%, 60% 60%, 50% 100%, 40% 65%, 30% 90%, 20% 50%, 10% 80%, 0 60%);
+    opacity: 0.7;
+  }
+  .typing {
+    display: flex;
+    gap: 3px;
+    background: var(--p-card);
+    align-self: flex-start;
+    padding: 8px 10px;
+    border-radius: 14px;
+  }
+  .typing i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--p-muted);
+    opacity: 0.6;
+  }
+  .input {
+    display: flex;
+    gap: 7px;
+    padding: 6px 10px 8px;
+  }
+  .field {
+    flex: 1;
+    background: var(--p-card);
+    border: 1px solid var(--p-line);
+    border-radius: 99px;
+    padding: 7px 12px;
+    color: var(--p-muted);
+  }
+  .mic {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--p-accent);
+    flex: none;
+    position: relative;
+  }
+  .mic::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 8px;
+    width: 6px;
+    height: 10px;
+    border-radius: 4px;
+    background: #fff;
+  }
+</style>

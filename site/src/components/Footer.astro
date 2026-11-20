@@ -1,0 +1,118 @@
+---
+import { SITE } from '../site';
+import Logo from './Logo.astro';
+const year = new Date().getFullYear();
+---
+
+<footer class="foot">
+  <div class="wrap cols">
+    <div class="about">
+      <a class="brand" href="/"><Logo size={30} /> FouLove</a>
+      <p>
+        La messagerie privée des couples. Chiffrée de bout en bout, sans publicité, sans traceur. Son code est public.
+      </p>
+      <p class="small">
+        Une question, un problème ? <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+      </p>
+    </div>
+    <nav aria-label="Découvrir">
+      <h2>Découvrir</h2>
+      <a href="/">Accueil</a>
+      <a href="/guide/">Guide pas à pas</a>
+      <a href="/securite/">Comment c'est protégé</a>
+      <a href={SITE.github} rel="noopener">Code source</a>
+    </nav>
+    <nav aria-label="Aide">
+      <h2>Aide</h2>
+      <a href="/aide/">Questions et contact</a>
+      <a href="/aide/#signaler-un-problème">Signaler un problème</a>
+      <a href="/supprimer-mon-compte/">Supprimer mon compte</a>
+    </nav>
+    <nav aria-label="Informations légales">
+      <h2>Informations</h2>
+      <a href="/confidentialite/">Confidentialité</a>
+      <a href="/conditions/">Conditions d'utilisation</a>
+      <a href="/securite-enfants/">Sécurité des enfants</a>
+      <a href="/mentions-legales/">Mentions légales</a>
+    </nav>
+  </div>
+  <div class="wrap legal">
+    <span>© {year} FouLove</span>
+    <span>Ce site ne dépose aucun cookie et ne mesure pas votre visite.</span>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    margin-top: 0;
+    border-top: 1px solid var(--line);
+    background: var(--bg-2);
+    padding: 56px 0 28px;
+    font-size: 0.97rem;
+  }
+  .cols {
+    display: grid;
+    gap: 36px;
+    grid-template-columns: 1.6fr repeat(3, 1fr);
+  }
+  @media (max-width: 860px) {
+    .cols {
+      grid-template-columns: 1fr 1fr;
+    }
+    .about {
+      grid-column: 1 / -1;
+    }
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    text-decoration: none;
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+  }
+  .about p {
+    color: var(--muted);
+    max-width: 38ch;
+  }
+  .small {
+    font-size: 0.93rem;
+  }
+  nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  h2 {
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  nav a {
+    color: var(--ink);
+    text-decoration: none;
+    padding: 5px 0;
+  }
+  nav a:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+  .legal {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 24px;
+    margin-top: 44px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+</style>

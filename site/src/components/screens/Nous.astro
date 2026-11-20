@@ -1,0 +1,190 @@
+---
+import Tabs from './Tabs.astro';
+---
+
+<div class="nous">
+  <div class="cover"><img src="/img/couverture.webp" alt="" loading="eager" decoding="async" /></div>
+  <div class="who">
+    <div class="avatar"><img src="/img/nous.webp" alt="" decoding="async" /></div>
+    <div class="names">Inès <span>&amp;</span> Sami</div>
+    <div class="bio">Deux cafés, une ville, mille kilomètres.</div>
+    <div class="chips">
+      <span class="chip"><b>1 248</b> jours ensemble</span>
+      <span class="chip gold"><b>36</b> jours de flamme</span>
+    </div>
+  </div>
+  <div class="block">
+    <div class="h">Vos instants</div>
+    <div class="moments">
+      <div class="m"><div class="ring seen"><span class="plus">+</span></div><span>Toi</span></div>
+      <div class="m">
+        <div class="ring"><img src="/img/instant.webp" alt="" decoding="async" /></div><span>Sami · 2 h</span>
+      </div>
+    </div>
+  </div>
+  <div class="block card">
+    <div class="row">
+      <span class="dot"></span>
+      <div><b>Notre anniversaire</b><small>dans 12 jours · 4 ans</small></div>
+    </div>
+  </div>
+  <div class="block card word">
+    <small>Dernier mot doux</small>
+    « Hâte d'être vendredi. Je garde la place près de la fenêtre. »
+  </div>
+  <Tabs active={0} />
+</div>
+
+<style>
+  .nous {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    font-size: 11.5px;
+  }
+  .cover {
+    height: 118px;
+    flex: none;
+    overflow: hidden;
+  }
+  .cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .who {
+    text-align: center;
+    margin-top: -38px;
+    padding: 0 14px;
+  }
+  .avatar {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 6px;
+    border-radius: 50%;
+    padding: 3px;
+    background: var(--p-bg);
+  }
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .names {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 600;
+  }
+  .names span {
+    color: var(--p-accent);
+    font-style: italic;
+  }
+  .bio {
+    color: var(--p-muted);
+    margin: 2px 0 8px;
+  }
+  .chips {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+  .chip {
+    background: var(--p-soft);
+    border-radius: 99px;
+    padding: 3px 8px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .chip.gold {
+    background: color-mix(in srgb, var(--p-gold) 22%, transparent);
+  }
+  .block {
+    margin: 10px 14px 0;
+  }
+  .h {
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .moments {
+    display: flex;
+    gap: 14px;
+  }
+  .m {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--p-muted);
+  }
+  .ring {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    padding: 2.5px;
+    background: conic-gradient(var(--p-gold), #ff8fab, var(--p-accent), var(--p-gold));
+    display: grid;
+    place-items: center;
+  }
+  .ring.seen {
+    background: var(--p-line);
+  }
+  .ring img,
+  .plus {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--p-bg);
+  }
+  .plus {
+    display: grid;
+    place-items: center;
+    background: var(--p-card);
+    font-size: 20px;
+    color: var(--p-accent);
+  }
+  .card {
+    background: var(--p-card);
+    border: 1px solid var(--p-line);
+    border-radius: 14px;
+    padding: 9px 11px;
+  }
+  .row {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+  }
+  .row small,
+  .word small {
+    display: block;
+    color: var(--p-muted);
+    font-size: 10px;
+  }
+  .dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+    background: var(--p-soft);
+    flex: none;
+    position: relative;
+  }
+  .dot::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: var(--p-accent);
+  }
+  .word {
+    font-family: var(--serif);
+    font-style: italic;
+    line-height: 1.35;
+  }
+  .word small {
+    font-family: system-ui, sans-serif;
+    font-style: normal;
+    margin-bottom: 2px;
+  }
+</style>

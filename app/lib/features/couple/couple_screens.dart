@@ -288,6 +288,10 @@ class _EndedScreenState extends State<_EndedScreen> {
               else ...[
                 FilledButton(onPressed: _erase, child: const Text('Effacer et recommencer')),
                 TextButton(onPressed: widget.auth.signOut, child: const Text('Me déconnecter')),
+                TextButton(
+                  onPressed: () => DangerScreen.open(context, deleteAccount: true),
+                  child: Text('Supprimer mon compte', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ),
               ],
             ],
           ),
@@ -548,6 +552,11 @@ class _InviteScreenState extends State<InviteScreen> {
       await widget.auth.signOut();
       return;
     }
+    if (v == 'delete') {
+      // La fonction `account` ferme aussi la bulle en attente : personne ne l'a encore rejointe.
+      DangerScreen.open(context, deleteAccount: true);
+      return;
+    }
     _poll?.cancel();
     try {
       // Personne ne l'a encore rejointe : l'annuler ne fait rien perdre.
@@ -603,6 +612,7 @@ class _InviteScreenState extends State<InviteScreen> {
                       PopupMenuItem(value: 'join', child: Text('J\'ai plutôt reçu une invitation')),
                       PopupMenuItem(value: 'cancel', child: Text('Annuler cette bulle')),
                       PopupMenuItem(value: 'out', child: Text('Se déconnecter')),
+                      PopupMenuItem(value: 'delete', child: Text('Supprimer mon compte')),
                     ],
                   ),
                 ],

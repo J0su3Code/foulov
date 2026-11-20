@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme/foulov_theme.dart';
-
-/// Adresse publique de la politique de confidentialité (aussi donnée à Google Play).
-const privacyPolicyUrl = 'https://github.com/J0su3Code/foulov/blob/main/docs/CONFIDENTIALITE.md';
-const accountDeletionUrl = 'https://github.com/J0su3Code/foulov/blob/main/docs/SUPPRESSION-COMPTE.md';
-const sourceCodeUrl = 'https://github.com/J0su3Code/foulov';
+import 'links.dart';
 
 /// « Ce que le serveur voit » : ce qui reste entre vous, ce qui est visible et pourquoi, ce que nous ne faisons pas.
-/// Le même contenu que docs/CONFIDENTIALITE.md, en version courte.
+/// Le même contenu que la politique de confidentialité du site (site/src/pages/confidentialite.md), en version courte.
 class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
 
@@ -73,13 +68,13 @@ class PrivacyScreen extends StatelessWidget {
           FilledButton.icon(
             icon: const Icon(Icons.description_outlined),
             label: const Text('Politique de confidentialité complète'),
-            onPressed: () => launchUrl(Uri.parse(privacyPolicyUrl), mode: LaunchMode.externalApplication),
+            onPressed: () => openLink(context, Links.privacyPolicy),
           ),
           const SizedBox(height: 6),
           TextButton.icon(
             icon: const Icon(Icons.code_rounded),
             label: const Text('Vérifier le code (il est public)'),
-            onPressed: () => launchUrl(Uri.parse(sourceCodeUrl), mode: LaunchMode.externalApplication),
+            onPressed: () => openLink(context, Links.sourceCode),
           ),
           const SizedBox(height: 8),
           Text(

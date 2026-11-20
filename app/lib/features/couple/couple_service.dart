@@ -310,7 +310,8 @@ class CoupleService {
   /// Message à envoyer par WhatsApp, SMS… : il suffit de le copier puis de le coller dans FouLove.
   Future<String> invitationText(String code) async =>
       'Rejoins-moi sur FouLove 💞\n'
-      'Ouvre l\'app, touche « J\'ai un code d\'invitation », puis « Coller l\'invitation ».\n\n'
+      'Installe l\'app et connecte-toi. Touche « J\'ai reçu une invitation », puis « Coller ou saisir » et '
+      '« Coller l\'invitation ».\n\n'
       '${await invitation(code)}';
 
   /// Chez celui qui a invité, après le premier message : la preuve reçue vient-elle de la personne qui a reçu

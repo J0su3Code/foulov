@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../account/links.dart';
 import '../account/privacy_screen.dart';
 import 'auth_service.dart';
 
@@ -148,6 +149,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: const Icon(Icons.mail_outline),
                   label: const Text('Recevoir un code par e-mail'),
                   onPressed: () => setState(() => _step = _Step.email),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'En continuant, tu confirmes avoir 16 ans ou plus et tu acceptes nos conditions d\'utilisation '
+                  'et notre politique de confidentialité.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12.5, color: c.onSurfaceVariant, height: 1.35),
+                ),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => openLink(context, Links.terms),
+                      child: const Text('Conditions', style: TextStyle(fontSize: 12.5)),
+                    ),
+                    TextButton(
+                      onPressed: () => openLink(context, Links.privacyPolicy),
+                      child: const Text('Confidentialité', style: TextStyle(fontSize: 12.5)),
+                    ),
+                  ],
                 ),
               ],
               if (!_busy && _step == _Step.email)

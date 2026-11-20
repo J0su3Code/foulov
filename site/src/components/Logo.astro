@@ -1,0 +1,10 @@
+---
+// Le logo : l'icône de l'app (bulle irisée et cœur), en image.
+interface Props {
+  size?: number;
+}
+const { size = 34 } = Astro.props;
+const src = size > 48 ? '/icone-192.png' : '/icone-64.png';
+---
+
+<img src={src} width={size} height={size} alt="" style={`border-radius:${Math.round(size * 0.27)}px`} />
