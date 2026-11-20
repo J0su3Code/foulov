@@ -17,7 +17,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-enum _Step { choose, email, code }
+enum _Step { choose, email, code, password }
 
 class _LoginScreenState extends State<LoginScreen> {
   _Step _step = _Step.choose;
@@ -25,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
   final _email = TextEditingController();
   final _code = TextEditingController();
+  final _password = TextEditingController();
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _email.dispose();
     _code.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -68,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _error = 'La connexion Google n\'a pas abouti. Réessaie, ou utilise un code par e-mail.';
       }
     } on AuthException catch (e) {
-      _error = _authMessage(e);
+      _error = _step == _Step.password ? 'E-mail ou mot de passe incorrect.' : _authMessage(e);
     } catch (_) {
       _error = 'Impossible de joindre FouLove. Vérifie ta connexion internet puis réessaie.';
     } finally {
@@ -103,7 +105,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 icon: const Icon(Icons.arrow_back),
                 onPressed: _busy
                     ? null
-                    : () => setState(() => _step = _step == _Step.code ? _Step.email : _Step.choose),
+                    : () => setState(
+                        () => _step = switch (_step) {
+                          _Step.code || _Step.password => _Step.email,
+                          _ => _Step.choose,
+                        },
+                      ),
               ),
       ),
       body: SafeArea(
@@ -118,6 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 _Step.choose => 'Entrons dans\nvotre bulle.',
                 _Step.email => 'Ton adresse\ne-mail',
                 _Step.code => 'Vérifie\ntes e-mails',
+                _Step.password => 'Compte de\ndémonstration',
               }, style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.1)),
               const SizedBox(height: 10),
               Text(switch (_step) {
@@ -126,6 +134,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 _Step.code =>
                   'Saisis le code à 8 chiffres envoyé à ${_email.text.trim()}. Tu peux quitter l\'app pour aller le '
                       'chercher : elle t\'attendra ici.',
+                _Step.password =>
+                  'Réservé aux comptes de démonstration (examen de l\'app). Les autres comptes n\'ont pas '
+                      'de mot de passe : ils se connectent avec un code reçu par e-mail.',
               }, style: t.textTheme.bodyLarge?.copyWith(color: c.onSurfaceVariant)),
               const SizedBox(height: 28),
               if (_step == _Step.email)
@@ -139,6 +150,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   onChanged: (_) => setState(() {}),
                   onSubmitted: (_) => _emailOk ? _sendCode() : null,
                 ),
+              if (_step == _Step.password) ...[
+                TextField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  decoration: const InputDecoration(labelText: 'Adresse e-mail', border: OutlineInputBorder()),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _password,
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.password],
+                  decoration: const InputDecoration(labelText: 'Mot de passe', border: OutlineInputBorder()),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
               if (_step == _Step.code)
                 TextField(
                   controller: _code,
@@ -196,8 +224,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ],
-              if (!_busy && _step == _Step.email)
+              if (!_busy && _step == _Step.email) ...[
                 FilledButton(onPressed: _emailOk ? _sendCode : null, child: const Text('Recevoir le code')),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _error = null;
+                    _step = _Step.password;
+                  }),
+                  child: Text('Compte de démonstration', style: TextStyle(fontSize: 12.5, color: c.onSurfaceVariant)),
+                ),
+              ],
+              if (!_busy && _step == _Step.password)
+                FilledButton(
+                  onPressed: _emailOk && _password.text.isNotEmpty
+                      ? () => _run(() async => widget.auth.signInWithPassword(_email.text, _password.text))
+                      : null,
+                  child: const Text('Se connecter'),
+                ),
               if (!_busy && _step == _Step.code) ...[
                 FilledButton(onPressed: _code.text.length == 8 ? _verifyCode : null, child: const Text('Valider')),
                 OutlinedButton.icon(

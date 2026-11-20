@@ -24,7 +24,7 @@ Tout est prêt à copier-coller dans la [Play Console](https://play.google.com/c
 
 **Description courte** (80 car. max) :
 
-> La messagerie privée de votre couple. Chiffrée de bout en bout, rien que vous deux.
+> La messagerie privée du couple, chiffrée de bout en bout. Rien que vous deux.
 
 **Description complète** (4 000 car. max) :
 

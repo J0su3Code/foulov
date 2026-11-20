@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/foulov_theme.dart';
+import 'danger_screen.dart';
 import 'links.dart';
 
 /// « Signaler un problème » : le mécanisme de signalement exigé par les normes de sécurité des enfants
@@ -69,6 +70,13 @@ class ReportScreen extends StatelessWidget {
             title: 'Un bug ou une question',
             subtitle: 'Quelque chose ne marche pas, ou tu as une idée.',
             onTap: () => writeToUs(context, subject: 'FouLove — question', body: _template('Ton message :')),
+          ),
+          _Choice(
+            icon: Icons.block_rounded,
+            title: 'Ne plus avoir de contact',
+            subtitle:
+                'Fermer la bulle coupe tout lien : l\'autre ne peut plus rien t\'envoyer. C\'est le blocage de FouLove.',
+            onTap: () => DangerScreen.open(context, deleteAccount: false),
           ),
           const SizedBox(height: 14),
           Text(
