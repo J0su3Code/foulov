@@ -14,9 +14,11 @@ Tout est prêt à copier-coller dans la [Play Console](https://play.google.com/c
 | Catégorie | Communication |
 | Tags | Messagerie, Couple, Vie privée |
 | E-mail de contact | josuecode@yahoo.com |
-| Site web | https://github.com/J0su3Code/foulov |
-| Politique de confidentialité | https://github.com/J0su3Code/foulov/blob/main/docs/CONFIDENTIALITE.md |
-| Suppression du compte (lien) | https://github.com/J0su3Code/foulov/blob/main/docs/SUPPRESSION-COMPTE.md |
+| Site web | https://foulove.vercel.app |
+| Politique de confidentialité | https://foulove.vercel.app/confidentialite/ |
+| Suppression du compte (lien) | https://foulove.vercel.app/supprimer-mon-compte/ |
+| Normes de sécurité des enfants | https://foulove.vercel.app/securite-enfants/ |
+| Point de contact sécurité des enfants | FouLove — josuecode@yahoo.com |
 
 ## 2. Fiche du Store
 
@@ -70,7 +72,8 @@ Tout est prêt à copier-coller dans la [Play Console](https://play.google.com/c
 
 **Votre app collecte-t-elle ou partage-t-elle des données utilisateur ?** Oui.
 **Les données sont-elles chiffrées en transit ?** Oui (TLS, et chiffrement de bout en bout pour tout le contenu).
-**Les utilisateurs peuvent-ils demander la suppression de leurs données ?** Oui (dans l'app, et par le lien ci-dessus).
+**Les utilisateurs peuvent-ils demander la suppression de leurs données ?** Oui (dans l'app, et sur la page web
+ci-dessus, sans l'app).
 
 | Catégorie Google | Collectée ? | Partagée ? | Facultatif ? | Usage | Remarque |
 |---|---|---|---|---|---|
@@ -135,3 +138,14 @@ première version : Google garde la clé de signature finale, et la clé d'envoi
   (Intégrité de l'application → Signature de l'application).
 
 Ces empreintes sont publiques (elles ne permettent pas de signer).
+
+## 8. Sécurité des enfants (déclaration)
+
+Play Console → Contenu de l'application → *Normes de sécurité des enfants* :
+
+- Normes publiées : https://foulove.vercel.app/securite-enfants/ (nomment l'app et l'éditeur, interdisent
+  explicitement l'exploitation et les abus sexuels sur les enfants).
+- Mécanisme de signalement dans l'app : **Réglages → Aide → Signaler un problème** (choix « La sécurité d'un enfant »).
+- Traitement des contenus d'abus : suspension puis suppression du compte, signalement au NCMEC et à PHAROS.
+- Conformité aux lois sur la protection des enfants : oui.
+- Point de contact : josuecode@yahoo.com.

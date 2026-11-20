@@ -1,0 +1,118 @@
+---
+// Cadre de téléphone en CSS : l'écran est fourni en contenu. Les écrans reprennent l'app réelle.
+interface Props {
+  label: string;
+  dark?: boolean;
+  class?: string;
+}
+const { label, dark = false, class: cls = '' } = Astro.props;
+---
+
+<figure class:list={['phone', cls, { dark }]} aria-label={label} role="img">
+  <div class="screen">
+    <div class="status" aria-hidden="true">
+      <span>9:41</span>
+      <span class="cam"></span>
+      <span class="sig"><i></i><i></i><i></i><b></b></span>
+    </div>
+    <slot />
+  </div>
+</figure>
+
+<style>
+  .phone {
+    --p-bg: #fff8f5;
+    --p-card: #ffffff;
+    --p-line: #f0e1e1;
+    --p-ink: #2b1a22;
+    --p-muted: #78616d;
+    --p-accent: #d6336c;
+    --p-soft: #ffe3ea;
+    --p-gold: #e8a93a;
+    margin: 0;
+    width: 290px;
+    aspect-ratio: 9 / 19.5;
+    padding: 10px;
+    border-radius: 46px;
+    background: linear-gradient(150deg, #3b2a33, #120a0f 60%, #2a1d24);
+    box-shadow:
+      inset 0 0 0 1.5px rgb(255 255 255 / 12%),
+      0 2px 4px rgb(0 0 0 / 18%),
+      0 40px 80px -30px rgb(60 10 30 / 45%);
+    flex: none;
+    font-family: system-ui, -apple-system, Roboto, sans-serif;
+    user-select: none;
+  }
+  .phone.dark {
+    --p-bg: #140c14;
+    --p-card: #221520;
+    --p-line: #33222f;
+    --p-ink: #fbeff4;
+    --p-muted: #b79fb0;
+    --p-accent: #ff6f9f;
+    --p-soft: #3a1830;
+    --p-gold: #f5c26b;
+  }
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 37px;
+    overflow: hidden;
+    background: var(--p-bg);
+    color: var(--p-ink);
+    display: flex;
+    flex-direction: column;
+  }
+  .status {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    font-size: 11px;
+    font-weight: 700;
+    z-index: 5;
+    color: var(--status, var(--p-ink));
+  }
+  .cam {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #0b0709;
+    position: absolute;
+    left: 50%;
+    top: 11px;
+    transform: translateX(-50%);
+  }
+  .sig {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+  }
+  .sig i {
+    width: 3px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  .sig i:nth-child(1) {
+    height: 5px;
+  }
+  .sig i:nth-child(2) {
+    height: 7px;
+  }
+  .sig i:nth-child(3) {
+    height: 9px;
+  }
+  .sig b {
+    width: 18px;
+    height: 9px;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+    margin-left: 5px;
+    background: linear-gradient(90deg, currentColor 70%, transparent 0) content-box;
+    padding: 1px;
+  }
+</style>

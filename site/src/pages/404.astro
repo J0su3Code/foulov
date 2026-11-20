@@ -1,0 +1,29 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Page introuvable" noindex>
+  <section class="wrap lost">
+    <span class="eyebrow">Erreur 404</span>
+    <h1>Cette page s’est envolée.</h1>
+    <p class="lead">Elle n’existe pas, ou plus. Mais la bulle, elle, est toujours là.</p>
+    <div class="links">
+      <a class="btn btn-primary" href="/">Revenir à l’accueil</a>
+      <a class="btn btn-ghost" href="/guide/">Lire le guide</a>
+      <a class="btn btn-ghost" href="/aide/">Aide et contact</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .lost {
+    padding-top: clamp(64px, 12vw, 140px);
+    padding-bottom: clamp(64px, 12vw, 140px);
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+  }
+</style>

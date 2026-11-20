@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../backup/backup_service.dart';
 import '../backup/phrase_screen.dart';
 import '../account/danger_screen.dart';
+import '../account/links.dart';
 import '../account/privacy_screen.dart';
+import '../account/report_screen.dart';
 import '../lock/app_lock.dart';
 import '../../theme/theme_mode.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -187,6 +189,31 @@ class SpaceScreen extends StatelessWidget {
                       Navigator.of(context).pop();
                       onShowSymbols();
                     },
+                  ),
+                ],
+              ),
+              const _Section('Aide'),
+              _Card(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.menu_book_outlined),
+                    title: const Text('Guide de FouLove'),
+                    subtitle: const Text('Tout savoir, pas à pas, sur notre site.'),
+                    trailing: Icon(Icons.open_in_new_rounded, size: 20, color: cs.onSurfaceVariant),
+                    onTap: () => openLink(context, Links.guide),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.flag_outlined),
+                    title: const Text('Signaler un problème'),
+                    subtitle: const Text('Un abus, la sécurité d\'un enfant, un bug.'),
+                    trailing: Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+                    onTap: () => ReportScreen.open(context),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.gavel_rounded),
+                    title: const Text('Conditions d\'utilisation'),
+                    trailing: Icon(Icons.open_in_new_rounded, size: 20, color: cs.onSurfaceVariant),
+                    onTap: () => openLink(context, Links.terms),
                   ),
                 ],
               ),

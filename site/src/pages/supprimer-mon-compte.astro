@@ -1,0 +1,342 @@
+---
+import Doc from '../layouts/Doc.astro';
+import Icon from '../components/Icon.astro';
+import { SITE } from '../site';
+const mail = `mailto:${SITE.email}?subject=${encodeURIComponent('Suppression de compte FouLove')}&body=${encodeURIComponent(
+  "Bonjour,\n\nJe souhaite la suppression de mon compte FouLove et de toutes les données qui s'y rattachent.\nAdresse e-mail du compte : \n\nMerci.",
+)}`;
+---
+
+<Doc
+  title="Supprimer mon compte FouLove"
+  eyebrow="Vos données, votre choix"
+  description="Supprimez votre compte FouLove et toutes vos données, depuis l'app ou depuis ce site, sans réinstaller l'app."
+  intro="Vous pouvez supprimer votre compte FouLove (application éditée par FouLove) et toutes les données qui s'y rattachent, depuis l'app ou directement ici, sans réinstaller l'app."
+  updated="20 novembre 2026"
+>
+  <h2 id="ici">Supprimer mon compte ici</h2>
+  <p>
+    Il vous faut seulement l’adresse e-mail de votre compte (celle de votre compte Google, si vous vous connectez avec
+    Google). Nous vous y envoyons un code, pour vérifier que c’est bien vous.
+  </p>
+
+  <div class="flow card" id="flow" data-url={SITE.supabaseUrl} data-key={SITE.supabaseKey}>
+    <ol class="progress" aria-hidden="true">
+      <li class="on">Adresse</li>
+      <li>Code</li>
+      <li>Confirmer</li>
+    </ol>
+
+    <form id="step-email" class="step" novalidate>
+      <label for="email">Adresse e-mail du compte</label>
+      <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="vous@exemple.fr" />
+      <button class="btn btn-primary" type="submit"><Icon name="mail" /> Recevoir un code</button>
+    </form>
+
+    <form id="step-code" class="step" hidden novalidate>
+      <p class="sent">
+        Si un compte FouLove existe avec l’adresse <strong id="email-echo"></strong>, un code vient d’y être envoyé.
+        Pensez à regarder dans les indésirables.
+      </p>
+      <label for="code">Code reçu par e-mail</label>
+      <input
+        id="code"
+        name="code"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        pattern="[0-9]*"
+        maxlength="10"
+        required
+        placeholder="12345678"
+      />
+      <div class="row">
+        <button class="btn btn-primary" type="submit">Vérifier</button>
+        <button class="btn btn-ghost" type="button" id="restart">Changer d’adresse</button>
+      </div>
+    </form>
+
+    <form id="step-confirm" class="step" hidden novalidate>
+      <div class="note note-warn">
+        <p><strong>C’est définitif.</strong> Seront supprimés de nos serveurs, immédiatement :</p>
+        <ul>
+          <li>votre compte ;</li>
+          <li>votre bulle, pour vous deux : votre partenaire verra qu’elle a été fermée ;</li>
+          <li>tous les fichiers chiffrés de votre bulle (photos, vidéos, vocaux) et votre sauvegarde chiffrée ;</li>
+          <li>vos clés publiques et vos jetons de notification.</li>
+        </ul>
+        <p>
+          Ce qui se trouve encore sur votre téléphone y reste : désinstallez ensuite l’app, ou effacez ses données
+          dans les paramètres du téléphone. Sur celui de votre amour, tout reste jusqu’à ce qu’il ou elle touche
+          « Effacer et recommencer ».
+        </p>
+      </div>
+      <label class="checkbox"><input type="checkbox" id="sure" required /> Je comprends que mon compte et notre bulle seront supprimés définitivement.</label>
+      <button class="btn btn-danger" type="submit" id="delete" disabled><Icon name="trash" /> Supprimer définitivement</button>
+    </form>
+
+    <div id="step-done" class="step done" hidden tabindex="-1">
+      <div class="icon-badge"><Icon name="check" /></div>
+      <h3>Votre compte a été supprimé</h3>
+      <p>
+        Votre compte, votre bulle et leurs fichiers chiffrés ont été effacés de nos serveurs. Vous pouvez désinstaller
+        l’app. Merci d’avoir fait confiance à FouLove.
+      </p>
+    </div>
+
+    <p class="error" id="error" role="alert" hidden></p>
+    <noscript>
+      <p class="error">
+        Cette page a besoin de JavaScript. Sans JavaScript, demandez la suppression <a href={mail}>par e-mail</a>.
+      </p>
+    </noscript>
+  </div>
+
+  <h2 id="app">Depuis l’app</h2>
+  <ol>
+    <li>Ouvrez FouLove.</li>
+    <li>
+      <strong>Si vous avez une bulle :</strong> touchez l’engrenage sur l’écran <span class="ui">Nous</span>, puis <span class="ui">Zone sensible</span> → <span class="ui">Supprimer mon compte</span>.
+    </li>
+    <li>
+      <strong>Si vous n’avez pas encore de bulle, ou si elle attend votre amour :</strong> touchez <span class="ui">…</span> en haut à droite, puis <span class="ui">Supprimer mon compte</span>.
+    </li>
+    <li>
+      <strong>Si votre bulle a été fermée :</strong> touchez <span class="ui">Supprimer mon compte</span>, en bas de l’écran « Votre bulle a été fermée ».
+    </li>
+    <li>Dans tous les cas, tapez <code>SUPPRIMER</code> pour confirmer, et votre code FouLove si vous en avez un.</li>
+  </ol>
+  <p>Dans ce cas, l’app efface aussi tout ce qui se trouve sur ce téléphone.</p>
+
+  <h2 id="email-request">Par e-mail</h2>
+  <p>
+    Vous n’avez plus accès à votre adresse e-mail, ou quelque chose ne fonctionne pas ? Écrivez-nous à <a href={mail}>{SITE.email}</a>, avec pour objet « Suppression de compte FouLove », en précisant l’adresse de votre
+    compte. Nous vérifions la demande, supprimons le compte sous 30 jours au plus, et vous le confirmons par e-mail.
+  </p>
+
+  <h2 id="quoi">Ce qui est supprimé, ce qui est conservé</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Donnée</th><th>Ce qu’il en advient</th></tr></thead>
+      <tbody>
+        <tr><td>Votre compte (adresse e-mail ou identifiant Google)</td><td>Supprimé immédiatement</td></tr>
+        <tr><td>Votre bulle : appartenance au couple, invitations, messages chiffrés en transit</td><td>Supprimés immédiatement, pour vous deux</td></tr>
+        <tr><td>Fichiers chiffrés (photos, vidéos, vocaux) et votre sauvegarde chiffrée</td><td>Supprimés immédiatement</td></tr>
+        <tr><td>Sauvegarde chiffrée de votre amour</td><td>Supprimée quand il ou elle efface la bulle sur son téléphone (« Effacer et recommencer »)</td></tr>
+        <tr><td>Clés publiques, jetons de notification</td><td>Supprimés immédiatement</td></tr>
+        <tr><td>Journaux techniques de nos hébergeurs (adresses IP)</td><td>Effacés selon leurs propres règles, en général sous quelques semaines</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Nous ne conservons rien d’autre, sauf si une enquête en cours l’impose (voir <a href="/securite-enfants/">Sécurité des enfants</a>). Vos échanges n’ont jamais été lisibles sur nos serveurs : ils n’existaient en clair
+    que sur vos téléphones.
+  </p>
+
+  <h2 id="bulle">Fermer seulement votre bulle</h2>
+  <p>
+    Vous voulez effacer votre bulle mais garder votre compte, par exemple pour en recréer une ? Dans l’app : <span class="ui">Réglages</span> → <span class="ui">Zone sensible</span> → <span class="ui">Fermer notre bulle</span>.
+    Tout le contenu partagé est effacé de nos serveurs, et votre compte reste.
+  </p>
+</Doc>
+
+<script>
+  // Parcours sans l'app : code à usage unique par e-mail (Supabase Auth, sans création de compte),
+  // puis appel de la fonction « account » avec la session obtenue. Rien n'est gardé dans le navigateur.
+  const flow = document.getElementById('flow')!;
+  const base = flow.dataset.url!;
+  const key = flow.dataset.key!;
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const steps = ['step-email', 'step-code', 'step-confirm', 'step-done'];
+  const errorBox = $('error');
+  let email = '';
+  let token = '';
+
+  function show(id: string) {
+    for (const s of steps) $(s).hidden = s !== id;
+    const i = Math.min(steps.indexOf(id), 2);
+    flow.querySelectorAll('.progress li').forEach((li, j) => li.classList.toggle('on', j <= i));
+    errorBox.hidden = true;
+    const focus = $(id).querySelector<HTMLElement>('input') ?? $(id);
+    focus.focus();
+  }
+  function fail(msg: string) {
+    errorBox.textContent = msg;
+    errorBox.hidden = false;
+  }
+  async function auth(path: string, body: unknown) {
+    return fetch(`${base}/auth/v1/${path}`, {
+      method: 'POST',
+      headers: { apikey: key, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+  function busy(form: HTMLElement, on: boolean) {
+    form.querySelectorAll('button').forEach((b) => ((b as HTMLButtonElement).disabled = on));
+    form.setAttribute('aria-busy', String(on));
+  }
+
+  $('step-email').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    email = ($('email') as HTMLInputElement).value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('Cette adresse e-mail ne semble pas valide.');
+    busy(form, true);
+    try {
+      const res = await auth('otp', { email, create_user: false });
+      if (res.status === 429) return fail('Trop de demandes. Patientez une minute avant de redemander un code.');
+      if (res.status >= 500) return fail('Le service ne répond pas pour le moment. Réessayez dans un instant.');
+      // Qu'un compte existe ou non, on affiche la même suite : la page ne révèle pas qui a un compte.
+      $('email-echo').textContent = email;
+      show('step-code');
+    } catch {
+      fail('Impossible de joindre le service. Vérifiez votre connexion puis réessayez.');
+    } finally {
+      busy(form, false);
+    }
+  });
+
+  $('restart').addEventListener('click', () => show('step-email'));
+
+  $('step-code').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const code = ($('code') as HTMLInputElement).value.replace(/\D/g, '');
+    if (code.length < 6) return fail('Le code reçu par e-mail compte au moins 6 chiffres.');
+    busy(form, true);
+    try {
+      const res = await auth('verify', { type: 'email', email, token: code });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.access_token) {
+        return fail(res.status === 429 ? 'Trop de tentatives. Patientez quelques minutes.' : 'Ce code ne fonctionne pas. Il a peut-être expiré : demandez-en un nouveau.');
+      }
+      token = data.access_token;
+      show('step-confirm');
+    } catch {
+      fail('Impossible de joindre le service. Vérifiez votre connexion puis réessayez.');
+    } finally {
+      busy(form, false);
+      ($('delete') as HTMLButtonElement).disabled = !($('sure') as HTMLInputElement).checked;
+    }
+  });
+
+  $('sure').addEventListener('change', (e) => {
+    ($('delete') as HTMLButtonElement).disabled = !(e.target as HTMLInputElement).checked;
+  });
+
+  $('step-confirm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    if (!($('sure') as HTMLInputElement).checked) return;
+    busy(form, true);
+    let done = false;
+    try {
+      const res = await fetch(`${base}/functions/v1/account`, {
+        method: 'POST',
+        headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete' }),
+      });
+      if (res.ok) {
+        done = true;
+        token = '';
+        show('step-done');
+      } else if (res.status === 401) {
+        fail('Votre vérification a expiré. Recommencez avec un nouveau code.');
+      } else {
+        fail('La suppression n’a pas abouti. Réessayez dans un instant ; si cela persiste, écrivez-nous à josuecode@yahoo.com.');
+      }
+    } catch {
+      fail('Impossible de joindre le service. Réessayez dans un instant ; si cela persiste, écrivez-nous à josuecode@yahoo.com.');
+    } finally {
+      if (!done) busy(form, false);
+    }
+  });
+</script>
+
+<style>
+  .flow {
+    margin: 1.4em 0 1em;
+    box-shadow: var(--shadow);
+  }
+  .progress {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    counter-reset: s;
+  }
+  .progress li {
+    counter-increment: s;
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--muted);
+    padding-top: 10px;
+    border-top: 4px solid var(--line);
+    margin: 0;
+  }
+  .progress li::before {
+    content: counter(s) '. ';
+  }
+  .progress li.on {
+    color: var(--accent-ink);
+    border-top-color: var(--accent);
+  }
+  .step {
+    display: grid;
+    gap: 14px;
+  }
+  .step[hidden] {
+    display: none;
+  }
+  .step label {
+    margin-bottom: -6px;
+  }
+  .step .btn {
+    justify-self: start;
+  }
+  .step .checkbox {
+    margin: 0;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .sent {
+    margin: 0;
+  }
+  .step .note {
+    margin: 0;
+  }
+  .note ul {
+    margin: 0.4em 0 0.8em;
+  }
+  .done {
+    text-align: left;
+  }
+  .done h3 {
+    margin: 0;
+  }
+  .done p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .done .icon-badge {
+    background: color-mix(in srgb, var(--ok) 18%, transparent);
+    color: var(--ok);
+    margin: 0;
+  }
+  .error {
+    margin: 16px 0 0;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    color: var(--ink);
+    border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  }
+  .error[hidden] {
+    display: none;
+  }
+</style>

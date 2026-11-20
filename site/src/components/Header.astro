@@ -1,0 +1,161 @@
+---
+import { NAV } from '../site';
+import Icon from './Icon.astro';
+import Logo from './Logo.astro';
+const here = Astro.url.pathname;
+---
+
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="/" aria-label="FouLove, accueil">
+      <Logo size={34} />
+      <span>FouLove</span>
+    </a>
+    <nav aria-label="Navigation principale" class="nav-desk">
+      {
+        NAV.map((n) => (
+          <a href={n.href} aria-current={here.startsWith(n.href) ? 'page' : undefined}>
+            {n.label}
+          </a>
+        ))
+      }
+    </nav>
+    <span class="soon" title="FouLove sera bientôt disponible sur Google Play">
+      <Icon name="phone" size={18} /> Bientôt sur Android
+    </span>
+    <details class="nav-mob">
+      <summary aria-label="Ouvrir le menu">
+        <Icon name="menu" />
+      </summary>
+      <nav aria-label="Navigation principale (mobile)">
+        <a href="/">Accueil</a>
+        {
+          NAV.map((n) => (
+            <a href={n.href} aria-current={here.startsWith(n.href) ? 'page' : undefined}>
+              {n.label}
+            </a>
+          ))
+        }
+        <a href="/supprimer-mon-compte/">Supprimer mon compte</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<style>
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    height: 68px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    text-decoration: none;
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-right: auto;
+  }
+  .nav-desk {
+    display: flex;
+    gap: 4px;
+  }
+  .nav-desk a,
+  .nav-mob nav a {
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+  }
+  .nav-desk a:hover {
+    background: var(--bg-2);
+  }
+  .nav-desk a[aria-current='page'] {
+    background: var(--soft);
+    color: var(--accent-ink);
+  }
+  .soon {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: 999px;
+    padding: 7px 14px;
+    white-space: nowrap;
+  }
+  .nav-mob {
+    display: none;
+    position: relative;
+  }
+  .nav-mob summary {
+    list-style: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .nav-mob summary::-webkit-details-marker {
+    display: none;
+  }
+  .nav-mob[open] summary {
+    background: var(--bg-2);
+  }
+  .nav-mob nav {
+    position: absolute;
+    right: 0;
+    top: 52px;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+  }
+  .nav-mob nav a {
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+  .nav-mob nav a[aria-current='page'] {
+    color: var(--accent-ink);
+    background: var(--soft);
+  }
+  @media (max-width: 900px) {
+    .nav-desk {
+      display: none;
+    }
+    .nav-mob {
+      display: block;
+    }
+    .bar {
+      gap: 12px;
+    }
+  }
+  @media (max-width: 420px) {
+    .soon {
+      display: none;
+    }
+  }
+</style>

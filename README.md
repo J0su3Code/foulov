@@ -4,6 +4,7 @@ L'espace privé d'un couple, « une bulle à deux ». Messages, instants, souven
 tout est chiffré de bout en bout, sur vos deux téléphones.
 
 > En développement. Pas encore publié sur les stores (Android d'abord, iPhone ensuite).
+> Site : **[foulove.vercel.app](https://foulove.vercel.app)** — guide, sécurité, confidentialité, suppression du compte.
 
 ## Ce que FouLove promet, mot pour mot
 
@@ -62,7 +63,8 @@ Conception complète, menaces couvertes et limites assumées : [docs/SECURITY.md
 | `supabase/` | Schéma, règles d'accès, fonctions (`media`, `push`), tests |
 | `animation/` | Intro « une bulle à deux » et icône : scènes Blender générées par code ([détails](animation/README.md)) |
 | `design/` | Maquettes |
-| `docs/` | Conception de la sécurité |
+| `site/` | Site public (Astro, déployé à la main sur Vercel) : guide, pages légales, suppression du compte ([détails](site/README.md)) |
+| `docs/` | Conception de la sécurité, publication Google Play |
 
 ## Licence
 

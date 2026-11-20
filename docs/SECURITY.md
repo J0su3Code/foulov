@@ -54,7 +54,7 @@ Toute la cryptographie vit dans une seule bibliothèque Rust (`core/`). Le code 
 - La première session est établie par **PQXDH** (X25519 + ML-KEM-1024). Les messages suivants passent par le **triple ratchet** de libsignal (Double Ratchet + SPQR), qui apporte :
   - la *confidentialité persistante* : voler les clés d'aujourd'hui ne permet pas de lire les messages d'hier ;
   - l'*auto-guérison* : après une compromission passagère, les clés suivantes redeviennent sûres.
-- Les clés privées ne sont jamais exportées, sauf dans la sauvegarde chiffrée (§7), et seulement si l'utilisateur l'active.
+- Les clés privées ne sont jamais exportées, pas même dans la sauvegarde chiffrée (§7) : un téléphone restauré crée une nouvelle identité.
 
 ## 4bis. Messagerie
 
@@ -111,7 +111,7 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
    - son téléphone compare cette empreinte à la clé publiée par le serveur ; si elles diffèrent, l'appairage s'arrête et rien n'est envoyé ;
    - si elles correspondent, la clé d'Inès est marquée « vérifiée » chez Malik, sans action de sa part ;
    - côté Inès, la vérification se fait en comparant les 7 symboles : ils sont côte à côte, il suffit de regarder les deux écrans.
-   *Prévu* : un secret d'appairage de 128 bits, inclus dans le QR code et jamais envoyé au serveur, pour confirmer aussi automatiquement la clé de Malik chez Inès.
+   Depuis l'invitation v2 (point 3), le QR code contient aussi le secret d'appairage : la clé de Malik est alors confirmée automatiquement chez Inès.
 3. **À distance : l'invitation complète** (`core/src/invite.rs`, tests `core/tests/invite.rs`). Inès l'envoie par une
    autre messagerie (WhatsApp, SMS…) ; Malik la copie et la colle. Elle contient `foulove:2:<code>:<empreinte>:<secret>` :
    - l'**empreinte** de la clé d'Inès : le téléphone de Malik la compare à la clé publiée par le serveur (comme le QR) ;
@@ -154,7 +154,7 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
 - **Effacement à distance** du contenu local par l'utilisateur depuis un autre appareil : prévu plus tard.
 - **Sauvegarde chiffrée** (activée par défaut, désactivable) :
   - à la création du compte, l'app affiche une **phrase de récupération de 24 mots** (256 bits) à noter sur papier ;
-  - clé de sauvegarde = Argon2id(phrase, sel stocké avec la sauvegarde) ;
+  - clé de sauvegarde dérivée de la phrase (détail ci-dessous) ;
   - la sauvegarde (historique, clés des fichiers, profil du couple, albums, lettres) est chiffrée avec cette clé puis déposée sur R2 ;
   - **sans la phrase, personne ne peut la lire, pas même nous**. Phrase perdue et téléphones perdus = données perdues. L'app le dit clairement.
 - **Clé de chaque sauvegarde** : HKDF-SHA256(secret de la phrase, sel aléatoire de 256 bits). La phrase vaut déjà 256 bits aléatoires (BIP39, liste française, accents facultatifs à la saisie) : une dérivation lente comme Argon2 n'ajouterait rien contre la force brute. La sauvegarde ne contient **jamais** les clés Signal.
@@ -223,15 +223,15 @@ C'est la liste exacte affichée dans l'app :
 | Le nombre d'enveloppes échangées et leur rythme. Le serveur ne distingue pas un message d'un accusé de lecture ou d'une réaction, mais un rythme (message puis accusé quelques secondes après) peut se deviner | Acheminer |
 | La taille approximative des contenus chiffrés (§6.3) | Stockage |
 | Les jetons de notification | Réveiller l'app |
-| Quand l'un de vous a l'app ouverte (« en ligne ») et quand il écrit (« écrit… »), jamais ce qu'il écrit. Canal temps réel privé, réservé aux deux membres du couple par les règles d'accès. **Désactivable** dans « Notre espace » (on ne voit alors plus non plus ceux de l'autre) | Indicateurs de présence et d'écriture |
+| Quand l'un de vous a l'app ouverte (« en ligne ») et quand il écrit (« écrit… »), jamais ce qu'il écrit. Canal temps réel privé, réservé aux deux membres du couple par les règles d'accès. **Désactivable** dans les Réglages (rubrique Confidentialité) (on ne voit alors plus non plus ceux de l'autre) | Indicateurs de présence et d'écriture |
 | Les adresses IP, dans les journaux techniques de nos hébergeurs (Supabase, Cloudflare), selon leurs politiques | Fonctionnement du réseau ; nous n'ajoutons aucun journal applicatif contenant des IP |
 
 Jamais : contenu, noms de fichiers, légendes, dates du couple, surnoms, bio, histoire, anniversaires, lettres, instants, carnet d'adresses, numéro de téléphone.
 
 ## 11. Ce qu'il reste à faire avant d'affirmer quoi que ce soit publiquement
 
-- [ ] Implémentation du cœur `core/` avec tests unitaires et vecteurs de test.
-- [ ] Tests automatisés des règles d'accès Supabase.
+- [x] Implémentation du cœur `core/` avec tests (`cargo test`) ; vecteurs de test officiels encore à ajouter.
+- [x] Tests automatisés des règles d'accès Supabase (pgTAP, `supabase/tests/database/`).
 - [ ] Revue de code externe de `core/` et des règles serveur.
 - [ ] **Audit de sécurité indépendant** avant toute comparaison publique avec d'autres messageries.
 - [ ] Programme de signalement de vulnérabilités (adresse dédiée, délai de réponse publié).

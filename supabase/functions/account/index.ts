@@ -18,7 +18,16 @@ const r2: R2 = {
   bucket: Deno.env.get("R2_BUCKET")!,
 };
 
-const json = (body: unknown, status = 200) => Response.json(body, { status });
+// Appel possible depuis le site (page « Supprimer mon compte », sans l'app). L'accès se fait par jeton dans
+// l'en-tête Authorization, jamais par cookie : ouvrir le CORS à toute origine ne donne rien de plus à un autre site.
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Max-Age": "86400",
+};
+
+const json = (body: unknown, status = 200) => Response.json(body, { status, headers: cors });
 
 /// Supprime tous les objets sous un préfixe (liste par pages de 1 000, suppressions par lots de 20 en parallèle).
 async function purgePrefix(prefix: string): Promise<number> {
@@ -48,7 +57,8 @@ async function purgePrefix(prefix: string): Promise<number> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return new Response(null, { status: 405 });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (req.method !== "POST") return new Response(null, { status: 405, headers: cors });
   const auth = req.headers.get("Authorization");
   if (!auth) return json({ error: "non authentifié" }, 401);
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
