@@ -2,7 +2,7 @@
 
 Procédure interne derrière les engagements publiés sur https://foulove.vercel.app/securite-enfants/ et dans les
 conditions d'utilisation. Les échanges sont chiffrés de bout en bout : on agit sur le **compte**, jamais sur le contenu,
-qu'on ne peut pas lire. Les signalements arrivent à josuecode@yahoo.com (app : Réglages → Aide → Signaler un problème).
+qu'on ne peut pas lire. Les signalements arrivent à hello@josuecode.com (app : Réglages → Aide → Signaler un problème).
 
 ## 1. Lire et trier (le jour même)
 

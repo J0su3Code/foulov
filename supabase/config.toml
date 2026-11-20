@@ -196,7 +196,9 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# FouLove : 60 par heure pour tout le projet (Resend gratuit : 100 par jour). Chaque adresse reste limitée à un
+# code par minute (max_frequency).
+email_sent = 60
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -234,20 +236,27 @@ otp_length = 8
 # 10 minutes : un code de connexion n'a pas besoin de vivre plus longtemps.
 otp_expiry = 600
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# Envoi des codes par Resend (domaine d'envoi vérifié : foulove.josuecode.com, région UE).
+# La clé n'est jamais dans le dépôt : RESEND_API_KEY doit être dans l'environnement au moment du push.
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "connexion@foulove.josuecode.com"
+sender_name = "FouLove"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Modèles en français, avec le code à 8 chiffres (l'app et le site demandent le code, pas un lien).
+# Nouveau compte (inscription par code) :
+[auth.email.template.confirmation]
+subject = "Bienvenue sur FouLove : votre code"
+content_path = "./supabase/templates/bienvenue.html"
+
+# Compte existant (connexion, page « Supprimer mon compte ») :
+[auth.email.template.magic_link]
+subject = "Votre code de connexion FouLove"
+content_path = "./supabase/templates/connexion.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

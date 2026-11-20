@@ -4,7 +4,7 @@ export const SITE = {
   tagline: 'Une bulle à deux',
   description:
     'FouLove est la messagerie privée de votre couple : messages, photos, instants, souvenirs et lettres, chiffrés de bout en bout. Rien que vous deux, pas même nous.',
-  email: 'josuecode@yahoo.com',
+  email: 'hello@josuecode.com',
   github: 'https://github.com/J0su3Code/foulov',
   security: 'https://github.com/J0su3Code/foulov/blob/main/docs/SECURITY.md',
   // Projet Supabase de production : adresse et clé publique (publishable), faites pour être dans un client.

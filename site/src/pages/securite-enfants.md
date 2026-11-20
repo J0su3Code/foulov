@@ -9,7 +9,7 @@ updated: 20 novembre 2026
 
 ## Notre engagement
 
-FouLove (application `org.foulov.app`, éditée par FouLove) interdit **toute forme d’exploitation ou d’abus sexuel sur des enfants** (en anglais *CSAE*, *Child Sexual Abuse and Exploitation*), et en particulier :
+FouLove (application `org.foulov.app`, éditée par Boinzemwendé Josué Ouedraogo) interdit **toute forme d’exploitation ou d’abus sexuel sur des enfants** (en anglais *CSAE*, *Child Sexual Abuse and Exploitation*), et en particulier :
 
 - la création, le partage ou la détention de **contenus d’abus sexuels sur des enfants** (*CSAM*) ;
 - la **sollicitation** d’un mineur, la prise de contact à des fins sexuelles (*grooming*), la sextorsion ;
@@ -33,7 +33,7 @@ Chaque personne peut nous signaler un problème, **sans quitter l’app** :
 2. Dans la rubrique **Aide**, touchez **Signaler un problème**, puis **La sécurité d’un enfant**.
 3. Un e-mail prérempli s’ouvre : décrivez la situation et envoyez-le.
 
-Vous pouvez aussi écrire directement à **[josuecode@yahoo.com](mailto:josuecode@yahoo.com?subject=Signalement%20%E2%80%94%20s%C3%A9curit%C3%A9%20des%20enfants)**, avec pour objet « Signalement — sécurité des enfants ». Ces signalements sont traités **en priorité**, avant tout autre message.
+Vous pouvez aussi écrire directement à **[hello@josuecode.com](mailto:hello@josuecode.com?subject=Signalement%20%E2%80%94%20s%C3%A9curit%C3%A9%20des%20enfants)**, avec pour objet « Signalement — sécurité des enfants ». Ces signalements sont traités **en priorité**, avant tout autre message.
 
 Si un enfant est en danger immédiat, **appelez d’abord les secours** : le 17 ou le 112 en France et dans l’Union européenne, le 911 aux États-Unis et au Canada.
 
@@ -58,7 +58,9 @@ FouLove respecte les lois applicables en matière de protection des enfants, not
 Pour toute question sur ces normes, ou pour les autorités et Google :
 
 **Point de contact sécurité des enfants — FouLove**
-E-mail : [josuecode@yahoo.com](mailto:josuecode@yahoo.com)
+
+- Responsable : Boinzemwendé Josué Ouedraogo, éditeur de FouLove
+- E-mail : [hello@josuecode.com](mailto:hello@josuecode.com?subject=S%C3%A9curit%C3%A9%20des%20enfants)
 
 Cette personne est habilitée à prendre les décisions nécessaires et à répondre au nom de FouLove.
 
@@ -78,6 +80,6 @@ Cette personne est habilitée à prendre les décisions nécessaires et à répo
 
 FouLove (`org.foulov.app`) is a private, end-to-end encrypted messenger for couples, intended for users aged 16 and over. It has **zero tolerance for child sexual abuse and exploitation (CSAE)**, including CSAM, grooming and sextortion. There is no way to discover or contact strangers: a space links exactly two people who invited each other.
 
-Users can report any concern **inside the app** (Settings → *Signaler un problème*) or by e-mail at [josuecode@yahoo.com](mailto:josuecode@yahoo.com). Reports about child safety are handled first, before any other request. We block offending accounts, preserve what an investigation needs as required by law, then delete the accounts and their data; report CSAM to the NCMEC CyberTipline and to the relevant national authorities (PHAROS in France), and cooperate with law enforcement under applicable law.
+Users can report any concern **inside the app** (Settings → *Signaler un problème*) or by e-mail at [hello@josuecode.com](mailto:hello@josuecode.com). Reports about child safety are handled first, before any other request. We block offending accounts, preserve what an investigation needs as required by law, then delete the accounts and their data; report CSAM to the NCMEC CyberTipline and to the relevant national authorities (PHAROS in France), and cooperate with law enforcement under applicable law.
 
-**Child safety point of contact:** FouLove — [josuecode@yahoo.com](mailto:josuecode@yahoo.com).
+**Child safety point of contact:** Boinzemwendé Josué Ouedraogo, publisher of FouLove — [hello@josuecode.com](mailto:hello@josuecode.com).

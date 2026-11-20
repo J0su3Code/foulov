@@ -8,10 +8,10 @@ updated: 20 novembre 2026
 
 ## Éditeur
 
-Ce site et l’application FouLove (`org.foulov.app`) sont édités par **FouLove**, projet indépendant.
+Ce site et l’application FouLove (`org.foulov.app`) sont édités par **Boinzemwendé Josué Ouedraogo**, à titre individuel.
 
-- E-mail : [josuecode@yahoo.com](mailto:josuecode@yahoo.com)
-- Directeur de la publication : le responsable du projet FouLove, joignable à la même adresse.
+- E-mail : [hello@josuecode.com](mailto:hello@josuecode.com)
+- Directeur de la publication : Boinzemwendé Josué Ouedraogo.
 
 ## Hébergement du site
 
@@ -22,6 +22,8 @@ Ce site et l’application FouLove (`org.foulov.app`) sont édités par **FouLov
 - **Supabase Inc.** — comptes et acheminement des messages chiffrés, serveurs situés dans l’Union européenne (Francfort, Allemagne) — [supabase.com](https://supabase.com).
 - **Cloudflare, Inc.** — stockage des fichiers chiffrés (R2) — [cloudflare.com](https://www.cloudflare.com).
 - **Google LLC** — notifications (Firebase Cloud Messaging) et connexion avec Google — [firebase.google.com](https://firebase.google.com).
+- **Resend** — envoi des codes de connexion par e-mail — [resend.com](https://resend.com).
+- **LWS** — messagerie de l’adresse de contact — [lws.fr](https://www.lws.fr).
 
 ## Propriété intellectuelle
 

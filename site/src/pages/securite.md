@@ -59,6 +59,6 @@ Avant l’envoi, les photos et vidéos sont réencodées sur votre téléphone :
 
 ## Vous avez trouvé une faille ?
 
-Merci de nous l’écrire en privé, avant de la rendre publique : **[josuecode@yahoo.com](mailto:josuecode@yahoo.com?subject=Faille%20de%20s%C3%A9curit%C3%A9)**, avec pour objet « Faille de sécurité ». Nous accusons réception sous 72 heures, puis nous vous informons de la correction.
+Merci de nous l’écrire en privé, avant de la rendre publique : **[hello@josuecode.com](mailto:hello@josuecode.com?subject=Faille%20de%20s%C3%A9curit%C3%A9)**, avec pour objet « Faille de sécurité ». Nous accusons réception sous 72 heures, puis nous vous informons de la correction.
 
 Merci de ne pas accéder aux données d’autres personnes, et de ne pas perturber le service pendant vos recherches.

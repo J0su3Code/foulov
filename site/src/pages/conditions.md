@@ -34,7 +34,7 @@ Vous vous engagez à utiliser FouLove de façon licite et respectueuse de votre 
 
 Parce que vos échanges sont chiffrés de bout en bout, **nous ne pouvons pas les lire**, ni les surveiller, ni les modérer à l’avance. Cela vaut pour tout le monde, nous compris.
 
-Vous pouvez nous signaler un comportement contraire à ces règles à tout moment, depuis l’app (Réglages → *Signaler un problème*) ou par e-mail à [josuecode@yahoo.com](mailto:josuecode@yahoo.com). Nous examinons chaque signalement. Si vous choisissez de nous transmettre un contenu (par exemple une capture d’écran), il sort du chiffrement : nous l’utilisons seulement pour traiter le signalement, et le transmettons aux autorités lorsque la loi l’exige.
+Vous pouvez nous signaler un comportement contraire à ces règles à tout moment, depuis l’app (Réglages → *Signaler un problème*) ou par e-mail à [hello@josuecode.com](mailto:hello@josuecode.com). Nous examinons chaque signalement. Si vous choisissez de nous transmettre un contenu (par exemple une capture d’écran), il sort du chiffrement : nous l’utilisons seulement pour traiter le signalement, et le transmettons aux autorités lorsque la loi l’exige.
 
 En cas de manquement grave à ces conditions, nous pouvons suspendre ou supprimer le compte concerné, et en informer les autorités compétentes.
 
@@ -76,4 +76,4 @@ Nous pouvons faire évoluer ces conditions, par exemple quand l’app change. La
 
 Ces conditions sont soumises au droit français. Si vous résidez dans un autre pays, vous gardez la protection des règles impératives de ce pays. En cas de désaccord, écrivez-nous d’abord : nous chercherons une solution à l’amiable. À défaut, le litige peut être porté devant les tribunaux compétents.
 
-Pour toute question : [josuecode@yahoo.com](mailto:josuecode@yahoo.com).
+Pour toute question : [hello@josuecode.com](mailto:hello@josuecode.com).
