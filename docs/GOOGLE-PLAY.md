@@ -13,12 +13,12 @@ Tout est prêt à copier-coller dans la [Play Console](https://play.google.com/c
 | Type | Application, gratuite |
 | Catégorie | Communication |
 | Tags | Messagerie, Couple, Vie privée |
-| E-mail de contact | josuecode@yahoo.com |
+| E-mail de contact | hello@josuecode.com |
 | Site web | https://foulove.vercel.app |
 | Politique de confidentialité | https://foulove.vercel.app/confidentialite/ |
 | Suppression du compte (lien) | https://foulove.vercel.app/supprimer-mon-compte/ |
 | Normes de sécurité des enfants | https://foulove.vercel.app/securite-enfants/ |
-| Point de contact sécurité des enfants | FouLove — josuecode@yahoo.com |
+| Point de contact sécurité des enfants | FouLove — hello@josuecode.com |
 
 ## 2. Fiche du Store
 
@@ -148,4 +148,4 @@ Play Console → Contenu de l'application → *Normes de sécurité des enfants*
 - Mécanisme de signalement dans l'app : **Réglages → Aide → Signaler un problème** (choix « La sécurité d'un enfant »).
 - Traitement des contenus d'abus : suspension puis suppression du compte, signalement au NCMEC et à PHAROS.
 - Conformité aux lois sur la protection des enfants : oui.
-- Point de contact : josuecode@yahoo.com.
+- Point de contact : hello@josuecode.com.

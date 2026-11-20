@@ -11,7 +11,7 @@ const mail = `mailto:${SITE.email}?subject=${encodeURIComponent('Suppression de 
   title="Supprimer mon compte FouLove"
   eyebrow="Vos données, votre choix"
   description="Supprimez votre compte FouLove et toutes vos données, depuis l'app ou depuis ce site, sans réinstaller l'app."
-  intro="Vous pouvez supprimer votre compte FouLove (application éditée par FouLove) et toutes les données qui s'y rattachent, depuis l'app ou directement ici, sans réinstaller l'app."
+  intro="Vous pouvez supprimer votre compte FouLove (application éditée par Boinzemwendé Josué Ouedraogo) et toutes les données qui s'y rattachent, depuis l'app ou directement ici, sans réinstaller l'app."
   updated="20 novembre 2026"
 >
   <h2 id="ici">Supprimer mon compte ici</h2>
@@ -243,10 +243,10 @@ const mail = `mailto:${SITE.email}?subject=${encodeURIComponent('Suppression de 
       } else if (res.status === 401) {
         fail('Votre vérification a expiré. Recommencez avec un nouveau code.');
       } else {
-        fail('La suppression n’a pas abouti. Réessayez dans un instant ; si cela persiste, écrivez-nous à josuecode@yahoo.com.');
+        fail('La suppression n’a pas abouti. Réessayez dans un instant ; si cela persiste, écrivez-nous à hello@josuecode.com.');
       }
     } catch {
-      fail('Impossible de joindre le service. Réessayez dans un instant ; si cela persiste, écrivez-nous à josuecode@yahoo.com.');
+      fail('Impossible de joindre le service. Réessayez dans un instant ; si cela persiste, écrivez-nous à hello@josuecode.com.');
     } finally {
       if (!done) busy(form, false);
     }

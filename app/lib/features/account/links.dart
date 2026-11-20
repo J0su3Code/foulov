@@ -14,7 +14,7 @@ abstract final class Links {
   static const accountDeletion = '$siteUrl/supprimer-mon-compte/';
   static const security = '$siteUrl/securite/';
   static const sourceCode = 'https://github.com/J0su3Code/foulov';
-  static const contactEmail = 'josuecode@yahoo.com';
+  static const contactEmail = 'hello@josuecode.com';
 }
 
 /// Ouvre une page dans le navigateur. Si aucun navigateur ne répond, l'adresse est copiée.

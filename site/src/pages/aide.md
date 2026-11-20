@@ -9,7 +9,7 @@ updated: 20 novembre 2026
 
 ## Nous écrire
 
-Une question, une idée, un problème ? Écrivez-nous à **[josuecode@yahoo.com](mailto:josuecode@yahoo.com)**. Nous répondons en français, en général sous quelques jours.
+Une question, une idée, un problème ? Écrivez-nous à **[hello@josuecode.com](mailto:hello@josuecode.com)**. Nous répondons en français, en général sous quelques jours.
 
 Ne nous envoyez jamais votre phrase de 24 mots ni votre code FouLove : nous ne vous les demanderons jamais.
 
@@ -18,7 +18,7 @@ Ne nous envoyez jamais votre phrase de 24 mots ni votre code FouLove : nous ne v
 Pour signaler un comportement abusif, un contenu illicite ou un danger pour un enfant :
 
 - **dans l’app** : **Réglages** → **Signaler un problème** ;
-- **par e-mail** : [josuecode@yahoo.com](mailto:josuecode@yahoo.com?subject=Signalement), avec pour objet « Signalement ».
+- **par e-mail** : [hello@josuecode.com](mailto:hello@josuecode.com?subject=Signalement), avec pour objet « Signalement ».
 
 Décrivez ce qui se passe. Comme vos échanges sont chiffrés, nous ne pouvons pas les voir : si vous voulez nous montrer un contenu, joignez une capture d’écran. Les signalements qui concernent un enfant sont traités en priorité (voir [Sécurité des enfants](/securite-enfants/)).
 

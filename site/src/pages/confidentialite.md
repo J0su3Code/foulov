@@ -16,8 +16,8 @@ updated: 20 novembre 2026
 
 ## Qui est responsable de vos données
 
-Le responsable du traitement est l’éditeur de FouLove (voir les [mentions légales](/mentions-legales/)).
-Pour toute question sur vos données : **[josuecode@yahoo.com](mailto:josuecode@yahoo.com)**. Nous répondons sous 30 jours au plus.
+Le responsable du traitement est **Boinzemwendé Josué Ouedraogo**, qui édite FouLove à titre individuel (voir les [mentions légales](/mentions-legales/)).
+Pour toute question sur vos données : **[hello@josuecode.com](mailto:hello@josuecode.com)**. Nous répondons sous 30 jours au plus.
 
 ## Ce qui reste entre vous deux
 
@@ -76,7 +76,8 @@ Nous ne voyons **jamais** : le contenu de vos échanges, vos photos, vos noms de
 | Google Firebase Cloud Messaging | Envoi des notifications (texte fixe, sans contenu) | Google |
 | Google Sign-In | Connexion, si vous la choisissez | Google |
 | Vercel | Hébergement de ce site | Vercel (États-Unis) |
-| Yahoo Mail | Réception de vos e-mails, demandes et signalements | Yahoo |
+| Resend | Envoi des codes de connexion par e-mail | Resend (États-Unis), envoi depuis l’Union européenne (Irlande) |
+| LWS | Messagerie de hello@josuecode.com : réception de vos e-mails, demandes et signalements | France |
 
 Ces services ne reçoivent que des données chiffrées ou les informations techniques listées plus haut. Certains sont des sociétés américaines : lorsque des données quittent l’Union européenne, ces transferts sont encadrés par les clauses contractuelles types de la Commission européenne ou par le cadre de protection des données UE–États-Unis.
 
@@ -100,7 +101,7 @@ Ces services ne reçoivent que des données chiffrées ou les informations techn
 - **Fermer votre bulle** : Réglages → Zone sensible → *Fermer notre bulle*. Le contenu partagé est effacé de nos serveurs, et ce téléphone est remis à zéro ; votre compte reste. Ce qui se trouve sur le téléphone de votre amour y reste, jusqu’à ce qu’il ou elle l’efface.
 - **Supprimer votre compte** : Réglages → Zone sensible → *Supprimer mon compte*. Ou [depuis ce site](/supprimer-mon-compte/), sans l’app.
 - **Couper les indicateurs** « en ligne » et « écrit… » : dans les réglages.
-- **Vos droits RGPD** : vous pouvez demander l’accès, la rectification, l’effacement ou la portabilité des données vous concernant, vous opposer à un traitement ou en demander la limitation. Écrivez-nous : [josuecode@yahoo.com](mailto:josuecode@yahoo.com).
+- **Vos droits RGPD** : vous pouvez demander l’accès, la rectification, l’effacement ou la portabilité des données vous concernant, vous opposer à un traitement ou en demander la limitation. Écrivez-nous : [hello@josuecode.com](mailto:hello@josuecode.com).
 - **Réclamation** : vous pouvez saisir l’autorité de protection des données de votre pays (en France, la [CNIL](https://www.cnil.fr/fr/plaintes)).
 
 Comme vos échanges sont chiffrés de bout en bout, ils ne sont lisibles que sur vos téléphones. Une demande d’accès porte donc sur les seules données listées dans « Ce que nos serveurs voient quand même ». Et si vous perdez vos deux téléphones sans votre phrase de récupération, personne ne peut récupérer vos échanges, pas même nous.
