@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 // Adresse publique du site. À changer ici le jour où le nom de domaine est acheté.
-const site = process.env.SITE_URL ?? 'https://foulove.vercel.app';
+const site = process.env.SITE_URL ?? 'https://foulove.josuecode.com';
 
 export default defineConfig({
   site,

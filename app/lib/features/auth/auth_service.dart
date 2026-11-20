@@ -21,6 +21,36 @@ class AuthService {
   bool _googleReady = false;
 
   Session? get session => _supabase.auth.currentSession;
+
+  // Connexion par code en cours. Pendant qu'on va chercher le code dans ses e-mails, certains téléphones
+  // (TECNO, Xiaomi…) ferment l'app pour libérer de la mémoire : au retour, on rouvre directement la saisie du code.
+  static const _pendingKey = 'foulov.pending_login';
+  static const _pendingFor = Duration(minutes: 10); // durée de vie du code (otp_expiry)
+
+  /// Adresse à laquelle un code a été envoyé il y a moins de 10 minutes, lue au démarrage par [loadPending].
+  String? pendingEmail;
+
+  Future<void> loadPending() async {
+    try {
+      final v = await const FlutterSecureStorage().read(key: _pendingKey);
+      final i = v?.lastIndexOf('|') ?? -1;
+      if (v == null || i < 0) return;
+      final sent = DateTime.fromMillisecondsSinceEpoch(int.parse(v.substring(i + 1)));
+      if (DateTime.now().difference(sent) < _pendingFor) {
+        pendingEmail = v.substring(0, i);
+      } else {
+        await clearPending();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> clearPending() async {
+    pendingEmail = null;
+    try {
+      await const FlutterSecureStorage().delete(key: _pendingKey);
+    } catch (_) {}
+  }
+
   Stream<AuthState> get changes => _supabase.auth.onAuthStateChange;
 
   Future<void> _initGoogle() async {
@@ -54,11 +84,19 @@ class AuthService {
   }
 
   /// Envoie un code à usage unique (8 chiffres, valable 10 minutes) à l'adresse indiquée.
-  Future<void> sendEmailCode(String email) => _supabase.auth.signInWithOtp(email: email.trim(), shouldCreateUser: true);
+  Future<void> sendEmailCode(String email) async {
+    await _supabase.auth.signInWithOtp(email: email.trim(), shouldCreateUser: true);
+    pendingEmail = email.trim();
+    await const FlutterSecureStorage().write(
+      key: _pendingKey,
+      value: '${email.trim()}|${DateTime.now().millisecondsSinceEpoch}',
+    );
+  }
 
   /// Vérifie le code reçu par e-mail et ouvre la session.
   Future<User?> verifyEmailCode(String email, String code) async {
     final res = await _supabase.auth.verifyOTP(type: OtpType.email, email: email.trim(), token: code.trim());
+    await clearPending();
     return res.user;
   }
 

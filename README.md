@@ -4,7 +4,7 @@ L'espace privé d'un couple, « une bulle à deux ». Messages, instants, souven
 tout est chiffré de bout en bout, sur vos deux téléphones.
 
 > En développement. Pas encore publié sur les stores (Android d'abord, iPhone ensuite).
-> Site : **[foulove.vercel.app](https://foulove.vercel.app)** — guide, sécurité, confidentialité, suppression du compte.
+> Site : **[foulove.josuecode.com](https://foulove.josuecode.com)** — guide, sécurité, confidentialité, suppression du compte.
 
 ## Ce que FouLove promet, mot pour mot
 

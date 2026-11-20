@@ -1,6 +1,6 @@
 # Site de FouLove
 
-Site public : **https://foulove.vercel.app** — présentation, guide pas à pas, sécurité, confidentialité, conditions,
+Site public : **https://foulove.josuecode.com** — présentation, guide pas à pas, sécurité, confidentialité, conditions,
 sécurité des enfants, aide, et suppression du compte **sans l'app** (exigences Google Play).
 
 Site statique [Astro](https://astro.build), sans cookie, sans mesure d'audience, sans rien charger d'un autre site

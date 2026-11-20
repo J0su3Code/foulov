@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// Adresses publiques de FouLove (site : dossier `site/` du dépôt). Les mêmes sont données à Google Play.
 /// Le jour où le nom de domaine est acheté, seule [siteUrl] change.
 abstract final class Links {
-  static const siteUrl = 'https://foulove.vercel.app';
+  static const siteUrl = 'https://foulove.josuecode.com';
   static const guide = '$siteUrl/guide/';
   static const help = '$siteUrl/aide/';
   static const privacyPolicy = '$siteUrl/confidentialite/';
