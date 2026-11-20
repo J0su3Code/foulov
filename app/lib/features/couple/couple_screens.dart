@@ -318,6 +318,7 @@ class _ChatHostState extends State<_ChatHost> {
     Supabase.instance.client,
     partnerId: widget.state.partnerId!,
     coupleId: widget.state.coupleId!,
+    coupleSince: widget.state.since,
   );
   late final Future<void> _ready = _service.start();
 

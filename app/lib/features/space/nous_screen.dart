@@ -554,7 +554,9 @@ class _HistoryCard extends StatelessWidget {
         busy: true,
       );
     }
-    if (chat.messages.length < 3) {
+    final since = chat.coupleSince;
+    final oldBubble = since == null || DateTime.now().difference(since) > const Duration(days: 1);
+    if (chat.messages.length < 3 && oldBubble) {
       return card(
         Icons.restore_rounded,
         'Nouveau téléphone ?',

@@ -22,6 +22,9 @@ class PrivacyScreen extends StatelessWidget {
           _Hero(),
           const _Title('Ce qui reste entre vous deux', icon: Icons.lock_rounded),
           const _Card(
+            footer:
+                'Chiffrés sur ton téléphone avant de partir, déchiffrés seulement sur celui de ton amour. '
+                'Nos serveurs ne transportent que des données illisibles. Nous n\'avons pas les clés.',
             children: [
               _Line(Icons.chat_bubble_outline_rounded, 'Vos messages, réactions, réponses et vocaux'),
               _Line(Icons.photo_outlined, 'Vos photos, vidéos et leurs légendes'),
@@ -30,14 +33,12 @@ class PrivacyScreen extends StatelessWidget {
               _Line(Icons.palette_outlined, 'Photo à deux, couverture, fond, couleurs, albums'),
               _Line(Icons.cloud_outlined, 'Votre sauvegarde (clé tirée de vos 24 mots)'),
             ],
-            footer:
-                'Chiffrés sur ton téléphone avant de partir, déchiffrés seulement sur celui de ton amour. '
-                'Nos serveurs ne transportent que des données illisibles. Nous n\'avons pas les clés.',
           ),
           const _Title('Ce que nos serveurs voient', icon: Icons.visibility_outlined),
           const _Card(
             children: [
-              _Seen('Ton adresse e-mail (ou ton compte Google ou Apple)', 'pour te connecter'),
+              _Seen('Ton adresse e-mail ; avec Google, aussi ton nom et ta photo de profil', 'pour te connecter'),
+              _Seen('La date de création de ton compte et de ta dernière connexion', 'pour sécuriser ton compte'),
               _Seen('Que vos deux comptes forment un couple', 'pour acheminer vos messages'),
               _Seen('L\'heure d\'envoi et le nombre de contenus chiffrés', 'pour les acheminer dans l\'ordre'),
               _Seen('Leur taille approximative (arrondie)', 'pour les stocker'),

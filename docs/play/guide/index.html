@@ -66,6 +66,7 @@ th { background: var(--bg2); }
 .copy .len { display: block; margin-top: 6px; font-size: .8rem; color: var(--muted); }
 .assets { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 14px 0; }
 .asset { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; text-align: center; }
+.caps { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .asset img { max-width: 100%; border-radius: 10px; display: block; margin: 0 auto 8px; }
 .asset small { color: var(--muted); display: block; }
 .asset a { font-weight: 700; font-size: .9rem; }
@@ -86,62 +87,24 @@ footer { color: var(--muted); font-size: .9rem; padding: 40px 0 60px; }
 
 <div class="layout">
 <nav class="toc" aria-label="Sommaire">
-  <a href="#calendrier">Le calendrier</a>
-  <a href="#compte">1. Votre compte</a>
-  <a href="#creer">2. Créer l'app</a>
-  <a href="#contenu">3. Contenu de l'application</a>
-  <a href="#donnees">4. Sécurité des données</a>
-  <a href="#fiche">5. Fiche du Store</a>
-  <a href="#test">6. Test fermé (14 jours)</a>
-  <a href="#prod">7. Accès à la production</a>
+  <a href="#creer">1. Créer l'app</a>
+  <a href="#contenu">2. Contenu de l'application</a>
+  <a href="#donnees">3. Sécurité des données</a>
+  <a href="#fiche">4. Fiche du Store</a>
+  <a href="#test">5. Lancer le test fermé</a>
+  <a href="#apres">Après le premier envoi</a>
   <a href="#moi">Ce que je prépare encore</a>
 </nav>
 
 <main>
 <header class="hero">
   <h1>Publier FouLove sur <em>Google Play</em></h1>
-  <p class="lead">Tout ce que la Play Console va vous demander, dans l'ordre, avec la bonne réponse pour FouLove. Cochez chaque étape une fois faite : la page s'en souvient.</p>
+  <p class="lead">De « Créer une application » jusqu'au lancement du test fermé : chaque écran de la Play Console, dans l'ordre, avec la bonne réponse pour FouLove. Cochez chaque étape une fois faite : la page s'en souvient.</p>
   <p class="note">Recherche faite le 20 novembre 2026 sur les pages d'aide officielles de Google. La Console bouge souvent : si un libellé diffère un peu, cherchez le sens, pas le mot exact. En cas de doute, faites une capture d'écran et montrez-la-moi.</p>
 </header>
 
-<section id="calendrier">
-  <h2>Le calendrier</h2>
-  <p>Pour un compte personnel récent, Google impose un <strong>test fermé de 14 jours avec au moins 12 testeurs</strong> avant d'ouvrir l'app au public. Comptez environ trois semaines.</p>
-  <div class="timeline">
-    <div><b>1–2 j</b><span>Compte, création de l'app, déclarations</span></div>
-    <div><b>14 j</b><span>Test fermé avec 12 testeurs minimum</span></div>
-    <div><b>≤ 7 j</b><span>Google étudie la demande d'accès à la production</span></div>
-    <div><b>≤ 7 j</b><span>Examen de la version publique</span></div>
-  </div>
-</section>
-
-<section id="compte">
-  <h2>1. Votre compte développeur</h2>
-
-  <div class="step"><label class="chk"><input type="checkbox" data-k="c1" /><div>
-    <h3>Vérifier votre identité</h3>
-    <span class="where">Play Console → page d'accueil (tâches à faire)</span>
-    <p>Frais uniques de 25 $, pièce d'identité officielle. Votre nom légal vient de votre profil de paiement Google.</p>
-    <p>Le nom du développeur affiché sur Play doit être celui écrit sur le site : <strong>Boinzemwendé Josué Ouedraogo</strong>. L'e-mail du développeur est public : mettez <code>hello@josuecode.com</code>.</p>
-  </div></label></div>
-
-  <div class="step"><label class="chk"><input type="checkbox" data-k="c2" /><div>
-    <h3>Vérifier votre téléphone</h3>
-    <span class="where">Play Console → page d'accueil → « Vérifier l'appareil »</span>
-    <ol><li>Installez l'app <strong>Play Console</strong> sur votre téléphone (votre TECNO convient : Android 10 ou plus).</li>
-    <li>Scannez le QR code affiché sur l'ordinateur, connectez-vous avec le même compte Google, choisissez votre compte développeur, puis <strong>Vérifier</strong>.</li></ol>
-    <p>Un émulateur ne marche pas : il faut le vrai téléphone.</p>
-  </div></label></div>
-
-  <div class="step"><label class="chk"><input type="checkbox" data-k="c3" /><div>
-    <h3>Déclarer votre statut : non-commerçant</h3>
-    <span class="where">Gérer le compte → Informations du compte → À propos de vous</span>
-    <p><span class="ans">Non-commerçant</span> : FouLove est gratuite, sans publicité ni achat, et vous la publiez à titre personnel. Il faudra le confirmer aussi pour l'app (étape 3).</p>
-  </div></label></div>
-</section>
-
 <section id="creer">
-  <h2>2. Créer l'app</h2>
+  <h2>1. Créer l’app</h2>
   <div class="step"><label class="chk"><input type="checkbox" data-k="a1" /><div>
     <h3>« Créer une application »</h3>
     <span class="where">Play Console → Toutes les applications → Créer une application</span>
@@ -159,7 +122,7 @@ footer { color: var(--muted); font-size: .9rem; padding: 40px 0 60px; }
 </section>
 
 <section id="contenu">
-  <h2>3. Contenu de l'application</h2>
+  <h2>2. Contenu de l’application</h2>
   <p><span class="where">Surveiller et améliorer → Règles et programmes → Contenu de l'application</span> Chaque ligne affiche « Commencer » ou « Gérer ».</p>
 
   <div class="step"><label class="chk"><input type="checkbox" data-k="p1" /><div>
@@ -176,7 +139,32 @@ footer { color: var(--muted); font-size: .9rem; padding: 40px 0 60px; }
   <div class="step"><label class="chk"><input type="checkbox" data-k="p3" /><div>
     <h3>Informations de connexion (anciennement « Accès aux applications »)</h3>
     <p><span class="ans">Tout ou partie des fonctionnalités sont limitées</span>, puis ajoutez les identifiants des comptes de démonstration.</p>
-    <p class="note red"><strong>Je les prépare avec vous</strong> (voir « Ce que je prépare encore ») : Google ne peut pas recevoir de code par e-mail, il lui faut deux comptes déjà en couple, avec un mot de passe. Le texte d'instructions en anglais vous sera donné à ce moment-là.</p>
+    <p>Ajoutez <strong>deux</strong> jeux d'identifiants (bouton « Ajouter des instructions »). Les adresses et les mots de passe sont dans <code>foulov/Secret Keys/comptes-demo.txt</code>, avec la phrase de 24 mots du compte A.</p>
+    <div class="tw"><table>
+      <tr><th>Champ</th><th>Compte A</th><th>Compte B</th></tr>
+      <tr><td>Nom d'utilisateur</td><td><code>demo.ines@foulove.josuecode.com</code></td><td><code>demo.sami@foulove.josuecode.com</code></td></tr>
+      <tr><td>Mot de passe</td><td colspan="2">Celui du fichier <code>comptes-demo.txt</code></td></tr>
+    </table></div>
+    <p>Instructions (en anglais, comme Google le demande) — remplacez <code>[24 WORDS]</code> par la phrase du fichier :</p>
+    <div class="copy">FouLove is a private, end-to-end encrypted messenger for couples: it only works between two paired accounts. The two demo accounts below are already paired with each other.
+
+HOW TO SIGN IN (no e-mail code needed)
+1. Open the app and tap "Commencer", then "Recevoir un code par e-mail".
+2. Tap the small link "Compte de démonstration" under the button.
+3. Enter the e-mail and password of Account A (Inès), then tap "Se connecter".
+
+SEE THE SAMPLE CONTENT
+Messages are end-to-end encrypted and stored only on the devices, so a new device starts empty. To load the demo history, when the app shows "Retrouver vos échanges", type this 24-word recovery phrase and tap "Restaurer":
+[24 WORDS]
+(If you skip this, the app still works: you can send messages, photos and letters to Account B.)
+If the app later shows "La clé de ton amour a changé", this is expected after a new sign-in: tap "Ce sont les mêmes".
+
+WHAT TO TRY
+- Tabs at the bottom: Nous (couple profile), Messages, Souvenirs (shared photos and albums), Lettres (letters and time capsules).
+- Messages: type a message, send a photo, long-press a message to react or reply.
+- Nous: tap the "+" circle to post a 24-hour moment.
+- Settings (gear icon on Nous): Aide > "Signaler un problème" (report), "Ne plus avoir de contact" (block: closes the shared space), Zone sensible > "Supprimer mon compte" (delete account).
+No app code (PIN) is set on these accounts. Please do not delete them: they are needed for future reviews.</div>
   </div></label></div>
 
   <div class="step"><label class="chk"><input type="checkbox" data-k="p4" /><div>
@@ -225,7 +213,7 @@ footer { color: var(--muted); font-size: .9rem; padding: 40px 0 60px; }
 </section>
 
 <section id="donnees">
-  <h2>4. Sécurité des données</h2>
+  <h2>3. Sécurité des données</h2>
   <p><span class="where">Contenu de l'application → Sécurité des données</span> Cinq écrans : présentation, collecte, types de données, utilisation, aperçu.</p>
   <p class="note">La règle clé de Google : ce qui est <strong>chiffré de bout en bout</strong>, que vous ne pouvez pas lire, <strong>ne se déclare pas</strong>. Donc on ne coche ni messages, ni photos, ni vidéos, ni vocaux. On déclare seulement ce que le serveur voit vraiment, exactement comme sur la page Confidentialité.</p>
 
@@ -260,7 +248,7 @@ footer { color: var(--muted); font-size: .9rem; padding: 40px 0 60px; }
 </section>
 
 <section id="fiche">
-  <h2>5. Fiche du Store</h2>
+  <h2>4. Fiche du Store</h2>
   <p><span class="where">Développer la base d'utilisateurs → Présence sur le Store → Fiche principale</span></p>
 
   <div class="step"><label class="chk"><input type="checkbox" data-k="f1" /><div>
@@ -305,7 +293,17 @@ Guide pas à pas, sécurité et confidentialité : foulove.josuecode.com</div>
     <div class="assets">
       <div class="asset"><img src="../icon-512.png" alt="Icône" style="width:140px" /><small>Icône 512 × 512, PNG 32 bits</small><a href="../icon-512.png" download>Télécharger</a></div>
       <div class="asset"><img src="../feature-graphic.png" alt="Image de présentation" /><small>Image de présentation 1 024 × 500</small><a href="../feature-graphic.png" download>Télécharger</a></div>
-      <div class="asset"><div class="todo" style="height:140px;display:grid;place-items:center">Captures d'écran<br />en préparation</div><small>4 à 8 captures 1 080 × 1 920 (portrait 9:16)</small></div>
+    </div>
+    <h3 style="margin-top:18px">Captures d'écran (téléphone), dans cet ordre</h3>
+    <p>1 080 × 1 920, format 9:16, PNG sans transparence. Ce sont de vrais écrans de l'app, avec les comptes de démonstration et des photos libres de droits (Unsplash).</p>
+    <div class="assets caps">
+      <div class="asset"><img src="../captures/1-nous.png" alt="Nous" loading="lazy" /><small>1. Nous</small><a href="../captures/1-nous.png" download>Télécharger</a></div>
+      <div class="asset"><img src="../captures/2-messages.png" alt="Messages" loading="lazy" /><small>2. Messages</small><a href="../captures/2-messages.png" download>Télécharger</a></div>
+      <div class="asset"><img src="../captures/3-instant.png" alt="Instant" loading="lazy" /><small>3. Instant</small><a href="../captures/3-instant.png" download>Télécharger</a></div>
+      <div class="asset"><img src="../captures/4-souvenirs.png" alt="Souvenirs" loading="lazy" /><small>4. Souvenirs</small><a href="../captures/4-souvenirs.png" download>Télécharger</a></div>
+      <div class="asset"><img src="../captures/5-lettres.png" alt="Lettres" loading="lazy" /><small>5. Lettres</small><a href="../captures/5-lettres.png" download>Télécharger</a></div>
+      <div class="asset"><img src="../captures/6-personnaliser.png" alt="Personnaliser" loading="lazy" /><small>6. Personnaliser</small><a href="../captures/6-personnaliser.png" download>Télécharger</a></div>
+      <div class="asset"><img src="../captures/7-serveur.png" alt="Ce que le serveur voit" loading="lazy" /><small>7. Ce que le serveur voit</small><a href="../captures/7-serveur.png" download>Télécharger</a></div>
     </div>
     <p class="note">Interdits sur les images et le titre : emoji, MAJUSCULES inutiles, « n°1 », « meilleur », « gratuit », « téléchargez », fausse pastille de notification. Les captures doivent montrer la vraie app. Aucune image n'est faite par IA : ne cochez pas « généré par IA ».</p>
   </div></label></div>
@@ -324,51 +322,22 @@ Guide pas à pas, sécurité et confidentialité : foulove.josuecode.com</div>
 </section>
 
 <section id="test">
-  <h2>6. Test fermé : 12 testeurs pendant 14 jours</h2>
+  <h2>5. Lancer le test fermé</h2>
   <div class="step"><label class="chk"><input type="checkbox" data-k="t1" /><div>
-    <h3>Créer le test fermé</h3>
-    <span class="where">Tester et publier → Tests → Test fermé → Gérer la piste</span>
-    <ol>
-      <li>Onglet <strong>Testeurs</strong> : créez une liste avec les adresses Gmail de vos testeurs (ou un Google Groupe).</li>
-      <li>Adresse de retour : <code>hello@josuecode.com</code>. Pays : France, et ceux de vos testeurs.</li>
-      <li>Créez une version : importez le fichier <code>.aab</code> que je vous fabrique, puis envoyez-la à l'examen.</li>
-      <li>Une fois acceptée, envoyez le <strong>lien d'inscription</strong> à chaque testeur : il l'ouvre, accepte, puis installe depuis Play.</li>
-    </ol>
-  </div></label></div>
-  <div class="step"><label class="chk"><input type="checkbox" data-k="t2" /><div>
-    <h3>Tenir 14 jours sans interruption</h3>
-    <ul>
-      <li>Visez <strong>15 à 20 testeurs</strong> : un testeur qui part avant 14 jours ne compte pas.</li>
-      <li>Ils doivent vraiment utiliser l'app. L'idéal pour FouLove : des <strong>couples</strong>, qui s'écrivent pour de vrai.</li>
-      <li>Publiez <strong>au moins une mise à jour</strong> pendant le test, avec les corrections demandées : Google le regarde.</li>
-      <li>Notez les retours au fur et à mesure : ils serviront au questionnaire de l'étape 7.</li>
-    </ul>
-    <p>Message à envoyer aux testeurs :</p>
-    <div class="copy">Coucou ! Je lance FouLove, une messagerie privée pour les couples, chiffrée de bout en bout. Google me demande 14 jours de test avant la sortie : tu veux bien la tester avec ton amour ?
-1. Ouvre ce lien et accepte : [lien d'inscription]
-2. Installe FouLove depuis Google Play (il faut le même compte Google).
-3. Garde-la installée au moins 14 jours, et utilisez-la un peu tous les deux.
-Tes retours (bugs, idées) : hello@josuecode.com. Merci du fond du cœur !</div>
+    <h3>Première version</h3>
+    <span class="where">Tester et publier → Tests → Test fermé → Créer une version</span>
+    <p>Importez le fichier <code>.aab</code> que je vous fabrique (signé avec la clé d'envoi FouLove, version 1.0.0). Notes de version :</p>
+    <div class="copy">Première version de test de FouLove : messages, photos, vocaux, instants, souvenirs, lettres et capsules, chiffrés de bout en bout.</div>
+    <p>Puis <strong>Vue d'ensemble de la publication → Envoyer pour examen</strong>. La suite, vous la connaissez.</p>
   </div></label></div>
 </section>
 
-<section id="prod">
-  <h2>7. Demander l'accès à la production</h2>
-  <div class="step"><label class="chk"><input type="checkbox" data-k="r1" /><div>
-    <h3>Le questionnaire en 3 parties</h3>
-    <span class="where">Tableau de bord → Demander l'accès à la production</span>
-    <ol>
-      <li><strong>Votre test fermé</strong> : comment vous avez trouvé les testeurs (des couples de votre entourage), leur engagement, un résumé précis des retours.</li>
-      <li><strong>Votre app</strong> : le public (les couples, notamment à distance, qui veulent un espace privé), ce qu'elle apporte (chiffrement de bout en bout, aucune publicité), le nombre d'installations attendu.</li>
-      <li><strong>Prête pour la production</strong> : les corrections faites pendant le test, et comment vous avez décidé qu'elle était prête.</li>
-    </ol>
-    <p class="note">Les refus viennent surtout de réponses vagues (« tout le monde a aimé »). Citez des corrections précises. Je vous aiderai à rédiger les réponses à partir des vrais retours.</p>
-  </div></label></div>
+<section id="apres">
+  <h2>Après le premier envoi</h2>
   <div class="step"><label class="chk"><input type="checkbox" data-k="r2" /><div>
-    <h3>Publier en production</h3>
-    <span class="where">Tester et publier → Production → Créer une version</span>
-    <p>Choisissez les pays, importez le <code>.aab</code>, écrivez les notes de version, puis <strong>Vue d'ensemble de la publication → Envoyer pour examen</strong>. Examen : de quelques heures à 7 jours.</p>
-    <p>Après le premier envoi : copiez l'empreinte SHA-1 de la <strong>clé de signature de l'application</strong> (page « Protected with Play »), et donnez-la-moi. Je l'ajoute dans Firebase, sinon la connexion Google ne marchera pas sur la version du Store.</p>
+    <h3>Me donner l'empreinte de la clé de signature Google</h3>
+    <span class="where">Tester et publier → Intégrité de l'application → page « Protected with Play » (signature d'application)</span>
+    <p>Copiez l'empreinte <strong>SHA-1</strong> (et SHA-256) de la <strong>clé de signature de l'application</strong>, pas celle de la clé d'importation. Je l'ajoute dans Firebase : sans elle, « Continuer avec Google » échouera sur la version installée depuis Play.</p>
   </div></label></div>
 </section>
 
@@ -376,10 +345,9 @@ Tes retours (bugs, idées) : hello@josuecode.com. Merci du fond du cœur !</div>
   <h2>Ce que je prépare encore</h2>
   <div class="step todo">
     <ul>
-      <li><strong>Deux comptes de démonstration déjà en couple</strong>, avec du contenu réaliste (sans vos vraies données), pour l'examinateur de Google et pour les captures. L'app a maintenant une connexion par mot de passe, discrète, réservée à ces comptes.</li>
-      <li><strong>Les captures d'écran du Store</strong>, mises en page aux couleurs de FouLove, à partir de vrais écrans de l'app.</li>
-      <li><strong>Le texte d'instructions en anglais</strong> pour l'écran « Informations de connexion ».</li>
       <li><strong>Le fichier .aab</strong> signé, avec le bon numéro de version.</li>
+      <li class="yes">Fait : deux comptes de démonstration en couple (Inès et Sami), avec du contenu réaliste et une sauvegarde chiffrée.</li>
+      <li class="yes">Fait : les 7 captures du Store et le texte en anglais pour l'examinateur.</li>
     </ul>
     <p>Déjà vérifié : niveau d'API cible 36 (exigé depuis août 2026), compatibilité avec les pages mémoire de 16 Ko, aucune autorisation sensible, page de suppression du compte et normes de sécurité des enfants en ligne, signalement et blocage dans l'app.</p>
   </div>
