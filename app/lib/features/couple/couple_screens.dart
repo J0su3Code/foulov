@@ -168,7 +168,29 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
         if (!s.hasCouple) {
           return ChoiceScreen(couple: widget.couple, onDone: _reload, onJoined: _joined, auth: widget.auth);
         }
-        if (!s.complete || s.partnerIdentity == null) return InviteScreen(couple: widget.couple, onPartner: _reload);
+        if (!s.complete || s.partnerIdentity == null) {
+          return InviteScreen(
+            couple: widget.couple,
+            auth: widget.auth,
+            onPartner: _reload,
+            onCancelled: (join) {
+              _reload();
+              if (join) {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => JoinScreen(
+                      couple: widget.couple,
+                      onJoined: () {
+                        Navigator.of(context).popUntil((r) => r.isFirst);
+                        _joined();
+                      },
+                    ),
+                  ),
+                );
+              }
+            },
+          );
+        }
         // Nouvelle clé du partenaire : avant tout le reste, une nouvelle comparaison des symboles.
         if (s.keyChanged) {
           return KeyChangeScreen(
@@ -456,10 +478,20 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
 // ===================================================================== invitation (côté créateur)
 
 class InviteScreen extends StatefulWidget {
-  const InviteScreen({super.key, required this.couple, required this.onPartner});
+  const InviteScreen({
+    super.key,
+    required this.couple,
+    required this.auth,
+    required this.onPartner,
+    required this.onCancelled,
+  });
 
   final CoupleService couple;
+  final AuthService auth;
   final VoidCallback onPartner;
+
+  /// Bulle en attente annulée ; `join` : on veut plutôt rejoindre celle de l'autre.
+  final void Function(bool join) onCancelled;
 
   @override
   State<InviteScreen> createState() => _InviteScreenState();
@@ -511,6 +543,26 @@ class _InviteScreenState extends State<InviteScreen> {
     }
   }
 
+  Future<void> _menu(String v) async {
+    if (v == 'out') {
+      await widget.auth.signOut();
+      return;
+    }
+    _poll?.cancel();
+    try {
+      // Personne ne l'a encore rejointe : l'annuler ne fait rien perdre.
+      await widget.couple.cancelPendingCouple();
+      widget.onCancelled(v == 'join');
+    } catch (_) {
+      _poll = Timer.periodic(const Duration(seconds: 3), (_) => _check());
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Ça n\'a pas marché. Vérifie ta connexion.')));
+      }
+    }
+  }
+
   Future<void> _newCode({bool forceNew = false}) async {
     try {
       final code = await widget.couple.currentInvitation(forceNew: forceNew);
@@ -539,7 +591,22 @@ class _InviteScreenState extends State<InviteScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
             children: [
-              Text('Invite ton amour', style: _title(context)),
+              Row(
+                children: [
+                  Expanded(child: Text('Invite ton amour', style: _title(context))),
+                  // Une sortie, toujours : on a pu toucher « Créer » au lieu de « J'ai reçu une invitation ».
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    tooltip: 'Plus',
+                    onSelected: _menu,
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'join', child: Text('J\'ai plutôt reçu une invitation')),
+                      PopupMenuItem(value: 'cancel', child: Text('Annuler cette bulle')),
+                      PopupMenuItem(value: 'out', child: Text('Se déconnecter')),
+                    ],
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Text(
                 'À distance : envoie-lui l\'invitation (WhatsApp, SMS…). À côté de toi : fais-lui scanner ce QR code. '

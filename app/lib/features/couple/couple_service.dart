@@ -171,6 +171,13 @@ class CoupleService {
     return s;
   }
 
+  /// Bulle créée mais personne ne l'a encore rejointe : on l'annule (rien à perdre, elle est vide) pour revenir au
+  /// choix « créer / rejoindre ».
+  Future<void> cancelPendingCouple() async {
+    await _db.rpc<dynamic>('leave_couple');
+    await _keyStore.delete(key: _inviteName);
+  }
+
   /// Après une remise à zéro (bulle fermée) : la prochaine ouverture crée une base et des clés neuves.
   void reset() {
     _opened = false;
