@@ -117,8 +117,8 @@ Vos photos ne sont **jamais** copiées dans la galerie du téléphone : elles re
 L’onglet **Lettres** est fait pour les mots qui comptent.
 
 1. Touchez <span class="ui">Écrire</span>, donnez un titre et écrivez votre lettre, aussi longue que vous voulez.
-2. Pour l’envoyer maintenant : <span class="ui">Envoyer tout de suite</span>.
-3. Pour en faire une **capsule** : choisissez une date avec <span class="ui">À ouvrir le…</span>, puis touchez <span class="ui">Sceller</span>. Votre amour la voit arriver, scellée, et ne pourra l’ouvrir qu’à ce jour-là. Idéal pour un anniversaire, ou un départ.
+2. Pour l’envoyer maintenant : touchez <span class="ui">Envoyer</span>, en haut à droite.
+3. Pour en faire une **capsule** : touchez <span class="ui">En faire une capsule</span>, choisissez le jour où elle s’ouvrira, puis <span class="ui">Sceller</span>. Votre amour la voit arriver, scellée, avec le nombre de jours restants, et ne pourra l’ouvrir qu’à ce jour-là. Vous non plus, d’ailleurs. Idéal pour un anniversaire, ou un départ.
 
 ## Protéger l’app : code et empreinte
 
