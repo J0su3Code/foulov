@@ -134,8 +134,10 @@ première version : Google garde la clé de signature finale, et la clé d'envoi
 **Connexion Google** : *fait le 19 nov. 2026 pour la clé d'envoi.* Ajouter dans Firebase (Paramètres du projet → app Android `org.foulov.app` → Empreintes) :
 - l'empreinte SHA-1 de la clé d'envoi : `20:5B:76:FD:9C:2F:7E:6A:94:84:22:D4:22:66:C6:EC:48:D4:68:20` ;
 - son SHA-256 : `11:9B:18:CC:CF:FD:3E:65:99:44:16:1A:68:35:DE:ED:3F:4F:DF:A8:D4:49:62:43:07:6E:D8:20:B2:DF:26:14` ;
-- après le premier envoi, l'empreinte de la **clé de signature d'application** indiquée par la Play Console
-  (Intégrité de l'application → Signature de l'application).
+- *fait le 21 nov. 2026* : les empreintes de la **clé de signature d'application** de Google Play (page
+  « Protéger avec Play », adresse `…/app/<numéro>/keymanagement`). Google y affiche une clé « classique », une clé
+  post-quantique et une clé précédente : les trois certificats sont ajoutés (SHA-1 et SHA-256), puisque Google
+  présente l'une ou l'autre selon la version d'Android.
 
 Ces empreintes sont publiques (elles ne permettent pas de signer).
 
