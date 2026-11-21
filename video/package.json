@@ -1,0 +1,22 @@
+{
+  "name": "foulove-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render:vertical": "remotion render src/index.ts FouLoveVertical out/foulove-vertical.mp4",
+    "render:horizontal": "remotion render src/index.ts FouLoveHorizontal out/foulove-horizontal.mp4"
+  },
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.79.0",
+    "@remotion/cli": "4.0.545",
+    "@remotion/media-utils": "4.0.545",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.545"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
