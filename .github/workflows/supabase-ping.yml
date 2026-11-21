@@ -1,0 +1,35 @@
+# Signe de vie quotidien : le plan gratuit de Supabase met en pause un projet resté 7 jours sans activité.
+# Appelle la fonction SQL public.ping() (migration 20261121090000_ping.sql), qui ne lit aucune donnée.
+name: Supabase, signe de vie
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # chaque jour à 6 h 17 (UTC)
+  workflow_dispatch: {}
+
+permissions:
+  actions: write # pour se réactiver (GitHub coupe les tâches planifiées après 60 jours sans activité du dépôt)
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Appeler ping()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          for i in 1 2 3; do
+            r=$(curl -s -m 30 -X POST "$SUPABASE_URL/rest/v1/rpc/ping" \
+              -H "apikey: $SUPABASE_KEY" -H "Content-Type: application/json" -d '{}') || true
+            if [ "$r" = '"ok"' ]; then echo "Supabase répond : $r"; exit 0; fi
+            echo "Essai $i : réponse inattendue ($r), nouvel essai dans 60 s"; sleep 60
+          done
+          echo "::error::Supabase ne répond pas : le projet est peut-être en pause (tableau de bord Supabase → Restore)."
+          exit 1
+      - name: Rester activée
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/supabase-ping.yml/enable"
