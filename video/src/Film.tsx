@@ -136,7 +136,7 @@ const Coeurs: React.FC<{ n?: number; x?: number; y?: number; couleur?: string; d
 
 // Gros titre animé (mots qui montent un par un).
 const Titre: React.FC<{ mots: string[]; couleurs?: (string | undefined)[]; taille?: number; nuit?: boolean; italique?: number[]; y?: number; pas?: number }> = ({
-  mots, couleurs = [], taille = 120, nuit, italique = [], y, pas = 4,
+  mots, couleurs = [], taille = 104, nuit, italique = [], y, pas = 4,
 }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -183,7 +183,7 @@ const Scene: React.FC<{ video?: string; image?: string; debut?: number; vitesse?
   const f = useCurrentFrame();
   const { vertical, u, w, h } = useMise();
   const p = useRessort(0, 120);
-  const H = vertical ? 1180 * u : 880 * u;
+  const H = vertical ? 1040 * u : 860 * u;
   const balance = Math.sin(f / 22) * 1.2;
   return (
     <AbsoluteFill>
@@ -191,7 +191,7 @@ const Scene: React.FC<{ video?: string; image?: string; debut?: number; vitesse?
       {titre}
       <div
         style={{
-          position: "absolute", left: vertical ? (w - H * 0.45) / 2 : w * 0.24 - (H * 0.45) / 2, top: vertical ? 470 * u : (h - H) / 2,
+          position: "absolute", left: vertical ? (w - H * 0.45) / 2 : w * 0.24 - (H * 0.45) / 2, top: vertical ? 450 * u : (h - H) / 2 - 20 * u,
           transform: `translateY(${(1 - p) * 220 * u}px) rotate(${(1 - p) * -6 + balance}deg) scale(${0.92 + 0.08 * p})`,
           opacity: op(p * 1.6),
         }}
@@ -208,7 +208,7 @@ const Scene: React.FC<{ video?: string; image?: string; debut?: number; vitesse?
 const BulleMsg: React.FC<{ texte: string; depart: number; moi?: boolean; y: number }> = ({ texte, depart, moi, y }) => {
   const p = useRessort(depart, 200);
   const { vertical, u } = useMise();
-  const k = (vertical ? 1180 : 880) / 2400; // échelle de l'écran
+  const k = (vertical ? 1040 : 860) / 2400; // échelle de l'écran
   if (p <= 0.001) return null;
   return (
     <div
@@ -264,24 +264,70 @@ const Accroche: React.FC = () => {
 const Distance: React.FC = () => {
   const f = useCurrentFrame();
   const { vertical, u, w, h } = useMise();
-  const dur = (t(4) - t(2)) * 30;
-  // l'intro de l'app : deux traits qui se rejoignent en cœur, puis la bulle
-  const p = useRessort(0, 180);
-  const km = interpolate(f, [0, 36], [0, 1000], { extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
-  const disparition = interpolate(f, [(t(3) - t(2)) * 30 - 6, (t(3) - t(2)) * 30 + 6], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const dA = Math.round((t(3) - t(2)) * 30); // « Mille kilomètres entre nous… »
+  const km = interpolate(f, [0, dA * 0.7], [0, 1000], { extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  // les deux points (elle en rose, lui en or) : écartés, puis ils foncent l'un vers l'autre
+  const rapproche = interpolate(f, [dA - 12, dA], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.in(Easing.cubic) });
+  const ecart = (vertical ? 0.36 : 0.3) * w * (1 - rapproche);
+  const cy = vertical ? h * 0.56 : h * 0.6;
+  const pulse = 1 + 0.12 * Math.sin(f / 4);
+  const entree = spring({ frame: f, fps: 30, config: { damping: 15, stiffness: 120 } });
+  const orbe = (x: number, c1: string) => (
+    <div style={{ position: "absolute", left: x - 40 * u, top: cy - 40 * u, width: 80 * u, height: 80 * u, borderRadius: "50%", transform: `scale(${pulse * entree})`,
+      background: `radial-gradient(circle, #fff 0 18%, ${c1} 38%, transparent 70%)`, boxShadow: `0 0 ${90 * u}px ${30 * u}px ${c1}88` }} />
+  );
+  const flash = interpolate(f, [dA - 2, dA + 2, dA + 10], [0, 0.9, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const phaseB = f >= dA;
   return (
-    <AbsoluteFill>
-      <AbsoluteFill style={{ background: C.prune }} />
-      <OffthreadVideo src={staticFile("clips/intro-nuit.mp4")} muted startFrom={45} playbackRate={6 / ((dur + 6) / 30)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", left: 0, right: 0, top: vertical ? 260 * u : h * 0.12, textAlign: "center", opacity: op(disparition), transform: `scale(${0.85 + 0.15 * p})` }}>
-        <div style={{ fontFamily: serif, fontWeight: 600, fontSize: (vertical ? 230 : 190) * u, color: "#fbeff4", letterSpacing: "-0.04em", lineHeight: 1 }}>
-          {Math.round(km).toLocaleString("fr-FR")}
-          <span style={{ fontSize: (vertical ? 110 : 90) * u, color: C.rose, fontStyle: "italic" }}> km</span>
-        </div>
-        <div style={{ fontFamily: sans, fontWeight: 700, letterSpacing: "0.2em", fontSize: 30 * u, color: "rgba(251,239,244,.7)", marginTop: 14 * u }}>ENTRE NOUS</div>
-      </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: vertical ? 300 * u : h * 0.12, textAlign: "center", opacity: op(1 - disparition), fontFamily: serif, fontWeight: 600, fontSize: (vertical ? 120 : 100) * u, color: "#fbeff4", letterSpacing: "-0.02em" }}>
-        une seule <em style={{ color: C.rose }}>bulle</em>
+    <AbsoluteFill style={{ background: C.prune }}>
+      {!phaseB && (
+        <>
+          <OffthreadVideo src={staticFile("clips/intro-nuit.mp4")} muted startFrom={15} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.6 }} />
+          {/* fil entre les deux */}
+          <div style={{ position: "absolute", left: w / 2 - ecart, width: ecart * 2, top: cy - 1.5 * u, height: 3 * u, opacity: op(entree * (1 - rapproche)),
+            background: `repeating-linear-gradient(90deg, rgba(255,214,227,.75) 0 ${18 * u}px, transparent ${18 * u}px ${34 * u}px)` }} />
+          {orbe(w / 2 - ecart, C.rose)}
+          {orbe(w / 2 + ecart, C.or)}
+          <div style={{ position: "absolute", left: 0, right: 0, top: cy - (vertical ? 420 : 330) * u, textAlign: "center", opacity: op(entree * (1 - rapproche)), transform: `scale(${0.85 + 0.15 * entree})` }}>
+            <div style={{ fontFamily: serif, fontWeight: 600, fontSize: (vertical ? 240 : 200) * u, color: "#fbeff4", letterSpacing: "-0.04em", lineHeight: 1 }}>
+              {Math.round(km).toLocaleString("fr-FR")}
+              <span style={{ fontSize: (vertical ? 110 : 90) * u, color: C.rose, fontStyle: "italic" }}> km</span>
+            </div>
+            <div style={{ fontFamily: sans, fontWeight: 700, letterSpacing: "0.22em", fontSize: 32 * u, color: "rgba(251,239,244,.75)", marginTop: 16 * u }}>ENTRE NOUS</div>
+          </div>
+          <div style={{ position: "absolute", left: w / 2 - ecart - 60 * u, top: cy + 70 * u, width: 120 * u, textAlign: "center", fontFamily: sans, fontWeight: 800, fontSize: 30 * u, color: C.rose, opacity: op(entree * (1 - rapproche)) }}>Inès</div>
+          <div style={{ position: "absolute", left: w / 2 + ecart - 60 * u, top: cy + 70 * u, width: 120 * u, textAlign: "center", fontFamily: sans, fontWeight: 800, fontSize: 30 * u, color: C.or, opacity: op(entree * (1 - rapproche)) }}>Sami</div>
+        </>
+      )}
+      {phaseB && (
+        <Sequence from={dA} layout="none">
+          <BulleNuit />
+        </Sequence>
+      )}
+      <AbsoluteFill style={{ background: "#fff", opacity: op(flash) }} />
+    </AbsoluteFill>
+  );
+};
+
+// « Mais une seule bulle. » : l'intro de nuit de l'app, du cœur à la bulle, en grand.
+const BulleNuit: React.FC = () => {
+  const f = useCurrentFrame();
+  const { vertical, u, h } = useMise();
+  const duree = (t(4) - t(3)) * 30;
+  const zoom = interpolate(f, [0, duree], [1.08, 1.0]);
+  const texte = spring({ frame: f - 4, fps: 30, config: { damping: 14, stiffness: 140 } });
+  return (
+    <AbsoluteFill style={{ background: C.prune }}>
+      {!vertical && (
+        <OffthreadVideo src={staticFile("clips/intro-nuit.mp4")} muted startFrom={Math.round(4.4 * 30)} playbackRate={(7.4 - 4.4) / ((duree + 4) / 30)}
+          style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(.7)", transform: "scale(1.2)" }} />
+      )}
+      <OffthreadVideo src={staticFile("clips/intro-nuit.mp4")} muted startFrom={Math.round(4.4 * 30)} playbackRate={(7.4 - 4.4) / ((duree + 4) / 30)}
+        style={{ position: "absolute", width: "100%", height: "100%", objectFit: vertical ? "cover" : "contain", WebkitMaskImage: vertical ? undefined : "linear-gradient(90deg, transparent 30%, #000 40%, #000 60%, transparent 70%)", transform: `scale(${vertical ? zoom : zoom * 1.75})`, transformOrigin: vertical ? "50% 50%" : "50% 40%" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, top: vertical ? 1240 * u : h * 0.8, textAlign: "center", fontFamily: serif, fontWeight: 600,
+        fontSize: (vertical ? 120 : 84) * u, color: "#fbeff4", letterSpacing: "-0.02em", opacity: op(texte), transform: `translateY(${(1 - texte) * 40 * u}px)`,
+        textShadow: "0 4px 30px rgba(0,0,0,.5)" }}>
+        une seule <em style={{ color: C.rose }}>bulle.</em>
       </div>
     </AbsoluteFill>
   );
@@ -482,7 +528,7 @@ export const Film: React.FC = () => {
       <Sequence from={sec(t(5)) + 70}><Audio src={staticFile("son/pop.mp3")} volume={0.5} /></Sequence>
       <Sequence from={sec(t(8)) + 50}><Audio src={staticFile("son/sceau.mp3")} volume={0.8} /></Sequence>
       {[t(6), t(7), t(10), t(12)].map((x, i) => (
-        <Sequence key={i} from={Math.max(0, sec(x) - 8)}><Audio src={staticFile("son/souffle.mp3")} volume={0.35} /></Sequence>
+        <Sequence key={i} from={Math.max(0, sec(x) - 8)}><Audio src={staticFile("son/souffle.mp3")} volume={0.6} /></Sequence>
       ))}
       {f < 0 && null}
     </AbsoluteFill>

@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 const c = new ElevenLabsClient();
 const lire = async (s) => { const ch = []; for await (const x of s) ch.push(Buffer.from(x)); return Buffer.concat(ch); };
 const quoi = process.argv[2] ?? "tout";
+const seul = process.argv[3];
 if (quoi === "tout" || quoi === "musique") {
   const audio = await c.music.compose({
     prompt:
@@ -22,11 +23,12 @@ if (quoi === "tout" || quoi === "bruits") {
   const sons = {
     notification: "A soft, modern phone message notification chime, two gentle notes, clean, no background",
     pop: "A tiny soft bubble pop with a warm sparkle, very short",
-    souffle: "A short smooth cinematic whoosh transition, airy, soft",
+    souffle: "A deep, soft, warm whoosh, like a heavy fabric swept slowly through the air: woooosh. Low frequencies, rounded and smooth, no high-pitched swish, no zip, no whistle",
     sceau: "A soft wax seal stamp press on paper, gentle thud, short",
   };
   for (const [nom, texte] of Object.entries(sons)) {
-    const a = await c.textToSoundEffects.convert({ text: texte, durationSeconds: nom === "souffle" ? 1.2 : 1, promptInfluence: 0.6 });
+    if (seul && nom !== seul) continue;
+    const a = await c.textToSoundEffects.convert({ text: texte, durationSeconds: nom === "souffle" ? 1.4 : 1, promptInfluence: 0.6 });
     await writeFile(`public/son/${nom}.mp3`, await lire(a));
     console.log("son ok", nom);
   }
