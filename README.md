@@ -49,6 +49,7 @@ Sécurité au quotidien :
 | Cœur cryptographique | Rust (`core/`) : libsignal (PQXDH avec ML-KEM-1024, double ratchet), base SQLCipher, fichiers en AES-256-GCM (STREAM) avec remplissage Padmé, Argon2id, HKDF, HMAC — rien d'inventé |
 | Compte | Supabase Auth : Google, Apple ou code à usage unique par e-mail. Aucun mot de passe. |
 | Données | Supabase Postgres, règles d'accès strictes (seuls les deux membres d'un couple), tests pgTAP |
+| Veille | GitHub Actions appelle chaque jour `public.ping()`, pour que le plan gratuit de Supabase ne mette pas le projet en pause |
 | Médias | Cloudflare R2, fichiers chiffrés avant l'envoi, liens pré-signés de courte durée |
 | Notifications | Firebase (FCM) : texte fixe, jamais de contenu |
 
