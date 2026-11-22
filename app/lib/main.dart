@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config.dart';
@@ -19,6 +21,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Charge le cœur cryptographique Rust (libsignal, chiffrement des fichiers, base locale chiffrée).
   await RustLib.init();
+  // Android : la vraie galerie photo du système (sélection multiple, albums), pas l'explorateur de fichiers.
+  final picker = ImagePickerPlatform.instance;
+  if (picker is ImagePickerAndroid) picker.useAndroidPhotoPicker = true;
   AppConfig.check();
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,

@@ -86,7 +86,7 @@ fn addr_key(a: &ProtocolAddress) -> String {
     format!("{}.{}", a.name(), u32::from(a.device_id()))
 }
 
-const SCHEMA_VERSION: i64 = 5;
+const SCHEMA_VERSION: i64 = 6;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v BLOB NOT NULL);
@@ -146,6 +146,10 @@ CREATE TABLE IF NOT EXISTS letters (
   open_at INTEGER, read_at INTEGER, starred INTEGER NOT NULL DEFAULT 0);
 -- Fichiers chiffrés à retirer de R2 (photo remplacée, instant expiré).
 CREATE TABLE IF NOT EXISTS r2_trash (object_key TEXT PRIMARY KEY);
+-- Stickers (version 6) : ceux que tu as enregistrés ou importés, sur ce téléphone seulement. id = SHA-256 du fichier.
+CREATE TABLE IF NOT EXISTS stickers (
+  id TEXT PRIMARY KEY, data BLOB NOT NULL, mime TEXT NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL,
+  favorite INTEGER NOT NULL DEFAULT 0, added_at INTEGER NOT NULL, used_at INTEGER NOT NULL DEFAULT 0);
 ";
 
 /// Mises à niveau des bases créées par une version précédente (CREATE IF NOT EXISTS n'ajoute pas de colonne).
@@ -172,6 +176,11 @@ fn migrate(conn: &Connection) -> Result<(), StoreError> {
     let has_quote: bool = conn.prepare("SELECT 1 FROM pragma_table_info('messages') WHERE name = 'quote_text'")?.exists([])?;
     if !has_quote {
         conn.execute_batch("ALTER TABLE messages ADD COLUMN quote_text TEXT; ALTER TABLE messages ADD COLUMN quote_thumb BLOB;")?;
+    }
+    // Version 6 : messages modifiés par leur auteur.
+    let has_edited: bool = conn.prepare("SELECT 1 FROM pragma_table_info('messages') WHERE name = 'edited_at'")?.exists([])?;
+    if !has_edited {
+        conn.execute_batch("ALTER TABLE messages ADD COLUMN edited_at INTEGER")?;
     }
     Ok(())
 }

@@ -41,6 +41,21 @@ Future<SentText> chatSendText({
   replyTo: replyTo,
 );
 
+/// Modifie un de ses messages (texte ou légende) dans les 15 minutes après l'envoi.
+Future<SentText> chatEditMessage({
+  required String partner,
+  required String id,
+  required String body,
+}) => RustLib.instance.api.crateApiChatChatEditMessage(
+  partner: partner,
+  id: id,
+  body: body,
+);
+
+/// Délai pour modifier un message, en millisecondes.
+PlatformInt64 chatEditWindowMs() =>
+    RustLib.instance.api.crateApiChatChatEditWindowMs();
+
 Future<Outgoing> chatSendReaction({
   required String partner,
   required String target,
@@ -243,6 +258,39 @@ Future<Outgoing> chatDeleteDate({
   required String id,
 }) => RustLib.instance.api.crateApiChatChatDeleteDate(partner: partner, id: id);
 
+Future<List<Sticker>> stickerList() =>
+    RustLib.instance.api.crateApiChatStickerList();
+
+Future<StickerAdded> stickerAdd({
+  required List<int> data,
+  required String mime,
+  required int width,
+  required int height,
+}) => RustLib.instance.api.crateApiChatStickerAdd(
+  data: data,
+  mime: mime,
+  width: width,
+  height: height,
+);
+
+Future<Uint8List?> stickerData({required String id}) =>
+    RustLib.instance.api.crateApiChatStickerData(id: id);
+
+Future<StickerFound?> stickerFind({required List<int> data}) =>
+    RustLib.instance.api.crateApiChatStickerFind(data: data);
+
+Future<void> stickerSetFavorite({required String id, required bool favorite}) =>
+    RustLib.instance.api.crateApiChatStickerSetFavorite(
+      id: id,
+      favorite: favorite,
+    );
+
+Future<void> stickerUsed({required String id}) =>
+    RustLib.instance.api.crateApiChatStickerUsed(id: id);
+
+Future<void> stickerDelete({required String id}) =>
+    RustLib.instance.api.crateApiChatStickerDelete(id: id);
+
 class ChatMessage {
   final String id;
   final bool fromMe;
@@ -262,6 +310,9 @@ class ChatMessage {
   /// Réponse à un instant : son texte et sa miniature.
   final Quote? quote;
 
+  /// Modifié par son auteur : heure de la dernière modification.
+  final PlatformInt64? editedAt;
+
   const ChatMessage({
     required this.id,
     required this.fromMe,
@@ -274,6 +325,7 @@ class ChatMessage {
     this.media,
     required this.deleted,
     this.quote,
+    this.editedAt,
   });
 
   @override
@@ -288,7 +340,8 @@ class ChatMessage {
       theirReaction.hashCode ^
       media.hashCode ^
       deleted.hashCode ^
-      quote.hashCode;
+      quote.hashCode ^
+      editedAt.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -305,7 +358,8 @@ class ChatMessage {
           theirReaction == other.theirReaction &&
           media == other.media &&
           deleted == other.deleted &&
-          quote == other.quote;
+          quote == other.quote &&
+          editedAt == other.editedAt;
 }
 
 /// Profil du couple, jamais visible du serveur.
@@ -665,4 +719,86 @@ class SentText {
           runtimeType == other.runtimeType &&
           message == other.message &&
           outgoing == other.outgoing;
+}
+
+/// Un sticker de la bibliothèque (son image se lit avec `sticker_data`).
+class Sticker {
+  final String id;
+  final String mime;
+  final int width;
+  final int height;
+  final bool favorite;
+  final PlatformInt64 addedAt;
+  final PlatformInt64 usedAt;
+
+  const Sticker({
+    required this.id,
+    required this.mime,
+    required this.width,
+    required this.height,
+    required this.favorite,
+    required this.addedAt,
+    required this.usedAt,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      mime.hashCode ^
+      width.hashCode ^
+      height.hashCode ^
+      favorite.hashCode ^
+      addedAt.hashCode ^
+      usedAt.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Sticker &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          mime == other.mime &&
+          width == other.width &&
+          height == other.height &&
+          favorite == other.favorite &&
+          addedAt == other.addedAt &&
+          usedAt == other.usedAt;
+}
+
+class StickerAdded {
+  final String id;
+
+  /// Faux : il y était déjà.
+  final bool added;
+
+  const StickerAdded({required this.id, required this.added});
+
+  @override
+  int get hashCode => id.hashCode ^ added.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is StickerAdded &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          added == other.added;
+}
+
+class StickerFound {
+  final String id;
+  final bool favorite;
+
+  const StickerFound({required this.id, required this.favorite});
+
+  @override
+  int get hashCode => id.hashCode ^ favorite.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is StickerFound &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          favorite == other.favorite;
 }

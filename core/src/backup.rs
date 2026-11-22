@@ -178,6 +178,9 @@ pub mod bpb {
         pub quote_text: Option<String>,
         #[prost(bytes = "vec", optional, tag = "12")]
         pub quote_thumb: Option<Vec<u8>>,
+        /// Modifié par son auteur (heure de la dernière modification).
+        #[prost(int64, optional, tag = "13")]
+        pub edited_at: Option<i64>,
     }
 
     #[derive(Clone, PartialEq, prost::Message)]
@@ -267,7 +270,7 @@ impl Device {
             let c = self.store.conn.lock();
             let mut b = bpb::Backup { version: 1, created_at: crate::chat::now_ms() as u64, ..Default::default() };
             let mut st = c
-                .prepare("SELECT id, from_me, body, reply_to, sent_at, received_at, status, my_reaction, their_reaction, deleted, quote_text, quote_thumb FROM messages")
+                .prepare("SELECT id, from_me, body, reply_to, sent_at, received_at, status, my_reaction, their_reaction, deleted, quote_text, quote_thumb, edited_at FROM messages")
                 .map_err(db)?;
             b.messages = st
                 .query_map([], |r| {
@@ -284,6 +287,7 @@ impl Device {
                         deleted: r.get::<_, i64>(9)? == 1,
                         quote_text: r.get(10)?,
                         quote_thumb: r.get(11)?,
+                        edited_at: r.get(12)?,
                     })
                 })
                 .map_err(db)?
@@ -403,10 +407,10 @@ impl Device {
                 sum.messages += c
                     .execute(
                         "INSERT OR IGNORE INTO messages (id, from_me, body, reply_to, sent_at, received_at, status, my_reaction,
-                           their_reaction, deleted, quote_text, quote_thumb) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                           their_reaction, deleted, quote_text, quote_thumb, edited_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
                         params![
                             m.id, m.from_me, m.body, m.reply_to, m.sent_at, m.received_at, m.status, m.my_reaction,
-                            m.their_reaction, m.deleted, m.quote_text, m.quote_thumb
+                            m.their_reaction, m.deleted, m.quote_text, m.quote_thumb, m.edited_at
                         ],
                     )
                     .map_err(db)? as u32;

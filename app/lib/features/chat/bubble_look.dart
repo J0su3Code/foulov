@@ -268,10 +268,24 @@ class BubbleLook extends InheritedWidget {
 /// Fond de la conversation : dégradé libre à 4 couleurs qui glisse doucement à chaque message envoyé (`bump`),
 /// motif dessiné par-dessus, ou votre photo floutée et assombrie à votre goût.
 class ChatWallpaper extends StatelessWidget {
-  const ChatWallpaper({super.key, required this.space, required this.child, this.thumbnail = false});
+  const ChatWallpaper({
+    super.key,
+    required this.space,
+    required this.child,
+    this.thumbnail = false,
+    this.wallpaper,
+    this.pattern,
+    this.patternOpacity,
+    this.photoBlur,
+    this.photoDim,
+  });
 
   final SpaceService space;
   final Widget child;
+
+  /// Aperçu d'un fond pas encore choisi (« Fond d'écran ») : remplace le réglage du couple.
+  final String? wallpaper;
+  final int? pattern, patternOpacity, photoBlur, photoDim;
 
   /// Petite vignette (choix d'un thème) : pas de photo, motif plus serré.
   final bool thumbnail;
@@ -283,8 +297,10 @@ class ChatWallpaper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final night = context.night;
-    final photo = !thumbnail && space.wallpaper == 'photo' ? space.wallpaperPhoto : null;
-    final colors = Wallpapers.colors(int.tryParse(space.wallpaper) ?? 0, night);
+    final wall = wallpaper ?? space.wallpaper;
+    final pattern = this.pattern ?? space.pattern;
+    final photo = !thumbnail && wall == 'photo' ? space.wallpaperPhoto : null;
+    final colors = Wallpapers.colors(int.tryParse(wall) ?? 0, night);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -299,7 +315,7 @@ class ChatWallpaper extends StatelessWidget {
             builder: (context, snap) {
               final bytes = snap.data ?? (photo.media.thumb.isEmpty ? null : photo.media.thumb);
               if (bytes == null) return ColoredBox(color: context.cs.surface);
-              final blur = space.photoBlur.toDouble();
+              final blur = (photoBlur ?? space.photoBlur).toDouble();
               return Stack(
                 fit: StackFit.expand,
                 children: [
@@ -308,17 +324,19 @@ class ChatWallpaper extends StatelessWidget {
                     imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
                     child: Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true),
                   ),
-                  ColoredBox(color: Colors.black.withValues(alpha: space.photoDim / 100)),
+                  ColoredBox(color: Colors.black.withValues(alpha: (photoDim ?? space.photoDim) / 100)),
                 ],
               );
             },
           ),
-        if (space.pattern > 0 && photo == null)
+        if (pattern > 0 && photo == null)
           RepaintBoundary(
             child: CustomPaint(
               painter: PatternPainter(
-                space.pattern,
-                (night ? Colors.white : const Color(0xFF3A1A2A)).withValues(alpha: space.patternOpacity / 100),
+                pattern,
+                (night ? Colors.white : const Color(0xFF3A1A2A)).withValues(
+                  alpha: (patternOpacity ?? space.patternOpacity) / 100,
+                ),
                 scale: thumbnail ? .5 : 1,
               ),
             ),

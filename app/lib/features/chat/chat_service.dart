@@ -284,6 +284,18 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Charge les pages plus anciennes jusqu'à ce message (toucher une citation y conduit). Faux s'il n'existe plus.
+  Future<bool> loadUntil(String id) async {
+    while (!_byId.containsKey(id) && hasMore) {
+      if (_loadingMore) {
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        continue;
+      }
+      await loadMore();
+    }
+    return _byId.containsKey(id);
+  }
+
   /// Les citations peuvent viser un message pas encore chargé : on le lit dans la base locale.
   Future<ChatMessage?> lookup(String id) async => _byId[id] ?? await chatMessage(id: id);
 
@@ -388,6 +400,24 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     _upsert(s.message);
     _notify();
     space.onActivity();
+    unawaited(flush());
+  }
+
+  /// Délai pour modifier un message (15 minutes, comme WhatsApp).
+  static final int editWindowMs = chatEditWindowMs();
+
+  /// Ses propres textes et légendes de photos ou vidéos, pendant 15 minutes.
+  static bool canEdit(ChatMessage m) =>
+      m.fromMe &&
+      !m.deleted &&
+      (m.media == null || m.media!.kind == 1 || m.media!.kind == 2) &&
+      DateTime.now().millisecondsSinceEpoch - m.sentAt < editWindowMs;
+
+  /// Modifie le texte (ou la légende) : la modification part chiffrée, sans notification chez ton amour.
+  Future<void> edit(String id, String text) async {
+    final s = await chatEditMessage(partner: partnerId, id: id, body: text);
+    _upsert(s.message);
+    _notify();
     unawaited(flush());
   }
 
@@ -532,6 +562,35 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     remember(created.message.id, full);
     _upsert(created.message);
     _notify();
+    unawaited(transfer());
+  }
+
+  /// Envoie un sticker (déjà préparé : WebP, PNG ou GIF, animé ou non). Sa miniature part dans le message
+  /// chiffré : il s'affiche aussitôt chez ton amour.
+  Future<void> sendSticker(
+    Uint8List data,
+    String mime,
+    int width,
+    int height,
+    Uint8List thumb, {
+    String? replyTo,
+  }) async {
+    final created = await chatCreateMedia(
+      dir: _mediaDir,
+      plain: data,
+      kind: 4,
+      mime: mime,
+      width: width,
+      height: height,
+      durationMs: 0,
+      thumb: thumb,
+      caption: '',
+      replyTo: replyTo,
+    );
+    remember(created.message.id, data);
+    _upsert(created.message);
+    _notify();
+    space.onActivity();
     unawaited(transfer());
   }
 

@@ -31,6 +31,9 @@ class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
   DateTime? _backAt;
 
+  /// La conversation traite le retour d'abord (fermer les stickers, annuler une modification).
+  final _chatBack = ChatBack();
+
   void _go(int i) {
     if (i == _tab || !mounted) return;
     HapticFeedback.selectionClick();
@@ -46,6 +49,7 @@ class _HomeShellState extends State<HomeShell> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        if (_tab == 1 && _chatBack.consume()) return;
         if (_tab != 0) {
           _go(0);
           return;
@@ -86,6 +90,7 @@ class _HomeShellState extends State<HomeShell> {
               // « Lu » seulement quand la conversation est vraiment sous les yeux.
               active: _tab == 1,
               onBack: () => _go(0),
+              back: _chatBack,
               bottomInset: MediaQuery.paddingOf(context).bottom,
             ),
             SouvenirsScreen(chat: s),

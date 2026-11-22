@@ -65,6 +65,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Quote dco_decode_box_autoadd_quote(dynamic raw);
 
   @protected
+  StickerFound dco_decode_box_autoadd_sticker_found(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
 
   @protected
@@ -152,6 +155,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SpaceSetting> dco_decode_list_space_setting(dynamic raw);
 
   @protected
+  List<Sticker> dco_decode_list_sticker(dynamic raw);
+
+  @protected
   MediaInfo dco_decode_media_info(dynamic raw);
 
   @protected
@@ -183,6 +189,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Quote? dco_decode_opt_box_autoadd_quote(dynamic raw);
+
+  @protected
+  StickerFound? dco_decode_opt_box_autoadd_sticker_found(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
@@ -239,6 +248,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SpaceStats dco_decode_space_stats(dynamic raw);
 
   @protected
+  Sticker dco_decode_sticker(dynamic raw);
+
+  @protected
+  StickerAdded dco_decode_sticker_added(dynamic raw);
+
+  @protected
+  StickerFound dco_decode_sticker_found(dynamic raw);
+
+  @protected
   int dco_decode_u_32(dynamic raw);
 
   @protected
@@ -290,6 +308,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Quote sse_decode_box_autoadd_quote(SseDeserializer deserializer);
+
+  @protected
+  StickerFound sse_decode_box_autoadd_sticker_found(
+    SseDeserializer deserializer,
+  );
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
@@ -389,6 +412,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<Sticker> sse_decode_list_sticker(SseDeserializer deserializer);
+
+  @protected
   MediaInfo sse_decode_media_info(SseDeserializer deserializer);
 
   @protected
@@ -426,6 +452,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Quote? sse_decode_opt_box_autoadd_quote(SseDeserializer deserializer);
+
+  @protected
+  StickerFound? sse_decode_opt_box_autoadd_sticker_found(
+    SseDeserializer deserializer,
+  );
 
   @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
@@ -480,6 +511,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SpaceStats sse_decode_space_stats(SseDeserializer deserializer);
+
+  @protected
+  Sticker sse_decode_sticker(SseDeserializer deserializer);
+
+  @protected
+  StickerAdded sse_decode_sticker_added(SseDeserializer deserializer);
+
+  @protected
+  StickerFound sse_decode_sticker_found(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -552,6 +592,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_quote(Quote self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_sticker_found(
+    StickerFound self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
@@ -674,6 +720,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_sticker(List<Sticker> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_media_info(MediaInfo self, SseSerializer serializer);
 
   @protected
@@ -723,6 +772,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_quote(Quote? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_sticker_found(
+    StickerFound? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
@@ -786,6 +841,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_space_stats(SpaceStats self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sticker(Sticker self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sticker_added(StickerAdded self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sticker_found(StickerFound self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

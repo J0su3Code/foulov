@@ -21,6 +21,8 @@ pub struct ChatMessage {
     pub deleted: bool,
     /// Réponse à un instant : son texte et sa miniature.
     pub quote: Option<Quote>,
+    /// Modifié par son auteur : heure de la dernière modification.
+    pub edited_at: Option<i64>,
 }
 
 pub struct Quote {
@@ -61,6 +63,7 @@ impl From<core::ChatMessage> for ChatMessage {
             }),
             deleted: m.deleted,
             quote: m.quote.map(|q| Quote { text: q.text, thumb: q.thumb }),
+            edited_at: m.edited_at,
         }
     }
 }
@@ -143,6 +146,20 @@ pub fn chat_send_text(partner: String, body: String, reply_to: Option<String>) -
         let (m, o) = d.send_text(&partner, &body, reply_to.as_deref())?;
         Ok(SentText { message: m.into(), outgoing: o.into() })
     })
+}
+
+/// Modifie un de ses messages (texte ou légende) dans les 15 minutes après l'envoi.
+pub fn chat_edit_message(partner: String, id: String, body: String) -> anyhow::Result<SentText> {
+    with_device(|d| {
+        let (m, o) = d.edit_message(&partner, &id, &body)?;
+        Ok(SentText { message: m.into(), outgoing: o.into() })
+    })
+}
+
+/// Délai pour modifier un message, en millisecondes.
+#[flutter_rust_bridge::frb(sync)]
+pub fn chat_edit_window_ms() -> i64 {
+    core::EDIT_WINDOW_MS
 }
 
 pub fn chat_send_reaction(partner: String, target: String, emoji: String) -> anyhow::Result<Outgoing> {
@@ -430,4 +447,72 @@ pub fn chat_save_date(partner: String, entry: DateEntry) -> anyhow::Result<Saved
 
 pub fn chat_delete_date(partner: String, id: String) -> anyhow::Result<Outgoing> {
     with_device(|d| Ok(d.delete_date(&partner, &id)?.into()))
+}
+
+// ------------------------------------------------------------------ stickers
+
+/// Un sticker de la bibliothèque (son image se lit avec `sticker_data`).
+pub struct Sticker {
+    pub id: String,
+    pub mime: String,
+    pub width: u32,
+    pub height: u32,
+    pub favorite: bool,
+    pub added_at: i64,
+    pub used_at: i64,
+}
+
+pub struct StickerAdded {
+    pub id: String,
+    /// Faux : il y était déjà.
+    pub added: bool,
+}
+
+pub struct StickerFound {
+    pub id: String,
+    pub favorite: bool,
+}
+
+pub fn sticker_list() -> anyhow::Result<Vec<Sticker>> {
+    with_device(|d| {
+        Ok(d.stickers()?
+            .into_iter()
+            .map(|s| Sticker {
+                id: s.id,
+                mime: s.mime,
+                width: s.width,
+                height: s.height,
+                favorite: s.favorite,
+                added_at: s.added_at,
+                used_at: s.used_at,
+            })
+            .collect())
+    })
+}
+
+pub fn sticker_add(data: Vec<u8>, mime: String, width: u32, height: u32) -> anyhow::Result<StickerAdded> {
+    with_device(|d| {
+        let (id, added) = d.sticker_add(&data, &mime, width, height)?;
+        Ok(StickerAdded { id, added })
+    })
+}
+
+pub fn sticker_data(id: String) -> anyhow::Result<Option<Vec<u8>>> {
+    with_device(|d| Ok(d.sticker_data(&id)?))
+}
+
+pub fn sticker_find(data: Vec<u8>) -> anyhow::Result<Option<StickerFound>> {
+    with_device(|d| Ok(d.sticker_find(&data)?.map(|(id, favorite)| StickerFound { id, favorite })))
+}
+
+pub fn sticker_set_favorite(id: String, favorite: bool) -> anyhow::Result<()> {
+    with_device(|d| Ok(d.sticker_set_favorite(&id, favorite)?))
+}
+
+pub fn sticker_used(id: String) -> anyhow::Result<()> {
+    with_device(|d| Ok(d.sticker_used(&id)?))
+}
+
+pub fn sticker_delete(id: String) -> anyhow::Result<()> {
+    with_device(|d| Ok(d.sticker_delete(&id)?))
 }

@@ -24,6 +24,8 @@ pub const KIND_PHOTO: u8 = 1;
 pub const KIND_VIDEO: u8 = 2;
 /// Message vocal (la « miniature » transporte alors la forme d'onde : jusqu'à 64 amplitudes de 0 à 255).
 pub const KIND_VOICE: u8 = 3;
+/// Sticker : image (WebP, PNG ou GIF, animée ou non) affichée sans bulle. La miniature voyage dans le message.
+pub const KIND_STICKER: u8 = 4;
 /// Archive chiffrée (transfert d'historique entre vos téléphones). Pas de miniature.
 pub const KIND_ARCHIVE: u8 = 5;
 /// Plafond du fichier chiffré (le serveur applique le même).
@@ -100,7 +102,7 @@ pub(crate) fn drop_file(c: &rusqlite::Connection, id: &str, trash: bool) -> R<()
     Ok(())
 }
 const MIMES: &[&str] =
-    &["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4", "video/quicktime", "audio/mp4", "audio/aac", "application/octet-stream"];
+    &["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "video/mp4", "video/quicktime", "audio/mp4", "audio/aac", "application/octet-stream"];
 
 /// Fichier à déposer sur R2.
 #[derive(Clone, Debug, PartialEq)]
@@ -147,7 +149,7 @@ pub(crate) fn valid_object_key(k: &str) -> bool {
 
 pub(crate) fn check_meta(kind: u8, mime: &str, thumb: &[u8], caption: &str, w: u32, h: u32) -> bool {
     let family = match kind {
-        KIND_PHOTO => "image/",
+        KIND_PHOTO | KIND_STICKER => "image/",
         KIND_VIDEO => "video/",
         KIND_VOICE => "audio/",
         KIND_ARCHIVE => "application/",
@@ -419,7 +421,8 @@ impl Device {
                 )
                 .map_err(db)?
             };
-            self.enqueue(partner, pb::Body::Media(row), Some(message_id)).map(Some)
+            let body = if row.kind == KIND_STICKER as u32 { pb::Body::Sticker(row) } else { pb::Body::Media(row) };
+            self.enqueue(partner, body, Some(message_id)).map(Some)
         })
     }
 

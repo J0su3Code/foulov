@@ -631,6 +631,7 @@ class _LastWord extends StatelessWidget {
             1 => '📷 Photo',
             2 => '🎬 Vidéo',
             3 => '🎙️ Message vocal',
+            4 => 'Sticker',
             _ => '…',
           };
     return LoveCard(

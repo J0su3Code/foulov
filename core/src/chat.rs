@@ -25,6 +25,13 @@ const FORMAT_V1: u8 = 1;
 const PAD_BLOCK: usize = 160;
 /// Longueur maximale d'un message texte, en octets UTF-8.
 pub const MAX_TEXT_BYTES: usize = 16 * 1024;
+/// Un message peut être modifié pendant 15 minutes après son envoi (comme WhatsApp).
+pub const EDIT_WINDOW_MS: i64 = 15 * 60_000;
+/// Marge pour les horloges un peu décalées entre les deux téléphones.
+const EDIT_GRACE_MS: i64 = 2 * 60_000;
+/// Une modification arrive peu après le message (elle part juste derrière lui) : au-delà d'un jour après sa
+/// réception ici, elle est refusée, même si l'heure annoncée par l'expéditeur semble dans le délai.
+const EDIT_ARRIVAL_MS: i64 = 24 * 3_600_000;
 /// Plaintext historique envoyé à l'appairage (`CoupleService._hello`) : reconnu et ignoré.
 const LEGACY_HELLO: &[u8] = b"FOULOVE:BONJOUR:1";
 
@@ -33,7 +40,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20")]
         pub body: Option<Body>,
     }
 
@@ -75,6 +82,24 @@ pub mod pb {
         HistoryRequest(Ref),
         #[prost(message, tag = "18")]
         HistoryOffer(HistoryOffer),
+        /// Un sticker (même description qu'une photo, `kind` = 4). Numéro à part : une version qui ne connaît pas
+        /// les stickers le garde de côté et l'affichera après sa mise à jour, au lieu de le rejeter.
+        #[prost(message, tag = "19")]
+        Sticker(Media),
+        /// Modification d'un de ses messages par son auteur, dans les minutes qui suivent l'envoi.
+        #[prost(message, tag = "20")]
+        Edit(Edit),
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Edit {
+        #[prost(bytes = "vec", tag = "1")]
+        pub target: Vec<u8>,
+        /// Nouveau texte (ou nouvelle légende d'une photo ou vidéo).
+        #[prost(string, tag = "2")]
+        pub body: String,
+        #[prost(uint64, tag = "3")]
+        pub edited_at: u64,
     }
 
     /// Réponse à une demande d'historique : le fichier chiffré déposé sur R2 et sa clé.
@@ -351,6 +376,8 @@ pub struct ChatMessage {
     pub deleted: bool,
     /// Réponse à un instant : son texte et sa miniature, gardés même après ses 24 h.
     pub quote: Option<Quote>,
+    /// Modifié par son auteur : heure de la dernière modification.
+    pub edited_at: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -519,7 +546,13 @@ pub(crate) fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMess
             Some(text) => Some(Quote { text, thumb: r.get::<_, Option<Vec<u8>>>(17)?.unwrap_or_default() }),
             None => None,
         },
+        edited_at: r.get(18)?,
     })
+}
+
+/// Seuls les textes et les légendes de photos ou vidéos se modifient (pas les vocaux ni les stickers).
+fn editable_kind(kind: Option<i64>) -> bool {
+    matches!(kind, None | Some(1) | Some(2))
 }
 
 /// Efface le contenu d'un message (texte, réactions, photo ou vidéo et son fichier chiffré local) et ne garde que
@@ -570,7 +603,7 @@ pub(crate) fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64
 /// Message et, s'il y en a une, sa photo ou vidéo.
 pub(crate) const SELECT: &str = "SELECT m.id, m.from_me, m.body, m.reply_to, m.sent_at, m.status, m.my_reaction, \
     m.their_reaction, md.kind, md.mime, md.width, md.height, md.duration_ms, md.thumb, md.state, m.deleted, \
-    m.quote_text, m.quote_thumb FROM messages m LEFT JOIN media md ON md.message_id = m.id";
+    m.quote_text, m.quote_thumb, m.edited_at FROM messages m LEFT JOIN media md ON md.message_id = m.id";
 
 impl Device {
     pub(crate) fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
@@ -581,6 +614,7 @@ impl Device {
             pb::Body::Text(_)
                 | pb::Body::Reaction(_)
                 | pb::Body::Media(_)
+                | pb::Body::Sticker(_)
                 | pb::Body::Letter(_)
                 | pb::Body::Moment(_)
                 | pb::Body::HistoryRequest(_)
@@ -642,6 +676,7 @@ impl Device {
             media: None,
             deleted: false,
             quote: None,
+            edited_at: None,
         };
         let text =
             pb::Text {
@@ -875,6 +910,52 @@ impl Device {
                 Ok(Received::Updated(if n > 0 { vec![id] } else { vec![] }))
             }
             pb::Body::Media(m) => crate::chat_media::apply_media(&c, m),
+            pb::Body::Sticker(m) => {
+                if m.kind != crate::chat_media::KIND_STICKER as u32 {
+                    return Err(DeviceError::BadMessage);
+                }
+                crate::chat_media::apply_media(&c, m)
+            }
+            pb::Body::Edit(e) => {
+                let id = id_from_wire(&e.target).ok_or(DeviceError::BadMessage)?;
+                let body = e.body.trim().to_owned();
+                if body.len() > MAX_TEXT_BYTES {
+                    return Err(DeviceError::BadMessage);
+                }
+                let row: Option<(i64, i64, Option<i64>, Option<i64>)> = c
+                    .query_row(
+                        "SELECT m.sent_at, m.received_at, m.edited_at, md.kind FROM messages m
+                         LEFT JOIN media md ON md.message_id = m.id
+                         WHERE m.id = ?1 AND m.from_me = 0 AND m.deleted = 0",
+                        params![id],
+                        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+                    )
+                    .optional()
+                    .map_err(db)?;
+                let at = i64::try_from(e.edited_at).unwrap_or(i64::MAX);
+                let now = now_ms();
+                let ok = match row {
+                    // Le partenaire ne modifie que ses propres messages, dans le délai, et la modification la plus
+                    // récente l'emporte (deux modifications peuvent arriver dans le désordre après une coupure).
+                    // L'heure annoncée doit être plausible (après l'envoi, pas dans le futur) et la modification doit
+                    // arriver peu après le message : on ne réécrit pas un vieux message en mentant sur l'heure.
+                    Some((sent_at, received_at, edited, kind)) => {
+                        editable_kind(kind)
+                            && (kind.is_some() || !body.is_empty())
+                            && at >= sent_at
+                            && at <= now + EDIT_GRACE_MS
+                            && at - sent_at <= EDIT_WINDOW_MS + EDIT_GRACE_MS
+                            && now - received_at <= EDIT_ARRIVAL_MS
+                            && edited.is_none_or(|x| at > x)
+                    }
+                    None => false,
+                };
+                if !ok {
+                    return Ok(Received::Nothing);
+                }
+                c.execute("UPDATE messages SET body = ?2, edited_at = ?3 WHERE id = ?1", params![id, body, at]).map_err(db)?;
+                Ok(Received::Updated(vec![id]))
+            }
             pb::Body::Date(d) => crate::dates::apply_date(&c, d),
             pb::Body::Setting(x) => crate::space::apply_setting(&c, x),
             pb::Body::Picture(x) => crate::space::apply_picture(&c, x),
@@ -979,6 +1060,49 @@ impl Device {
             kv_set(&self.store.conn.lock(), "together_since", (!date.is_empty()).then_some(date), at)?;
             self.enqueue(partner, pb::Body::Couple(pb::Couple { together_since: date.to_owned(), updated_at: at }), None)
         })
+    }
+
+    /// Modifie un de ses messages (texte, ou légende d'une photo ou vidéo) dans les 15 minutes qui suivent l'envoi.
+    /// La modification part chiffrée chez le partenaire, sans le réveiller (comme WhatsApp).
+    pub fn edit_message(&mut self, partner: &str, id: &str, body: &str) -> R<(ChatMessage, Outgoing)> {
+        let wire = unhex(id).filter(|b| b.len() == 16).ok_or(DeviceError::BadMessage)?;
+        let body = body.trim();
+        if body.len() > MAX_TEXT_BYTES {
+            return Err(DeviceError::Protocol("message trop long".into()));
+        }
+        let tx = self.store.conn.clone();
+        let out = tx.atomically(|| {
+            {
+                let c = self.store.conn.lock();
+                let row: Option<(i64, Option<i64>)> = c
+                    .query_row(
+                        "SELECT m.sent_at, md.kind FROM messages m LEFT JOIN media md ON md.message_id = m.id
+                         WHERE m.id = ?1 AND m.from_me = 1 AND m.deleted = 0",
+                        params![id],
+                        |r| Ok((r.get(0)?, r.get(1)?)),
+                    )
+                    .optional()
+                    .map_err(db)?;
+                let Some((sent_at, kind)) = row else {
+                    return Err(DeviceError::Protocol("on ne peut modifier que ses propres messages".into()));
+                };
+                if !editable_kind(kind) || (kind.is_none() && body.is_empty()) {
+                    return Err(DeviceError::Protocol("ce message ne peut pas être modifié".into()));
+                }
+                if now_ms() - sent_at > EDIT_WINDOW_MS {
+                    return Err(DeviceError::Protocol("le délai pour modifier ce message est passé".into()));
+                }
+            }
+            let at = now_ms();
+            self.store
+                .conn
+                .lock()
+                .execute("UPDATE messages SET body = ?2, edited_at = ?3 WHERE id = ?1", params![id, body, at])
+                .map_err(db)?;
+            self.enqueue(partner, pb::Body::Edit(pb::Edit { target: wire, body: body.to_owned(), edited_at: at as u64 }), None)
+        })?;
+        let msg = self.message(id)?.ok_or(DeviceError::BadMessage)?;
+        Ok((msg, out))
     }
 
     /// « Supprimer pour moi » : efface le message de ce téléphone seulement (le sien ou celui du partenaire).
