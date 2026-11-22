@@ -2299,7 +2299,6 @@ class _StickerBubbleState extends State<_StickerBubble> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final m = widget.m;
     final md = m.media!;
     final ready = md.state == 1 || (m.fromMe && md.state == 0);
@@ -2317,8 +2316,14 @@ class _StickerBubbleState extends State<_StickerBubble> {
             decoration: look.box(context, fromMe: widget.mine, radius: BorderRadius.all(look.radius)),
             child: widget.quote,
           ),
-        SizedBox.square(
-          dimension: 150,
+        // Comme WhatsApp : un tiers de la largeur de l'écran (160 au plus), l'heure dessous dans une pastille
+        // aux couleurs de la bulle.
+        SizedBox(
+          width: min(MediaQuery.sizeOf(context).width * .34, 160.0),
+          // Un sticker large ou haut garde sa forme : pas de vide entre lui et l'heure.
+          height:
+              min(MediaQuery.sizeOf(context).width * .34, 160.0) *
+              (md.width > 0 && md.height > 0 ? (md.height / md.width).clamp(.4, 1.0) : 1.0),
           child: FutureBuilder<Uint8List?>(
             future: _full,
             builder: (context, snap) {
@@ -2329,13 +2334,10 @@ class _StickerBubbleState extends State<_StickerBubble> {
           ),
         ),
         Container(
-          margin: const EdgeInsets.only(top: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainer.withValues(alpha: .85),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: _Meta(m: m, color: cs.onSurfaceVariant),
+          margin: const EdgeInsets.only(top: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: look.box(context, fromMe: widget.mine, radius: BorderRadius.circular(10)),
+          child: _Meta(m: m, color: look.fg(context, widget.mine)),
         ),
       ],
     );

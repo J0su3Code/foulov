@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../src/rust/api/chat.dart';
 import 'chat_service.dart';
+import 'sticker_pack.dart';
 
 /// Un sticker prêt à envoyer ou à enregistrer.
 typedef PreparedSticker = ({Uint8List bytes, String mime, int width, int height});
@@ -229,7 +230,10 @@ class StickerPanel extends StatefulWidget {
 
 class _StickerPanelState extends State<StickerPanel> with SingleTickerProviderStateMixin {
   final _lib = StickerLibrary.instance;
-  late final TabController _tabs = TabController(length: 3, vsync: this, initialIndex: _initialTab());
+  final _pack = StickerPack.instance;
+
+  /// Onglets : Récents, Favoris, FouLove (le pack), Mes stickers (importés ou enregistrés).
+  late final TabController _tabs = TabController(length: 4, vsync: this, initialIndex: _initialTab());
 
   int _initialTab() {
     if (_lib.recents.isNotEmpty) return 0;
@@ -241,6 +245,44 @@ class _StickerPanelState extends State<StickerPanel> with SingleTickerProviderSt
   void initState() {
     super.initState();
     unawaited(_lib.ensureLoaded());
+    unawaited(_pack.ensureLoaded());
+  }
+
+  /// Un sticker du pack : téléchargé en entier, rangé dans la bibliothèque (pour Récents et Favoris), puis envoyé.
+  Future<Sticker?> _fromPack(PackSticker p) async {
+    final b = await _pack.bytes(p.id);
+    if (b == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Ce sticker n\'a pas pu être téléchargé. Vérifie ta connexion.')));
+      }
+      return null;
+    }
+    final r = await _lib.add((bytes: b, mime: 'image/webp', width: p.width, height: p.height));
+    return _lib.byId(r.id);
+  }
+
+  Future<void> _sendPack(PackSticker p) async {
+    final st = await _fromPack(p);
+    if (st == null || !mounted) return;
+    final b = await _lib.data(st.id);
+    if (b != null) widget.onSend(st, b);
+  }
+
+  Future<void> _favPack(PackSticker p) async {
+    HapticFeedback.mediumImpact();
+    final mine = _lib.byId(p.id);
+    final messenger = ScaffoldMessenger.of(context);
+    if (mine != null) {
+      await _lib.setFavorite(mine.id, !mine.favorite);
+      messenger.showSnackBar(SnackBar(content: Text(mine.favorite ? 'Retiré des favoris' : 'Ajouté aux favoris ⭐')));
+      return;
+    }
+    final st = await _fromPack(p);
+    if (st == null) return;
+    await _lib.setFavorite(st.id, true);
+    messenger.showSnackBar(const SnackBar(content: Text('Ajouté aux favoris ⭐')));
   }
 
   @override
@@ -253,7 +295,7 @@ class _StickerPanelState extends State<StickerPanel> with SingleTickerProviderSt
     final messenger = ScaffoldMessenger.of(context);
     final n = await importStickers(context);
     if (n == null || !mounted) return;
-    if (_tabs.index != 2) _tabs.animateTo(2);
+    if (_tabs.index != 3) _tabs.animateTo(3);
     messenger.showSnackBar(
       SnackBar(
         content: Text(
@@ -274,7 +316,7 @@ class _StickerPanelState extends State<StickerPanel> with SingleTickerProviderSt
       height: widget.height,
       color: cs.surfaceContainer,
       child: ListenableBuilder(
-        listenable: _lib,
+        listenable: Listenable.merge([_lib, _pack]),
         builder: (context, _) => Column(
           children: [
             Row(
@@ -289,6 +331,7 @@ class _StickerPanelState extends State<StickerPanel> with SingleTickerProviderSt
                     tabs: const [
                       Tab(icon: Icon(Icons.history_rounded), height: 46),
                       Tab(icon: Icon(Icons.star_rounded), height: 46),
+                      Tab(icon: Icon(Icons.favorite_rounded), height: 46),
                       Tab(icon: Icon(Icons.emoji_emotions_outlined), height: 46),
                     ],
                   ),
@@ -314,13 +357,60 @@ class _StickerPanelState extends State<StickerPanel> with SingleTickerProviderSt
                           'Aucun favori pour l\'instant.\nGarde ton doigt sur un sticker, ou touche un sticker reçu, '
                           'puis « Ajouter aux favoris ».',
                         ),
-                        _grid(_lib.all, null),
+                        _packGrid(),
+                        // Mes stickers : ceux que j'ai importés ou enregistrés (pas ceux du pack déjà envoyés).
+                        _grid(_lib.all.where((s) => !_pack.contains(s.id)).toList(), null),
                       ],
                     ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Pack FouLove : miniatures chargées à la demande, en grille comme WhatsApp.
+  Widget _packGrid() {
+    final cs = Theme.of(context).colorScheme;
+    if (_pack.items.isEmpty) {
+      return Center(
+        child: _pack.failed
+            ? Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Les stickers FouLove n\'ont pas pu être chargés.\nVérifie ta connexion.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: cs.onSurfaceVariant, height: 1.4),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.tonal(onPressed: () => _pack.load(force: true), child: const Text('Réessayer')),
+                  ],
+                ),
+              )
+            : const CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return GridView.builder(
+      padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + widget.bottomInset),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 6,
+      ),
+      itemCount: _pack.items.length,
+      itemBuilder: (context, i) {
+        final p = _pack.items[i];
+        return InkWell(
+          key: ValueKey(p.id),
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _sendPack(p),
+          onLongPress: () => _favPack(p),
+          child: Padding(padding: const EdgeInsets.all(6), child: PackStickerImage(p)),
+        );
+      },
     );
   }
 
