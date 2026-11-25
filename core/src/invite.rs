@@ -68,7 +68,7 @@ impl Device {
         let want = proof(secret, &theirs, &self.identity_key()?);
         let ok = got.len() == 32 && got.iter().zip(want.iter()).fold(0u8, |a, (x, y)| a | (x ^ y)) == 0;
         if ok {
-            self.mark_verified(partner)?;
+            self.mark_verified(partner, &theirs)?;
         }
         Ok(ok)
     }

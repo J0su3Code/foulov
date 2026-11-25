@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../src/rust/api/chat.dart';
 import '../account/account_service.dart';
 import '../backup/backup_service.dart';
-import '../../src/rust/api/crypto.dart';
 import '../../src/rust/api/device.dart';
 
 /// État du couple vu par ce téléphone.
@@ -74,7 +73,7 @@ class CoupleService {
   static const idPrefix = 'foulove:id:';
   bool _opened = false;
 
-  /// Le dernier « rejoindre » s'est fait avec l'invitation complète : les deux clés se vérifient sans symboles.
+  /// Le dernier « rejoindre » s'est fait avec l'invitation complète : les deux clés se vérifient sans rien comparer.
   bool joinedWithInvitation = false;
 
   String get _me => _db.auth.currentUser!.id;
@@ -252,10 +251,10 @@ class CoupleService {
     }
   }
 
-  /// Nouvelle clé du partenaire acceptée après comparaison des 7 symboles : les messages en attente se lisent.
+  /// Nouvelle clé du partenaire, contrôlée par son lien : acceptée et vérifiée, les messages en attente se lisent.
   Future<void> acceptPartnerKey(String partner, Uint8List identity) async {
     await deviceAcceptPartnerKey(partner: partner, identityKey: identity);
-    await deviceMarkVerified(partner: partner);
+    await deviceMarkVerified(partner: partner, identityKey: identity);
   }
 
   // ------------------------------------------------------------------ créer / rejoindre
@@ -315,7 +314,7 @@ class CoupleService {
       '${await invitation(code)}';
 
   /// Chez celui qui a invité, après le premier message : la preuve reçue vient-elle de la personne qui a reçu
-  /// l'invitation ? Si oui, sa clé est vérifiée, sans symboles. L'invitation, utilisée, est oubliée.
+  /// l'invitation ? Si oui, sa clé est vérifiée, sans rien comparer. L'invitation, utilisée, est oubliée.
   Future<bool> verifyJoinProof(String partner) async {
     final secret = await _inviteSecret();
     if (secret == null) return false;
@@ -354,7 +353,7 @@ class CoupleService {
       'Voici mon lien FouLove 💞 Copie ce message, puis touche « Coller son lien » dans FouLove.\n\n'
       '$idPrefix${base64Url.encode(await deviceFingerprint()).replaceAll('=', '')}';
 
-  /// Son lien de retrouvailles, collé : s'il correspond à sa clé, elle est acceptée et vérifiée sans symboles.
+  /// Son lien de retrouvailles, collé : s'il correspond à sa clé, elle est acceptée et vérifiée sans rien comparer.
   /// Renvoie faux si le lien ne correspond pas (ou n'en est pas un).
   Future<bool> acceptByLink(String partner, Uint8List identity, String text, {bool keyChange = false}) async {
     final m = RegExp(r'foulove:id:([A-Za-z0-9_-]{20,})').firstMatch(text);
@@ -369,7 +368,7 @@ class CoupleService {
     if (keyChange) {
       await acceptPartnerKey(partner, identity);
     } else {
-      await deviceMarkVerified(partner: partner);
+      await deviceMarkVerified(partner: partner, identityKey: identity);
     }
     return true;
   }
@@ -419,7 +418,7 @@ class CoupleService {
       return JoinResult.keyMismatch;
     }
     await deviceStartSession(partner: partner, bundle: bundle);
-    if (expectedFp != null) await deviceMarkVerified(partner: partner);
+    if (expectedFp != null) await deviceMarkVerified(partner: partner, identityKey: bundle.identityKey);
 
     // Premier message chiffré de bout en bout : il établit la session chez le partenaire.
     // Avec une invitation complète, il porte aussi la preuve tirée de son secret.
@@ -461,9 +460,6 @@ class CoupleService {
     return deviceHasSession(partner: partner);
   }
 
-  Future<List<SasSymbol>> symbols(Uint8List partnerIdentity) => deviceSasWith(partnerIdentity: partnerIdentity);
-
-  Future<void> confirmSymbols(String partner) => deviceMarkVerified(partner: partner);
 
   // ------------------------------------------------------------------ outils
 

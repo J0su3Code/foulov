@@ -113,7 +113,11 @@ impl Device {
     }
 
     /// Accepter : prépare l'archive chiffrée dans `dir` ; elle partira une fois déposée sur R2 (`media_uploaded`).
-    pub fn offer_history(&mut self, dir: &Path) -> R<PendingUpload> {
+    pub fn offer_history(&mut self, partner: &str, dir: &Path) -> R<PendingUpload> {
+        // L'historique ne part que vers une clé vérifiée (lien, QR code ou invitation), contrôlé ici, dans le cœur.
+        if !self.is_verified(partner)? {
+            return Err(DeviceError::Protocol("clé du partenaire non vérifiée".into()));
+        }
         let req = kv_get(&self.store.conn.lock(), "history_asked")?.ok_or_else(|| DeviceError::Protocol("aucune demande".into()))?;
         let plain = mirror(self.snapshot()?).encode_to_vec();
         let id = hex(&random16());
@@ -160,12 +164,20 @@ impl Device {
             return Ok(None);
         }
         let id = kv_get(&self.store.conn.lock(), "history_incoming")?.unwrap_or_default();
-        let plain = self.open_media(&id)?;
-        let b = bpb::Backup::decode(plain.as_slice()).map_err(|_| DeviceError::BadMessage)?;
-        let sum = self.import_snapshot(&b)?;
+        let result = self.open_media(&id).and_then(|plain| {
+            let mut b = bpb::Backup::decode(plain.as_slice()).map_err(|_| DeviceError::BadMessage)?;
+            drop(plain);
+            // L'archive vient du partenaire : on n'en garde que l'historique. Réglages, photos du profil et
+            // fichiers techniques reviennent par le renvoi de l'espace, chacun validé comme un message normal.
+            b.kv.clear();
+            b.pictures.clear();
+            b.media.retain(|m| m.purpose == 0);
+            self.import_snapshot(&b)
+        });
+        // Réussi ou non, l'archive est oubliée : une archive illisible ne doit pas être retentée à chaque ouverture.
         let c = self.store.conn.lock();
         drop_file(&c, &id, true)?;
         del(&c, "history_incoming")?;
-        Ok(Some(sum))
+        Ok(Some(result?))
     }
 }

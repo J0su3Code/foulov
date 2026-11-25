@@ -183,8 +183,8 @@ class SpaceScreen extends StatelessWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.verified_user_outlined),
-                    title: const Text('Nos 7 symboles'),
-                    subtitle: const Text('Pour vérifier ensemble que personne ne s\'est glissé entre vous.'),
+                    title: const Text('Vérifier nos clés'),
+                    subtitle: const Text('Échangez vos liens pour être sûrs que personne ne s\'est glissé entre vous.'),
                     onTap: () {
                       Navigator.of(context).pop();
                       onShowSymbols();

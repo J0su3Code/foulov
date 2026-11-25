@@ -7,10 +7,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../src/rust/api/crypto.dart';
 import '../account/account_service.dart';
 import '../account/danger_screen.dart';
-import '../../src/rust/api/device.dart';
 import '../../ui/love.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -121,13 +119,12 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed && (_last?.keyChanged ?? false)) _reload();
   }
 
-  // Après avoir rejoint par QR code, ce téléphone est déjà vérifié, mais il affiche quand même les symboles :
-  // le partenaire en a besoin pour vérifier de son côté.
+  // Après avoir rejoint avec le code seul, l'écran de vérification s'affiche : il faut échanger les liens.
   bool _showSymbols = false;
 
   void _joined() {
     if (widget.couple.joinedWithInvitation) {
-      // Invitation complète : clés vérifiées des deux côtés, sans symboles. On fête ça.
+      // Invitation complète : clés vérifiées des deux côtés, rien à comparer. On fête ça.
       Navigator.of(context).push(
         PageRouteBuilder<void>(
           transitionDuration: const Duration(milliseconds: 700),
@@ -191,7 +188,7 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
             },
           );
         }
-        // Nouvelle clé du partenaire : avant tout le reste, une nouvelle comparaison des symboles.
+        // Nouvelle clé du partenaire : avant tout le reste, un nouvel échange de liens.
         if (s.keyChanged) {
           return KeyChangeScreen(
             couple: widget.couple,
@@ -526,7 +523,7 @@ class _InviteScreenState extends State<InviteScreen> {
       if (s.complete && s.partnerIdentity != null) {
         _poll?.cancel();
         await widget.couple.receiveHello(s.partnerId!);
-        // Invitation complète : la preuve reçue vérifie sa clé, sans symboles.
+        // Invitation complète : la preuve reçue vérifie sa clé, rien à comparer.
         final verified = await widget.couple.verifyJoinProof(s.partnerId!);
         HapticFeedback.heavyImpact();
         if (!mounted) return;
@@ -672,7 +669,7 @@ class _InviteScreenState extends State<InviteScreen> {
                 const SizedBox(height: 6),
                 Center(
                   child: Text(
-                    'Le code seul, à taper, marche aussi (il faudra alors comparer 7 symboles). Valable 24 h, une fois.',
+                    'Le code seul, à taper, marche aussi (il faudra alors échanger vos liens). Valable 24 h, une fois.',
                     textAlign: TextAlign.center,
                     style: _soft(context)?.copyWith(fontSize: 13),
                   ),
@@ -910,9 +907,12 @@ class _JoinScreenState extends State<JoinScreen> {
   }
 }
 
-// ===================================================================== vérification des 7 symboles
+// ===================================================================== vérification par les liens
 
-class VerifyScreen extends StatefulWidget {
+/// Le couple s'est formé avec le code seul (ou un ancien QR code) : les clés ne sont pas encore vérifiées.
+/// Chacun envoie son lien par une autre messagerie et colle celui de l'autre. Les 7 symboles d'avant ont été
+/// retirés : 42 bits ne suffisaient pas contre un serveur malveillant (docs/SECURITY.md §5).
+class VerifyScreen extends StatelessWidget {
   const VerifyScreen({
     super.key,
     required this.couple,
@@ -927,36 +927,18 @@ class VerifyScreen extends StatefulWidget {
   final Uint8List partnerIdentity;
   final VoidCallback onVerified;
 
-  /// Vrai si ce téléphone a déjà vérifié la clé du partenaire grâce au QR code.
+  /// Vrai si ce téléphone a déjà vérifié la clé du partenaire (QR code) : il ne reste qu'à envoyer son lien.
   final bool alreadyVerified;
 
-  @override
-  State<VerifyScreen> createState() => _VerifyScreenState();
-}
-
-class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderStateMixin {
-  late final Future<List<SasSymbol>> _symbols = widget.couple.symbols(widget.partnerIdentity);
-  late final AnimationController _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
-    ..forward();
-  bool _mismatch = false;
-
-  @override
-  void dispose() {
-    _in.dispose();
-    super.dispose();
-  }
-
-  Future<void> _same() async {
-    await widget.couple.confirmSymbols(widget.partnerId);
+  Future<void> _done(BuildContext context) async {
     HapticFeedback.heavyImpact();
-    if (!mounted) return;
     await Navigator.of(context).push(
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 700),
         pageBuilder: (_, a, _) => FadeTransition(opacity: a, child: const CelebrationScreen()),
       ),
     );
-    widget.onVerified();
+    onVerified();
   }
 
   @override
@@ -973,106 +955,47 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
                 Text('Scellez votre lien', style: _title(context)),
                 const SizedBox(height: 8),
                 Text(
-                  'Vos deux téléphones affichent ces 7 symboles. Lisez-les ensemble, à voix haute ou en appel vidéo.',
+                  alreadyVerified
+                      ? 'Ce téléphone a déjà reconnu celui de ton amour. Envoie-lui ton lien (WhatsApp, SMS…) : '
+                            'en le collant dans FouLove, son téléphone reconnaîtra le tien.'
+                      : 'Dernière étape, 10 secondes : envoie ton lien à ton amour par une autre messagerie '
+                            '(WhatsApp, SMS…), puis copie le sien et colle-le ici.',
                   style: _soft(context),
                 ),
-                if (widget.alreadyVerified) ...[
-                  const SizedBox(height: 14),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.verified_outlined, size: 18, color: cs.secondary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Le QR code a déjà confirmé la clé de ton amour sur ce téléphone. Montre-lui ces symboles : '
-                          'ils doivent être identiques sur son écran.',
-                          style: _soft(context)?.copyWith(fontSize: 14),
-                        ),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.lock_outline, size: 16, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Ces liens prouvent que personne ne s\'est glissé entre vous, pas même nos serveurs.',
+                        style: _soft(context)?.copyWith(fontSize: 13),
                       ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 26),
-                FutureBuilder<List<SasSymbol>>(
-                  future: _symbols,
-                  builder: (context, snap) {
-                    final s = snap.data;
-                    if (s == null) return const Center(child: CircularProgressIndicator());
-                    return Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        for (var i = 0; i < s.length; i++)
-                          AnimatedBuilder(
-                            animation: _in,
-                            builder: (context, child) {
-                              final t = Curves.easeOutBack.transform(((_in.value - i * .08) / .44).clamp(0.0, 1.0));
-                              return Opacity(
-                                opacity: t.clamp(0.0, 1.0),
-                                child: Transform.scale(scale: .6 + .4 * t, child: child),
-                              );
-                            },
-                            child: Container(
-                              width: 92,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: cs.surfaceContainer,
-                                borderRadius: BorderRadius.circular(22),
-                                boxShadow: [BoxShadow(color: cs.secondary.withValues(alpha: .15), blurRadius: 18)],
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(s[i].emoji, style: const TextStyle(fontSize: 38)),
-                                  const SizedBox(height: 4),
-                                  Text(s[i].name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+                    ),
+                  ],
                 ),
                 const Spacer(),
-                if (_mismatch)
-                  Text(
-                    'N\'allez pas plus loin. Quelqu\'un pourrait s\'être glissé entre vous. Supprimez cet espace et '
-                    'recommencez ensemble, de préférence côte à côte avec le QR code.',
-                    style: TextStyle(color: cs.error),
-                  )
-                else ...[
-                  Row(
-                    children: [
-                      Icon(Icons.lock_outline, size: 16, color: cs.onSurfaceVariant),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Ils prouvent que personne ne s\'est glissé entre vous.',
-                          style: _soft(context)?.copyWith(fontSize: 13),
-                        ),
-                      ),
-                    ],
+                if (alreadyVerified) ...[
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.send_rounded, size: 18),
+                    label: const Text('Envoyer mon lien'),
+                    onPressed: () async => SharePlus.instance.share(ShareParams(text: await couple.fingerprintLink())),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
                   FilledButton.icon(
                     icon: const Icon(Icons.favorite),
-                    label: const Text('Ce sont les mêmes'),
-                    onPressed: _same,
+                    label: const Text('Continuer'),
+                    onPressed: () => _done(context),
                   ),
-                  TextButton(
-                    onPressed: () => setState(() => _mismatch = true),
-                    child: const Text('Un symbole est différent'),
+                ] else
+                  LinkExchange(
+                    couple: couple,
+                    partnerId: partnerId,
+                    identity: partnerIdentity,
+                    onVerified: () => _done(context),
                   ),
-                  if (!widget.alreadyVerified)
-                    LinkExchange(
-                      couple: widget.couple,
-                      partnerId: widget.partnerId,
-                      identity: widget.partnerIdentity,
-                      onVerified: _same,
-                    ),
-                ],
               ],
             ),
           ),
@@ -1083,7 +1006,7 @@ class _VerifyScreenState extends State<VerifyScreen> with SingleTickerProviderSt
 }
 
 /// À distance, sans appel : chacun envoie son « lien de retrouvailles » (l'empreinte de sa clé) par une autre
-/// messagerie, et colle celui de l'autre. S'il correspond à la clé reçue, elle est vérifiée sans symboles.
+/// messagerie, et colle celui de l'autre. S'il correspond à la clé reçue, elle est vérifiée.
 class LinkExchange extends StatelessWidget {
   const LinkExchange({
     super.key,
@@ -1112,7 +1035,7 @@ class LinkExchange extends StatelessWidget {
               Expanded(child: Divider(color: cs.outline)),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text('ou à distance, par vos liens', style: _soft(context)?.copyWith(fontSize: 12.5)),
+                child: Text('par une autre messagerie', style: _soft(context)?.copyWith(fontSize: 12.5)),
               ),
               Expanded(child: Divider(color: cs.outline)),
             ],
@@ -1209,8 +1132,8 @@ class CelebrationScreen extends StatelessWidget {
 // ===================================================================== nouveau téléphone du partenaire
 
 /// La clé publiée par le partenaire a changé. Ses nouveaux messages restent en attente, illisibles, jusqu'à ce que
-/// vous compariez les 7 symboles de cette nouvelle clé.
-class KeyChangeScreen extends StatefulWidget {
+/// vous échangiez vos liens : seul le lien de son nouveau téléphone, reçu par une autre messagerie, débloque la clé.
+class KeyChangeScreen extends StatelessWidget {
   const KeyChangeScreen({
     super.key,
     required this.couple,
@@ -1223,14 +1146,6 @@ class KeyChangeScreen extends StatefulWidget {
   final String partnerId;
   final Uint8List newIdentity;
   final VoidCallback onDone;
-
-  @override
-  State<KeyChangeScreen> createState() => _KeyChangeScreenState();
-}
-
-class _KeyChangeScreenState extends State<KeyChangeScreen> {
-  late final Future<List<SasSymbol>> _symbols = deviceSasWith(partnerIdentity: widget.newIdentity);
-  bool _mismatch = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1248,70 +1163,23 @@ class _KeyChangeScreenState extends State<KeyChangeScreen> {
               const SizedBox(height: 8),
               Text(
                 'C\'est normal après un nouveau téléphone ou une réinstallation. Pour être sûrs que personne ne s\'est '
-                'glissé entre vous : comparez ces 7 symboles en appel vidéo, ou envoyez-vous vos liens par une autre '
-                'messagerie. Ses nouveaux messages attendent, chiffrés, jusque-là.',
+                'glissé entre vous, envoyez-vous vos liens par une autre messagerie (WhatsApp, SMS…), puis collez celui '
+                'de l\'autre. Ses nouveaux messages attendent, chiffrés, jusque-là.',
                 style: _soft(context),
               ),
-              const SizedBox(height: 22),
-              FutureBuilder<List<SasSymbol>>(
-                future: _symbols,
-                builder: (context, snap) {
-                  final s = snap.data;
-                  if (s == null) return const Center(child: CircularProgressIndicator());
-                  return Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      for (final x in s)
-                        Container(
-                          width: 92,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            color: cs.surfaceContainer,
-                            borderRadius: BorderRadius.circular(22),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(x.emoji, style: const TextStyle(fontSize: 38)),
-                              const SizedBox(height: 4),
-                              Text(x.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                    ],
-                  );
-                },
+              const SizedBox(height: 14),
+              Text(
+                'Tu n\'as pas changé de téléphone avec lui ou elle ? N\'accepte rien et parlez-en de vive voix.',
+                style: _soft(context)?.copyWith(fontSize: 13),
               ),
               const Spacer(),
-              if (_mismatch)
-                Text(
-                  'N\'acceptez pas cette clé. Quelqu\'un pourrait s\'être glissé entre vous : parlez-en de vive voix et '
-                  'refaites la comparaison quand vous êtes côte à côte.',
-                  style: TextStyle(color: cs.error),
-                )
-              else ...[
-                FilledButton.icon(
-                  icon: const Icon(Icons.favorite),
-                  label: const Text('Ce sont les mêmes'),
-                  onPressed: () async {
-                    await widget.couple.acceptPartnerKey(widget.partnerId, widget.newIdentity);
-                    HapticFeedback.heavyImpact();
-                    widget.onDone();
-                  },
-                ),
-                TextButton(
-                  onPressed: () => setState(() => _mismatch = true),
-                  child: const Text('Un symbole est différent'),
-                ),
-                LinkExchange(
-                  couple: widget.couple,
-                  partnerId: widget.partnerId,
-                  identity: widget.newIdentity,
-                  keyChange: true,
-                  onVerified: () async => widget.onDone(),
-                ),
-              ],
+              LinkExchange(
+                couple: couple,
+                partnerId: partnerId,
+                identity: newIdentity,
+                keyChange: true,
+                onVerified: () async => onDone(),
+              ),
             ],
           ),
         ),

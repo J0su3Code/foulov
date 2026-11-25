@@ -12,7 +12,6 @@ pub mod device;
 pub mod invite;
 pub mod media;
 pub mod pin;
-pub mod sas;
 pub mod space;
 pub mod stickers;
 pub mod store;

@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config.dart';
 import 'core/secure_session_storage.dart';
+import 'features/account/account_service.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/login_screen.dart';
 import 'features/couple/couple_screens.dart';
@@ -36,8 +37,11 @@ Future<void> main() async {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final auth = AuthService(Supabase.instance.client);
   await auth.loadPending();
-  // Code FouLove oublié : on se reconnecte par e-mail.
-  AppLock.instance.onForgot = auth.signOut;
+  // Code FouLove oublié, sans le verrouillage du téléphone : ce téléphone est remis à zéro, puis déconnecté.
+  AppLock.instance.onForgot = () async {
+    await AccountService.wipeLocal();
+    await auth.signOut();
+  };
   runApp(FouLovApp(auth: auth));
 }
 

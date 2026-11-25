@@ -21,7 +21,27 @@
 - Vérifier sur un vrai téléphone la réception d'un sticker et d'une modification (testé seulement côté envoi).
 - Une fois vu : en-tête « hors ligne » après démarrage à froid de l'émulateur, réglé par une relance de l'app. Cause non cherchée.
 
+## Revue de sécurité (25 nov. 2026) — corrigée, **pas encore en production**
+Rapport : `docs/revue/2026-11-revue-securite.md` ; `docs/SECURITY.md` passé en v0.2 (§5, §7, §8, §11).
+- 7 symboles retirés (truquables par un serveur malveillant, 42 bits) : `core/src/sas.rs` supprimé ; vérification
+  par invitation complète, QR ou liens `foulove:id:` → `couple_screens.dart` (`VerifyScreen`, `KeyChangeScreen`).
+- `mark_verified(partenaire, clé)` : ne vérifie que la clé contrôlée (`store.rs`, `device.rs`, pont `device.rs`).
+- « Code oublié » : verrou du téléphone, sinon remise à zéro (`app_lock.dart`, `main.dart`). Délais du code :
+  exposant borné, erreur comptée avant la vérification, horloge monotone (`app/test/app_lock_test.dart`).
+- Instant ne remplace plus une photo existante (`chat_media.rs` `insert_remote`, test dans `space.rs`).
+- Transfert : clé vérifiée exigée dans le cœur (`offer_history(partner, dir)`), archive filtrée, abandon après échec
+  (`transfer.rs`, `backup.rs`, test `une_archive_aux_noms_pieges_est_filtree`).
+- Plafond des contenus inconnus (2 000), `temp_store = MEMORY`, clé SQLCipher effacée (`zeroize`).
+- Serveur : migration `20261125120000_quotas.sql` (plafonds enveloppes + R2, verrou d'appairage), quota appelé par
+  la fonction `media` (`take_media_quota`), tests `quotas.test.sql`. **À déployer** : `supabase db push` puis
+  `supabase functions deploy media` (compatible avec l'app 1.0.0+4).
+- Android : `allowBackup=false` + `data_extraction_rules.xml` ; build release refusé sans `key.properties`.
+- Site : `guide.md`, `securite.md` mis à jour (à déployer après le push GitHub, la page renvoie vers le rapport).
+- Reste : vérifier Supabase Realtime « Allow public access » désactivé ; limites listées dans le rapport.
+- Les nouveaux écrans ne sont pas encore testés sur téléphone : à faire avec la prochaine version.
+
 ## Décisions
+- 7 symboles supprimés (choix de l'utilisateur : personne ne les comparait) ; seuls les liens/QR/invitation vérifient.
 - Stickers hébergés sur R2, pas dans l'app : l'AAB resterait > 200 Mo (limite Play). Seau privé, liens signés par lots (pas besoin d'accès public Cloudflare).
 - Pas Supabase Storage (choix de l'utilisateur ; quota de téléchargement limité).
 - Stickers et modifications sous de nouveaux numéros protobuf (19, 20) : les anciennes versions les gardent et les affichent après mise à jour.

@@ -136,7 +136,7 @@ class SpaceService extends ChangeNotifier {
 
   /// Accepter sa demande : notre historique, chiffré, part vers son nouveau téléphone.
   Future<void> acceptHistory() async {
-    await spaceOfferHistory(dir: chat.mediaDir);
+    await spaceOfferHistory(partner: _partner, dir: chat.mediaDir);
     await _history();
     _notify();
     unawaited(chat.transfer());

@@ -325,8 +325,8 @@ pub fn space_decline_history() -> anyhow::Result<()> {
     with_device(|d| Ok(d.decline_history()?))
 }
 
-pub fn space_offer_history(dir: String) -> anyhow::Result<PendingUpload> {
-    with_device(|d| Ok(upload(d.offer_history(Path::new(&dir))?)))
+pub fn space_offer_history(partner: String, dir: String) -> anyhow::Result<PendingUpload> {
+    with_device(|d| Ok(upload(d.offer_history(&partner, Path::new(&dir))?)))
 }
 
 /// Importe l'historique reçu s'il est téléchargé : nombre de messages ajoutés, ou `None`.

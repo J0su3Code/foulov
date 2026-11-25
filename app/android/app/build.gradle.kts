@@ -49,7 +49,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
+            // Jamais de version finale signée avec la clé de test : sans key.properties, la compilation « release »
+            // s'arrête. (Les versions « profile » et « debug » gardent la clé de test.)
+            val upload = signingConfigs.findByName("upload")
+            if (upload == null && gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }) {
+                throw GradleException("key.properties manquant : impossible de signer la version finale.")
+            }
+            signingConfig = upload ?: signingConfigs.getByName("debug")
         }
     }
 }

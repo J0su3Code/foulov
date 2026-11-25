@@ -17,7 +17,6 @@ use rand::rngs::OsRng;
 use rand::{Rng, TryRngCore as _};
 use sha2::{Digest, Sha256};
 
-use crate::sas::{self, Symbol};
 use crate::store::{Store, StoreError};
 
 /// Version 1 : un seul téléphone par personne.
@@ -268,13 +267,14 @@ impl Device {
         .expect("synchrone")?)
     }
 
-    /// Les 7 symboles à comparer avec le partenaire.
-    pub fn sas_with(&self, partner_identity: &[u8]) -> R<[Symbol; sas::SAS_LEN]> {
-        Ok(sas::sas_symbols(&self.identity_key()?, partner_identity))
-    }
-
-    pub fn mark_verified(&self, partner: &str) -> R<()> {
-        Ok(self.store.mark_verified(&addr(partner))?)
+    /// Marque vérifiée la clé `identity_key` du partenaire (contrôlée par un lien, le QR code ou la preuve
+    /// d'invitation). Échoue si ce n'est pas la clé enregistrée : on ne vérifie jamais une autre clé que celle vue.
+    pub fn mark_verified(&self, partner: &str, identity_key: &[u8]) -> R<()> {
+        let k = IdentityKey::decode(identity_key).map_err(|_| DeviceError::BadBundle)?;
+        if !self.store.mark_verified(&addr(partner), &k)? {
+            return Err(DeviceError::Protocol("ce n'est pas la clé enregistrée".into()));
+        }
+        Ok(())
     }
 
     pub fn is_verified(&self, partner: &str) -> R<bool> {
@@ -288,7 +288,7 @@ impl Device {
         Ok(k.map(|k| k.serialize().to_vec()))
     }
 
-    /// Accepte une nouvelle clé du partenaire après une nouvelle vérification des symboles.
+    /// Accepte une nouvelle clé du partenaire (puis `mark_verified` une fois contrôlée par lien ou QR code).
     pub fn accept_partner_key(&self, partner: &str, identity_key: &[u8]) -> R<()> {
         let k = IdentityKey::decode(identity_key).map_err(|_| DeviceError::BadBundle)?;
         self.store.accept_identity_change(&addr(partner), &k)?;
@@ -336,12 +336,10 @@ mod tests {
         assert_eq!(r.kind, 2);
         assert_eq!(malik.decrypt("ines", &r).unwrap(), b"Je t'aime");
 
-        // Mêmes symboles des deux côtés.
-        let a = ines.sas_with(&malik.identity_key().unwrap()).unwrap();
-        let b = malik.sas_with(&ines.identity_key().unwrap()).unwrap();
-        assert_eq!(a, b);
         assert!(!ines.is_verified("malik").unwrap());
-        ines.mark_verified("malik").unwrap();
+        assert!(ines.mark_verified("malik", &ines.identity_key().unwrap()).is_err(), "pas la clé de Malik");
+        assert!(!ines.is_verified("malik").unwrap());
+        ines.mark_verified("malik", &malik.identity_key().unwrap()).unwrap();
         assert!(ines.is_verified("malik").unwrap());
     }
 

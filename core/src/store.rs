@@ -202,9 +202,10 @@ impl Store {
     }
 
     fn with_connection(conn: Connection, key: &[u8; 32]) -> Result<Self, StoreError> {
-        let hex: String = key.iter().map(|b| format!("{b:02x}")).collect();
+        let hex = zeroize::Zeroizing::new(key.iter().map(|b| format!("{b:02x}")).collect::<String>());
         // La clé brute (256 bits) est passée directement : pas de dérivation PBKDF2 inutile.
-        conn.execute_batch(&format!("PRAGMA key = \"x'{hex}'\";"))?;
+        // Les copies de la clé (texte hexadécimal, requête) sont effacées de la mémoire après usage.
+        conn.execute_batch(&zeroize::Zeroizing::new(format!("PRAGMA key = \"x'{}'\";", hex.as_str())))?;
         let cipher: Option<String> = conn.query_row("PRAGMA cipher_version", [], |r| r.get(0)).optional()?;
         if cipher.unwrap_or_default().is_empty() {
             return Err(StoreError::NotEncrypted);
@@ -213,7 +214,7 @@ impl Store {
         conn.query_row("SELECT count(*) FROM sqlite_master", [], |r| r.get::<_, i64>(0))
             .map_err(|_| StoreError::WrongKeyOrCorrupted)?;
         conn.execute_batch(
-            "PRAGMA cipher_memory_security = ON; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON;",
+            "PRAGMA cipher_memory_security = ON; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON; PRAGMA temp_store = MEMORY;",
         )?;
         conn.execute_batch(SCHEMA)?;
         migrate(&conn)?;
@@ -247,9 +248,14 @@ impl Store {
     }
 
     /// Le couple a comparé les 7 symboles et confirmé qu'ils sont identiques.
-    pub fn mark_verified(&self, address: &ProtocolAddress) -> Result<(), StoreError> {
-        self.conn.lock().execute("UPDATE identities SET verified = 1 WHERE address = ?1", params![addr_key(address)])?;
-        Ok(())
+    /// Marque « vérifiée » la clé du partenaire, **seulement** si c'est bien `expected`, la clé que l'utilisateur
+    /// (ou la preuve d'invitation) vient de contrôler. Renvoie faux si la clé enregistrée est une autre.
+    pub fn mark_verified(&self, address: &ProtocolAddress, expected: &IdentityKey) -> Result<bool, StoreError> {
+        let n = self.conn.lock().execute(
+            "UPDATE identities SET verified = 1 WHERE address = ?1 AND identity = ?2",
+            params![addr_key(address), expected.serialize().to_vec()],
+        )?;
+        Ok(n == 1)
     }
 
     pub fn is_verified(&self, address: &ProtocolAddress) -> Result<bool, StoreError> {

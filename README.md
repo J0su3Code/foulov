@@ -35,8 +35,8 @@ Quatre onglets : **Nous · Messages · Souvenirs · Lettres**. Crème et framboi
 
 Sécurité au quotidien :
 
-- **Appairage** : invitation envoyée par une autre messagerie (ou QR code), clés vérifiées automatiquement, sans
-  symboles à comparer. Les 7 symboles restent possibles en appel vidéo.
+- **Appairage** : invitation envoyée par une autre messagerie (ou QR code), clés vérifiées automatiquement. Avec le
+  code seul, ou après un changement de téléphone, les liens échangés par une autre messagerie vérifient les clés.
 - **Code FouLove** (6 chiffres), même si le téléphone n'a pas de verrouillage ; empreinte ou visage en raccourci.
 - **Sauvegarde chiffrée** quotidienne avec une phrase de 24 mots ; ou, sur un nouveau téléphone, **récupération de
   l'historique depuis le téléphone de l'autre** (il accepte sur son écran).

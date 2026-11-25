@@ -1,26 +1,11 @@
 //! API exposée à Flutter. Volontairement minimale : chaque fonction délègue au cœur `foulov_core`.
 
-use foulov_core::{media, sas};
+use foulov_core::media;
 
 /// Version du cœur cryptographique (affichée dans « À propos » et utile aux rapports de bug).
 #[flutter_rust_bridge::frb(sync)]
 pub fn core_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
-}
-
-/// Un des 7 symboles de vérification.
-pub struct SasSymbol {
-    pub emoji: String,
-    pub name: String,
-}
-
-/// Les 7 symboles à comparer à voix haute, calculés à partir des deux clés d'identité publiques.
-#[flutter_rust_bridge::frb(sync)]
-pub fn sas_symbols(identity_a: Vec<u8>, identity_b: Vec<u8>) -> Vec<SasSymbol> {
-    sas::sas_symbols(&identity_a, &identity_b)
-        .iter()
-        .map(|s| SasSymbol { emoji: s.emoji.to_string(), name: s.name_fr.to_string() })
-        .collect()
 }
 
 /// Fichier chiffré prêt à être téléversé.

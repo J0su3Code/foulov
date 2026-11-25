@@ -4,7 +4,7 @@ title: Le guide de FouLove, pas à pas
 eyebrow: Guide
 description: Tout pour bien démarrer avec FouLove et en profiter pleinement, écran par écran — de la création de votre bulle à la sauvegarde.
 intro: De la création de votre bulle à la sauvegarde de vos souvenirs, tout ce qu’il faut savoir, dans l’ordre. Comptez cinq minutes pour démarrer à deux.
-updated: 20 novembre 2026
+updated: 25 novembre 2026
 ---
 
 ## Avant de commencer
@@ -53,7 +53,7 @@ Celui ou celle qui a reçu l’invitation :
 3. **À distance** : dans votre messagerie, copiez **tout** le message reçu. Revenez dans FouLove, choisissez l’onglet <span class="ui">Coller ou saisir</span>, puis touchez <span class="ui">Coller l’invitation</span>.
 4. L’écran **« Votre bulle est née. »** s’affiche des deux côtés. Touchez <span class="ui">Entrer dans notre bulle</span>.
 
-> **Avec le code seul.** Vous pouvez aussi taper le code à 10 caractères (par exemple `K7Q4M-9XHPT`). Dans ce cas, FouLove vous demande de comparer **7 symboles** : lisez-les ensemble, à voix haute ou en appel vidéo, puis touchez <span class="ui">Ce sont les mêmes</span>. Si un symbole diffère, touchez <span class="ui">Un symbole est différent</span> : l’appairage s’arrête, et vous recommencez avec un nouveau code.
+> **Avec le code seul.** Vous pouvez aussi taper le code à 10 caractères (par exemple `K7Q4M-9XHPT`). Dans ce cas, il reste une petite étape : envoyez-vous vos liens par une autre messagerie (<span class="ui">Envoyer mon lien</span>), puis copiez celui de l’autre et touchez <span class="ui">Coller son lien</span>. C’est ce qui prouve que personne ne s’est glissé entre vous.
 
 ## Votre accueil : Nous
 
@@ -127,7 +127,7 @@ Dans **Réglages** → **Sécurité** :
 - **Code FouLove** : six chiffres, demandés à chaque ouverture de l’app. Il protège FouLove même si votre téléphone n’a pas de verrouillage d’écran, ou si vous le prêtez.
 - **Empreinte ou visage** : un raccourci pour ouvrir l’app sans taper le code.
 
-Code oublié ? Touchez <span class="ui">Code oublié ?</span> sur l’écran de déverrouillage : vous vous reconnectez avec votre compte, et le code est retiré. Vous pourrez en choisir un nouveau dans les réglages.
+Code oublié ? Touchez <span class="ui">Code oublié ?</span> sur l’écran de déverrouillage. Si votre téléphone a un verrouillage d’écran, confirmez avec lui (empreinte, visage ou code du téléphone) : le code FouLove est retiré et vos échanges restent là. Sinon, la seule solution est de remettre FouLove à zéro sur ce téléphone ; vous retrouverez vos échanges avec votre phrase de 24 mots, ou depuis le téléphone de votre amour. Se reconnecter par e-mail ne suffit pas : la boîte mail est souvent ouverte sur le même téléphone.
 
 ## Sauvegarder vos souvenirs
 
@@ -150,11 +150,11 @@ Sur le nouveau téléphone, installez FouLove et connectez-vous **avec le même 
 **Sans la phrase : depuis le téléphone de votre amour.**
 
 1. Touchez <span class="ui">Continuer sans restaurer</span>.
-2. Le téléphone de votre amour affiche **« La clé de ton amour a changé »** : c’est normal, votre nouveau téléphone a de nouvelles clés. Vérifiez-les ensemble, avec les 7 symboles, ou en vous envoyant vos liens par une autre messagerie (<span class="ui">Envoyer mon lien</span>, puis <span class="ui">Coller son lien</span>).
+2. Le téléphone de votre amour affiche **« La clé de ton amour a changé »** : c’est normal, votre nouveau téléphone a de nouvelles clés. Vérifiez-les en vous envoyant vos liens par une autre messagerie (<span class="ui">Envoyer mon lien</span>, puis <span class="ui">Coller son lien</span>).
 3. Sur votre nouveau téléphone, touchez <span class="ui">Le demander</span> dans la carte « Nouveau téléphone ? » de l’écran **Nous**, ou ouvrez **Réglages** → <span class="ui">Récupérer notre historique</span>.
 4. Votre amour accepte sur son écran : vos messages, photos, albums et lettres reviennent sur votre nouveau téléphone, chiffrés de bout en bout pendant le transfert.
 
-> **Si vous voyez « La clé de ton amour a changé » sans raison.** Si votre amour n’a pas changé de téléphone ni réinstallé l’app, parlez-en avec lui ou elle avant de valider. En cas de doute, touchez <span class="ui">Un symbole est différent</span>.
+> **Si vous voyez « La clé de ton amour a changé » sans raison.** Si votre amour n’a pas changé de téléphone ni réinstallé l’app, parlez-en avec lui ou elle avant de coller quoi que ce soit. Sans son lien, la nouvelle clé n’est jamais acceptée.
 
 ## Fermer la bulle ou supprimer votre compte
 

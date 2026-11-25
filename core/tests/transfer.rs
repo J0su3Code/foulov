@@ -59,8 +59,13 @@ fn nouveau_telephone_recupere_l_historique_de_l_autre() {
     assert_eq!(ines.receive("malik", &ask.envelope_id, &ask.envelope).unwrap(), Received::HistoryRequested);
     assert!(ines.history_state().unwrap().asked);
 
+    // Clé non vérifiée : le cœur refuse d'emballer l'historique (pas seulement le bouton de l'app).
+    assert!(ines.offer_history("malik", &d.join("i")).is_err(), "jamais vers une clé non vérifiée");
+    assert!(ines.history_state().unwrap().asked, "la demande reste en attente");
+    ines.mark_verified("malik", &malik2.identity_key().unwrap()).unwrap();
+
     // Inès accepte : archive chiffrée, déposée sur « R2 », puis l'offre part chiffrée.
-    let up = ines.offer_history(&d.join("i")).unwrap();
+    let up = ines.offer_history("malik", &d.join("i")).unwrap();
     let r2 = d.join("r2-archive");
     fs::copy(&up.path, &r2).unwrap();
     assert!(!fs::read(&r2).unwrap().windows(11).any(|w| w == b"Bonjour toi"), "jamais en clair");
@@ -102,7 +107,7 @@ fn une_offre_non_demandee_est_ignoree() {
     malik.generate_bundle(5).unwrap();
     malik.start_session("ines", &view(&ib)).unwrap();
     // Malik n'a rien demandé ; Inès ne peut même pas préparer d'archive sans demande.
-    assert!(ines.offer_history(&d.join("i")).is_err());
+    assert!(ines.offer_history("malik", &d.join("i")).is_err());
     let (_, o) = malik.send_text("ines", "salut", None).unwrap();
     ines.receive("malik", &o.envelope_id, &o.envelope).unwrap();
     assert!(!malik.history_state().unwrap().incoming);

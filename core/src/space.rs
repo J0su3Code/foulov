@@ -1079,6 +1079,41 @@ fn media_info(r: &rusqlite::Row<'_>, i: usize) -> rusqlite::Result<MediaInfo> {
 mod tests {
     use super::*;
 
+    /// Attaque : le partenaire envoie un « instant » portant l'identifiant d'une de mes photos, pour la remplacer
+    /// dans mon historique par une image de son choix. Le contenu doit être refusé, ma photo intacte.
+    #[test]
+    fn un_instant_ne_remplace_jamais_une_photo_existante() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut ines = Device::open(&dir.path().join("i.db"), &[1; 32]).unwrap();
+        let photo = NewMedia { kind: KIND_PHOTO, mime: "image/jpeg", width: 4, height: 4, duration_ms: 0, thumb: b"t", caption: "", reply_to: None };
+        let (m, _) = ines.create_media(&dir.path().join("m"), &[7u8; 300], photo).unwrap();
+        let before: Vec<u8> =
+            ines.store.conn.lock().query_row("SELECT file_key FROM media WHERE message_id = ?1", params![m.id], |r| r.get(0)).unwrap();
+        let evil = pb::Moment {
+            id: crate::chat::unhex(&m.id).unwrap(),
+            created_at: now_ms() as u64,
+            kind: KIND_PHOTO as u32,
+            text: String::new(),
+            style: 0,
+            file: Some(pb::FileRef {
+                kind: KIND_PHOTO as u32,
+                object_key: "c/0f2c1a6e-1111-4222-8333-444455556666/0123456789abcdef0123456789abcdef".into(),
+                file_key: vec![9; 32],
+                sha256: vec![9; 32],
+                size: 100,
+                mime: "image/jpeg".into(),
+                width: 4,
+                height: 4,
+                duration_ms: 0,
+                thumb: b"x".to_vec(),
+            }),
+        };
+        let c = ines.store.conn.lock();
+        assert!(apply_moment(&c, evil).is_err(), "identifiant déjà pris : refusé");
+        let after: Vec<u8> = c.query_row("SELECT file_key FROM media WHERE message_id = ?1", params![m.id], |r| r.get(0)).unwrap();
+        assert_eq!(before, after, "ma photo n'a pas changé");
+    }
+
     #[test]
     fn series_de_jours() {
         let days: BTreeSet<i64> = [1, 2, 3, 7, 8, 10, 11, 12, 13].into_iter().collect();

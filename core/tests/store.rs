@@ -161,7 +161,8 @@ fn une_cle_de_partenaire_qui_change_est_bloquee_jusqu_a_acceptation() {
     start(&mut ines, &b, &ia, &ma);
     let c = send(&mut ines, &ma, &ia, "coucou");
     recv(&mut malik, &ia, &ma, &c.serialize(), c.message_type()).unwrap();
-    ines.mark_verified(&ma).unwrap();
+    let malik_key = ines.identity.get_identity(&ma).now_or_never().unwrap().unwrap().unwrap();
+    assert!(ines.mark_verified(&ma, &malik_key).unwrap());
     assert!(ines.is_verified(&ma).unwrap());
 
     // Malik change de téléphone : nouvelle identité. Inès ne doit pas pouvoir lui écrire sans le savoir.

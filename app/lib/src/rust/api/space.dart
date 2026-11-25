@@ -192,8 +192,13 @@ Future<Outgoing> spaceRequestHistory({required String partner}) =>
 Future<void> spaceDeclineHistory() =>
     RustLib.instance.api.crateApiSpaceSpaceDeclineHistory();
 
-Future<PendingUpload> spaceOfferHistory({required String dir}) =>
-    RustLib.instance.api.crateApiSpaceSpaceOfferHistory(dir: dir);
+Future<PendingUpload> spaceOfferHistory({
+  required String partner,
+  required String dir,
+}) => RustLib.instance.api.crateApiSpaceSpaceOfferHistory(
+  partner: partner,
+  dir: dir,
+);
 
 /// Importe l'historique reçu s'il est téléchargé : nombre de messages ajoutés, ou `None`.
 Future<int?> spaceImportHistory() =>

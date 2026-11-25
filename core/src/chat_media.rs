@@ -50,9 +50,18 @@ pub(crate) fn valid_file(f: &pb::FileRef, kinds: &[u8]) -> bool {
 }
 
 /// Enregistre un fichier reçu, à télécharger (état 2).
+///
+/// Enregistre un fichier annoncé par le partenaire. Ne remplace **jamais** une ligne existante : sinon le partenaire
+/// pourrait réutiliser l'identifiant d'un de mes messages (un instant, par exemple) et changer la photo affichée
+/// dans mon propre historique. Un identifiant déjà pris rejette le contenu reçu.
 pub(crate) fn insert_remote(c: &rusqlite::Connection, id: &str, f: &pb::FileRef, purpose: i64) -> R<()> {
+    let taken: bool =
+        c.query_row("SELECT EXISTS (SELECT 1 FROM media WHERE message_id = ?1)", params![id], |r| r.get(0)).map_err(db)?;
+    if taken {
+        return Err(DeviceError::BadMessage);
+    }
     c.execute(
-        "INSERT OR REPLACE INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms,
+        "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms,
            thumb, path, state, purpose) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, 2, ?12)",
         params![id, f.kind, f.object_key, f.file_key, f.sha256, f.size as i64, f.mime, f.width, f.height, f.duration_ms, f.thumb, purpose],
     )

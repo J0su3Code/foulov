@@ -22,7 +22,13 @@ use sha2::Sha256;
 
 use crate::chat::{R, db};
 use crate::device::{Device, DeviceError};
+use crate::chat_media::valid_object_key;
 use crate::media;
+
+/// Identifiant local d'un message ou d'un fichier : 32 caractères hexadécimaux minuscules.
+fn is_local_id(id: &str) -> bool {
+    id.len() == 32 && id.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
 
 pub const MAGIC: &[u8; 4] = b"FLB1";
 const SALT: usize = 32;
@@ -416,6 +422,10 @@ impl Device {
                     .map_err(db)? as u32;
             }
             for m in &b.media {
+                // Le nom du fichier local vient de `message_id` : jamais de chemin (« ../ »), jamais d'objet étranger.
+                if !is_local_id(&m.message_id) || !(m.object_key.is_empty() || valid_object_key(&m.object_key)) {
+                    continue;
+                }
                 sum.media += c
                     .execute(
                         "INSERT OR IGNORE INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height,
@@ -492,6 +502,39 @@ impl Device {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Attaque : une archive (transfert depuis le partenaire) contient un fichier au nom piégé (« ../ ») ou pointant
+    /// hors de notre espace R2. Ces lignes sont ignorées ; une ligne correcte passe.
+    #[test]
+    fn une_archive_aux_noms_pieges_est_filtree() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut d = Device::open(&dir.path().join("d.db"), &[4; 32]).unwrap();
+        let media = |id: &str, key: &str| bpb::Media {
+            message_id: id.into(),
+            kind: 1,
+            object_key: key.into(),
+            file_key: vec![1; 32],
+            sha256: vec![1; 32],
+            size: 10,
+            mime: "image/jpeg".into(),
+            ..Default::default()
+        };
+        let good = "c/0f2c1a6e-1111-4222-8333-444455556666/0123456789abcdef0123456789abcdef";
+        let b = bpb::Backup {
+            version: 1,
+            media: vec![
+                media("../../shared_prefs/x", good),
+                media("/data/data/org.foulov.app/files/x", good),
+                media("0123456789abcdef0123456789abcdef", "b/autre-compte/latest"),
+                media("fedcba9876543210fedcba9876543210", good),
+            ],
+            ..Default::default()
+        };
+        let sum = d.import_snapshot(&b).unwrap();
+        assert_eq!(sum.media, 1, "seule la ligne correcte est importée");
+        let n: i64 = d.store.conn.lock().query_row("SELECT count(*) FROM media", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 1);
+    }
 
     #[test]
     fn phrase_de_24_mots_aller_retour() {

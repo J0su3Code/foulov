@@ -121,18 +121,10 @@ pub fn device_decrypt(partner: String, envelope: Envelope) -> anyhow::Result<Vec
     with_device(|d| Ok(d.decrypt(&partner, &core::Envelope { kind: envelope.kind, body: envelope.body })?))
 }
 
-/// Les 7 symboles à comparer avec le partenaire.
-pub fn device_sas_with(partner_identity: Vec<u8>) -> anyhow::Result<Vec<crate::api::crypto::SasSymbol>> {
-    with_device(|d| {
-        Ok(d.sas_with(&partner_identity)?
-            .iter()
-            .map(|s| crate::api::crypto::SasSymbol { emoji: s.emoji.to_string(), name: s.name_fr.to_string() })
-            .collect())
-    })
-}
-
-pub fn device_mark_verified(partner: String) -> anyhow::Result<()> {
-    with_device(|d| Ok(d.mark_verified(&partner)?))
+/// Marque vérifiée la clé `identity_key` du partenaire, celle qui vient d'être contrôlée (lien ou QR code).
+/// Échoue si ce n'est pas la clé enregistrée.
+pub fn device_mark_verified(partner: String, identity_key: Vec<u8>) -> anyhow::Result<()> {
+    with_device(|d| Ok(d.mark_verified(&partner, &identity_key)?))
 }
 
 pub fn device_is_verified(partner: String) -> anyhow::Result<bool> {

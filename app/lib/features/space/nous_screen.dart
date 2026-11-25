@@ -523,7 +523,7 @@ class _HistoryCard extends StatelessWidget {
             verified
                 ? 'Son nouveau téléphone n\'a pas vos échanges. Si tu acceptes, ils lui sont envoyés chiffrés '
                       '(messages, photos, vidéos, lettres).'
-                : 'Vérifiez d\'abord vos clés (symboles ou liens, dans les réglages) : l\'historique ne part que vers '
+                : 'Vérifiez d\'abord vos clés (vos liens, dans les réglages) : l\'historique ne part que vers '
                       'un téléphone vérifié.',
             actions: [
               TextButton(onPressed: () => guard(space.declineHistory), child: const Text('Refuser')),

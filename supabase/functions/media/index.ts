@@ -10,7 +10,7 @@
 //
 // Secrets : R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET (et STICKERS_BUCKET, facultatif).
 
-import { createClient } from "npm:@supabase/supabase-js@2.49.4";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.49.4";
 import { presign, type R2 } from "./presign.ts";
 
 const r2: R2 = {
@@ -33,6 +33,14 @@ const STICKER_KEY = /^v1\/(index\.json|(t\/)?[0-9a-f]{64}\.webp)$/;
 const MAX_STICKER_KEYS = 120;
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
+
+/// Réserve le volume d'un envoi dans le quota du compte (fonction SQL `take_media_quota`) : au plus 300 envois et
+/// 3 Go par jour, 15 Go sur 30 jours. Sans cela, un seul compte pourrait remplir R2 et faire grimper la facture.
+async function quota(db: SupabaseClient, size: number): Promise<Response | null> {
+  const { error } = await db.rpc("take_media_quota", { size });
+  if (!error) return null;
+  return error.code === "P0001" ? json({ error: "limite d'envoi atteinte, réessaie demain" }, 429) : json({ error: "refusé" }, 403);
+}
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response(null, { status: 405 });
@@ -73,6 +81,8 @@ Deno.serve(async (req) => {
     if (body.action === "backup_upload") {
       const size = body.size;
       if (!Number.isInteger(size) || size! < 1 || size! > MAX_BACKUP_BYTES) return json({ error: "taille invalide" }, 400);
+      const refused = await quota(db, size!);
+      if (refused) return refused;
       return json({ url: await presign(r2, "PUT", key, { contentLength: size }) });
     }
     if (body.action === "backup_download") return json({ url: await presign(r2, "GET", key) });
@@ -101,6 +111,8 @@ Deno.serve(async (req) => {
   if (body.action === "upload") {
     const size = body.size;
     if (!Number.isInteger(size) || size! < 1 || size! > MAX_BYTES) return json({ error: "taille invalide" }, 400);
+    const refused = await quota(db, size!);
+    if (refused) return refused;
     const name = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
     const key = `c/${couple}/${name}`;
     return json({ key, url: await presign(r2, "PUT", key, { contentLength: size }) });

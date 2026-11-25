@@ -1,11 +1,9 @@
 //! Test d'intégration : deux téléphones établissent une session Signal post-quantique (PQXDH,
 //! ML-KEM-1024) puis échangent des messages dans les deux sens, comme Inès et Malik.
-//! Vérifie aussi que les 7 symboles de vérification sont identiques des deux côtés.
 
 use std::time::SystemTime;
 
 use foulov_core::libsignal_protocol::*;
-use foulov_core::sas::sas_indices;
 use futures_util::FutureExt;
 use rand::TryRngCore as _;
 use rand::rngs::OsRng;
@@ -119,12 +117,6 @@ fn ines_et_malik_echangent_en_post_quantique() {
             assert_eq!(decrypt(r, from, to, &parsed).await, text.as_bytes());
         }
 
-        // Les deux téléphones affichent les mêmes 7 symboles.
-        let ines_id = ines_store.get_identity_key_pair().await.unwrap().identity_key().serialize();
-        let malik_id = malik_store.get_identity_key_pair().await.unwrap().identity_key().serialize();
-        let seen_by_ines = sas_indices(&ines_id, &malik_id);
-        let seen_by_malik = sas_indices(&malik_id, &ines_id);
-        assert_eq!(seen_by_ines, seen_by_malik);
     }
     .now_or_never()
     .expect("les magasins en mémoire sont synchrones");

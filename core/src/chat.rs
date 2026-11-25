@@ -25,6 +25,8 @@ const FORMAT_V1: u8 = 1;
 const PAD_BLOCK: usize = 160;
 /// Longueur maximale d'un message texte, en octets UTF-8.
 pub const MAX_TEXT_BYTES: usize = 16 * 1024;
+/// Contenus d'une version plus récente gardés pour après la mise à jour : au plus ce nombre.
+const MAX_UNKNOWN_CONTENTS: i64 = 2000;
 /// Un message peut être modifié pendant 15 minutes après son envoi (comme WhatsApp).
 pub const EDIT_WINDOW_MS: i64 = 15 * 60_000;
 /// Marge pour les horloges un peu décalées entre les deux téléphones.
@@ -839,11 +841,13 @@ impl Device {
             // Contenu authentique (la session l'a vérifié) mais d'une version plus récente de l'app : on le garde,
             // chiffré dans la base locale, pour le relire après la mise à jour (`reprocess_unknown`).
             if version > FORMAT_V1 || (version == FORMAT_V1 && pb::Content::decode(rest).is_ok()) {
-                self.store
-                    .conn
-                    .lock()
-                    .execute("INSERT INTO unknown_contents (plain, at) VALUES (?1, ?2)", params![plain, now_ms()])
-                    .map_err(db)?;
+                // Plafond : le partenaire ne peut pas remplir le téléphone de contenus « d'une version future ».
+                let c = self.store.conn.lock();
+                let n: i64 = c.query_row("SELECT count(*) FROM unknown_contents", [], |r| r.get(0)).map_err(db)?;
+                if n < MAX_UNKNOWN_CONTENTS {
+                    c.execute("INSERT INTO unknown_contents (plain, at) VALUES (?1, ?2)", params![plain, now_ms()])
+                        .map_err(db)?;
+                }
                 return Ok(Received::Nothing);
             }
             return Err(DeviceError::BadMessage);

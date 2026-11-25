@@ -1,6 +1,8 @@
 # Architecture de sécurité de FouLove
 
-Version 0.1, 16 novembre 2026. Document de conception : rien de ce qui suit n'est encore audité.
+Version 0.2, 25 novembre 2026. Document de conception. Une revue de sécurité complète du code a été faite le 25
+novembre 2026 (par une IA, Claude) et les problèmes trouvés ont été corrigés ; ce n'est **pas** encore un audit
+indépendant (§11).
 Chaque promesse affichée dans l'app doit pouvoir être reliée à une section de ce document.
 
 ## 1. Objectifs
@@ -19,7 +21,7 @@ Chaque promesse affichée dans l'app doit pouvoir être reliée à une section d
 |---|---|---|
 | Serveur compromis | Fuite de la base Supabase ou du stockage R2, employé malveillant, réquisition | Chiffrement de bout en bout : le serveur ne détient que des données chiffrées et des clés publiques (§4, §6) |
 | Attaquant réseau | Wi-Fi public, opérateur | TLS partout, en plus du chiffrement de bout en bout |
-| Homme du milieu à l'appairage | Le serveur substitue ses propres clés | Vérification hors ligne : QR code ou 7 symboles comparés à voix haute (§5) |
+| Homme du milieu à l'appairage | Le serveur substitue ses propres clés | Vérification par un canal distinct du serveur : invitation complète, QR code ou liens échangés par une autre messagerie (§5) |
 | Intrus qui tente de rejoindre un couple | Code d'invitation deviné | Jetons à usage unique, longs, expirant en 24 h, tentatives limitées, couple plafonné à deux membres par la base (§5, §8) |
 | Téléphone volé verrouillé | Perte, vol | Base locale chiffrée, clé protégée par la puce sécurisée du téléphone et libérée seulement après déverrouillage (§7) |
 | Ordinateurs quantiques futurs | « Enregistrer maintenant, déchiffrer plus tard » | Échange de clés hybride classique + ML-KEM-1024, et ratchet post-quantique SPQR (§4) |
@@ -71,7 +73,7 @@ Implémentation : `core/src/chat.rs` (testée dans `core/tests/chat.rs`), transp
   - À l'envoi, le message et son enveloppe chiffrée sont enregistrés ensemble dans une boîte d'envoi locale. Après une coupure réseau ou un redémarrage, la même enveloppe est renvoyée, jamais rechiffrée ; le serveur refuse le doublon par sa clé primaire.
 - **Altération.** Une enveloppe modifiée en route est rejetée et écartée sans bloquer les suivantes. Un test modifie chaque octet, un par un : jamais un contenu modifié n'est accepté. Seuls des champs d'acheminement que Signal n'authentifie pas par conception (numéro de version, identifiants de pré-clés, et le chiffré ML-KEM quand la session est déjà ouverte) peuvent changer sans effet, le contenu restant intact.
 - **Réception instantanée** par Supabase Realtime, filtrée par les règles d'accès : chacun n'est averti que des enveloppes qui lui sont destinées. À chaque reconnexion, l'app récupère tout ce qui est en attente.
-- **Clé du partenaire changée** : les nouvelles enveloppes restent sur le serveur, non lues, et l'app demande de recomparer les 7 symboles (§5.7).
+- **Clé du partenaire changée** : les nouvelles enveloppes restent sur le serveur, non lues, et l'app demande un nouvel échange de liens (§5.7).
 
 ## 4ter. Dates importantes
 
@@ -112,8 +114,8 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
 2. **En personne : QR code.** Le QR code d'Inès contient le code et l'empreinte de sa clé d'identité, `SHA-256("FouLov-ID-v1" ‖ clé)`. Malik le scanne :
    - son téléphone compare cette empreinte à la clé publiée par le serveur ; si elles diffèrent, l'appairage s'arrête et rien n'est envoyé ;
    - si elles correspondent, la clé d'Inès est marquée « vérifiée » chez Malik, sans action de sa part ;
-   - côté Inès, la vérification se fait en comparant les 7 symboles : ils sont côte à côte, il suffit de regarder les deux écrans.
-   Depuis l'invitation v2 (point 3), le QR code contient aussi le secret d'appairage : la clé de Malik est alors confirmée automatiquement chez Inès.
+   - depuis l'invitation v2 (point 3), le QR code contient aussi le secret d'appairage : la clé de Malik est confirmée
+     automatiquement chez Inès. (Avec un ancien QR code sans secret, Malik envoie son lien, point 4.)
 3. **À distance : l'invitation complète** (`core/src/invite.rs`, tests `core/tests/invite.rs`). Inès l'envoie par une
    autre messagerie (WhatsApp, SMS…) ; Malik la copie et la colle. Elle contient `foulove:2:<code>:<empreinte>:<secret>` :
    - l'**empreinte** de la clé d'Inès : le téléphone de Malik la compare à la clé publiée par le serveur (comme le QR) ;
@@ -122,16 +124,21 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
      d'Inès la recalcule avec la clé de la session ouverte : si elle correspond, la clé de Malik est vérifiée.
    - Résultat : **aucun symbole à comparer**, et un serveur malveillant ne peut pas se glisser entre vous sans le contenu
      de l'invitation. Limite assumée : si la même personne contrôle notre serveur **et** la messagerie qui a transporté
-     l'invitation, elle pourrait le faire. Les 7 symboles restent alors la vérification ultime, en appel vidéo.
+     l'invitation, elle pourrait le faire.
    - Le QR code contient la même invitation : en personne aussi, les deux côtés sont vérifiés automatiquement.
-   - Le code seul (10 caractères tapés) marche toujours ; il faut alors comparer les 7 symboles
-     (`SHA-256("FouLov-SAS-v1" ‖ longueurs ‖ clés triées)`, 64 symboles, 42 bits).
+   - Le code seul (10 caractères tapés) marche toujours ; il faut alors échanger les liens du point 4 avant d'écrire.
+   - **Les 7 symboles ont été retirés** (revue du 25 novembre 2026). Ils ne valaient que 42 bits, calculés sur les
+     seules clés à long terme : un serveur malveillant pouvait fabriquer en quelques secondes (recherche « des
+     anniversaires », environ 2²¹ clés de chaque côté) deux fausses clés affichant les mêmes 7 symboles sur les deux
+     téléphones. De plus, en pratique, personne ne les comparait vraiment.
 4. **Nouveau téléphone : liens de retrouvailles.** Chacun peut envoyer `foulove:id:<empreinte de sa clé>` par une autre
    messagerie ; l'autre le colle, et la clé est acceptée si elle correspond exactement à celle reçue. Même modèle de
-   confiance que l'invitation (la messagerie qui transporte le lien doit être distincte de notre serveur).
-5. **Protection contre les essais au hasard** : 10 tentatives par heure et par compte. Un code invalide ne déclenche pas d'erreur, pour que la tentative soit bien comptée. Avec 50 bits, même un très grand nombre de comptes ne suffit pas pour tomber sur un code actif.
+   confiance que l'invitation (la messagerie qui transporte le lien doit être distincte de notre serveur). L'empreinte
+   fait 256 bits : impossible à imiter. Le cœur ne marque « vérifiée » que la clé exacte qui a été contrôlée
+   (`mark_verified(partenaire, clé)`), jamais une autre clé reçue entre-temps.
+5. **Protection contre les essais au hasard** : 10 tentatives par heure et par compte (compte exact, même avec des requêtes simultanées : verrou par compte). Un code invalide ne déclenche pas d'erreur, pour que la tentative soit bien comptée. Avec 50 bits, même un très grand nombre de comptes ne suffit pas pour tomber sur un code actif.
 6. **Plafond de deux membres** : la base refuse un troisième membre, par une contrainte en base et pas seulement dans l'app.
-7. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible et demande une nouvelle vérification.
+7. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible ; la nouvelle clé n'est acceptée qu'avec le lien du nouveau téléphone (point 4).
 
 ## 6. Photos, vidéos et fichiers
 
@@ -150,7 +157,7 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
 
 ## 7. Stockage local, verrouillage et récupération
 
-- **Base locale** : SQLCipher. Sa clé de 256 bits est aléatoire et enveloppée par une clé matérielle non exportable : Android Keystore, ou Keychain iOS accessible seulement sur cet appareil, après le premier déverrouillage.
+- **Base locale** : SQLCipher. Sa clé de 256 bits est aléatoire et enveloppée par une clé matérielle non exportable : Android Keystore, ou Keychain iOS accessible seulement sur cet appareil, après le premier déverrouillage. Fichiers temporaires de SQLite en mémoire (`temp_store = MEMORY`), clé effacée de la mémoire après l'ouverture. Rien de FouLove ne part dans la sauvegarde Google d'Android (`allowBackup=false`, `data_extraction_rules.xml`).
 - **Verrouillage de l'app** (activé par défaut dès que le téléphone a un verrouillage d'écran) : empreinte, visage ou code du téléphone à l'ouverture et après une minute en arrière-plan. Le désactiver demande de s'authentifier. Sur Android 13 et plus, la vignette des apps récentes ne montre pas la conversation, sans bloquer les captures d'écran.
   - *Choix assumé, comme Signal* : c'est un verrou d'accès à l'interface. La clé de la base n'exige **pas** l'empreinte pour être utilisée : sur Android, une clé liée à l'authentification est détruite si l'utilisateur retire le verrouillage d'écran de son téléphone, et tout l'historique serait perdu. Une personne qui obtient le téléphone **déverrouillé** et le code de l'app pourrait donc lire la base. Ce choix sera réexaminé quand la sauvegarde chiffrée existera.
 - **Effacement à distance** du contenu local par l'utilisateur depuis un autre appareil : prévu plus tard.
@@ -160,17 +167,24 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
   - la sauvegarde (historique, clés des fichiers, profil du couple, albums, lettres) est chiffrée avec cette clé puis déposée sur R2 ;
   - **sans la phrase, personne ne peut la lire, pas même nous**. Phrase perdue et téléphones perdus = données perdues. L'app le dit clairement.
 - **Clé de chaque sauvegarde** : HKDF-SHA256(secret de la phrase, sel aléatoire de 256 bits). La phrase vaut déjà 256 bits aléatoires (BIP39, liste française, accents facultatifs à la saisie) : une dérivation lente comme Argon2 n'ajouterait rien contre la force brute. La sauvegarde ne contient **jamais** les clés Signal.
-- **Restauration** sur un nouveau téléphone : après la connexion, l'app propose la phrase si une sauvegarde existe et que le téléphone n'a aucun historique (écran protégé contre les captures). Le téléphone crée une **nouvelle identité**, rouvre une session avec le partenaire et le couple compare ses 7 symboles.
-- **Côté partenaire** : à chaque chargement, l'app compare la clé publiée par le serveur à celle en laquelle elle a confiance. Si elles diffèrent, l'écran « La clé de ton amour a changé » s'affiche avant tout le reste ; les nouveaux messages restent chiffrés et illisibles jusqu'à la comparaison des 7 symboles de la nouvelle clé. Une substitution par le serveur se verrait ainsi immédiatement.
+- **Restauration** sur un nouveau téléphone : après la connexion, l'app propose la phrase si une sauvegarde existe et que le téléphone n'a aucun historique (écran protégé contre les captures). Le téléphone crée une **nouvelle identité**, rouvre une session avec le partenaire, et le couple échange ses liens (§5.4).
+- **Côté partenaire** : à chaque chargement, l'app compare la clé publiée par le serveur à celle en laquelle elle a confiance. Si elles diffèrent, l'écran « La clé de ton amour a changé » s'affiche avant tout le reste ; les nouveaux messages restent chiffrés et illisibles jusqu'à ce que le lien du nouveau téléphone soit collé. Une substitution par le serveur se verrait ainsi immédiatement.
 
 ### Code FouLove (`core/src/pin.rs`, `app/lib/features/lock/app_lock.dart`)
 
 - Six chiffres propres à l'app, utilisables même si le téléphone n'a aucun verrouillage d'écran.
 - Seule une empreinte **Argon2id** est gardée (sel aléatoire de 128 bits, 46 Mio, 1 passe, réglage OWASP), dans le
   coffre du système. Six chiffres ne font que 10⁶ possibilités : la protection vient de l'empreinte enfermée dans le
-  coffre et des **délais** imposés après 5 erreurs (30 s, puis doublés jusqu'à 1 h), conservés même si l'app est
-  fermée. C'est un verrou d'interface, comme celui du téléphone ; la base locale reste chiffrée par sa propre clé.
-- Changer ou retirer le code demande le code actuel. **Code oublié** : reconnexion par e-mail, puis le code est retiré.
+  coffre et des **délais** imposés après 5 erreurs (30 s, puis doublés jusqu'à 1 h, sans jamais retomber à zéro).
+  L'erreur est enregistrée avant la vérification (fermer l'app pendant le calcul ne l'efface pas), et le délai se
+  mesure avec une horloge monotone : changer l'heure du téléphone ne le raccourcit pas, et rouvrir l'app le fait
+  recommencer. C'est un verrou d'interface, comme celui du téléphone ; la base locale reste chiffrée par sa propre clé.
+- Changer ou retirer le code demande le code actuel.
+- **Code oublié** : si le téléphone a un verrouillage d'écran, l'empreinte, le visage ou le code du téléphone
+  remplacent le code FouLove, et l'historique reste. Sinon, la seule issue est de **remettre ce téléphone à zéro**
+  (l'historique revient avec la phrase de 24 mots ou depuis le téléphone du partenaire). Une simple reconnexion par
+  e-mail n'est plus acceptée : la boîte mail est souvent ouverte sur le même téléphone, et c'était un contournement
+  complet du verrou (revue du 25 novembre 2026).
 - L'empreinte ou le visage peuvent servir de raccourci.
 
 ### Récupérer l'historique depuis l'autre téléphone (`core/src/transfer.rs`, tests `core/tests/transfer.rs`)
@@ -178,11 +192,15 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
 Pour un nouveau téléphone sans phrase de récupération :
 - il **demande** l'historique par un message chiffré (identifiant aléatoire) ; seule une réponse à cette demande est
   acceptée ;
-- l'autre téléphone ne propose d'accepter que si la clé du nouveau téléphone est **vérifiée** (symboles ou liens) ;
+- l'autre téléphone n'accepte que si la clé du nouveau téléphone est **vérifiée** (liens) : contrôlé dans le cœur, pas
+  seulement par le bouton ;
 - s'il accepte, son historique (messages, clés des photos et vidéos, dates, albums, lettres — jamais les clés Signal
   ni les instants) est emballé **vu depuis l'autre côté**, chiffré avec une clé aléatoire (STREAM AES-256-GCM, Padmé),
   déposé sur R2 comme une photo ; la clé et l'empreinte SHA-256 voyagent dans un message chiffré ;
-- le nouveau téléphone vérifie l'empreinte, importe, puis retire l'archive de R2. Le serveur ne voit qu'un fichier
+- le nouveau téléphone vérifie l'empreinte, importe, puis retire l'archive de R2. L'archive vient du partenaire : il
+  n'en garde que l'historique (jamais de réglages ni de photos du profil), refuse les noms de fichiers qui ne sont
+  pas des identifiants (pas de « ../ »), et une archive illisible est abandonnée au lieu d'être retentée à chaque
+  ouverture ; Le serveur ne voit qu'un fichier
   illisible de taille arrondie.
 
 ## 8. Serveur (Supabase)
@@ -195,6 +213,12 @@ Pour un nouveau téléphone sans phrase de récupération :
 - **Le serveur ne stocke** que : enveloppes chiffrées, clés publiques, appartenance au couple, jetons d'invitation hachés, jetons de notification.
 - **Pas de liste** de couples ou d'utilisateurs accessible aux clients.
 - Les opérations sensibles (rejoindre un couple, URL pré-signée) passent par des **fonctions serveur**, avec limitation des tentatives.
+- **Plafonds d'utilisation** (migration `…_quotas.sql`, tests `quotas.test.sql`), car l'inscription est ouverte :
+  - enveloppes en attente chez un destinataire : 5 000 et 50 Mo au plus ;
+  - par expéditeur et par jour : 20 000 enveloppes et 200 Mo ;
+  - fichiers déposés sur R2 (photos, vidéos, sauvegardes, transferts), par compte : 300 envois et 3 Go par jour,
+    15 Go sur 30 jours. Sans ces plafonds, un seul compte pouvait faire grimper la facture de stockage, et deux
+    comptes remplir la base au point de bloquer le service pour tous.
 - Les règles d'accès sont **testées automatiquement** : une suite de tests vérifie qu'un utilisateur A ne peut rien lire du couple B.
 - Les clés secrètes Supabase et R2 ne sont **jamais** dans l'app ni dans le dépôt.
 - **Fermer sa bulle / supprimer son compte** (`supabase/functions/account`, migration `…_fermer_bulle.sql`, tests
@@ -234,6 +258,8 @@ Jamais : contenu, noms de fichiers, légendes, dates du couple, surnoms, bio, hi
 
 - [x] Implémentation du cœur `core/` avec tests (`cargo test`) ; vecteurs de test officiels encore à ajouter.
 - [x] Tests automatisés des règles d'accès Supabase (pgTAP, `supabase/tests/database/`).
-- [ ] Revue de code externe de `core/` et des règles serveur.
+- [x] Revue de sécurité complète du code et du serveur, par IA (25 novembre 2026), avec tests et corrections :
+  rapport `docs/revue/2026-11-revue-securite.md`. Ce n'est ni une revue externe ni un audit.
+- [ ] Revue de code externe de `core/` et des règles serveur, par des personnes indépendantes.
 - [ ] **Audit de sécurité indépendant** avant toute comparaison publique avec d'autres messageries.
 - [ ] Programme de signalement de vulnérabilités (adresse dédiée, délai de réponse publié).

@@ -1009,7 +1009,7 @@ class _KeyChanged extends StatelessWidget {
               Expanded(
                 child: Text(
                   'La clé de ton amour a changé (nouveau téléphone ?). Ses nouveaux messages restent en attente '
-                  'jusqu\'à ce que vous compariez de nouveau vos 7 symboles.',
+                  'jusqu\'à ce que vous échangiez vos liens. Touche ici.',
                   style: TextStyle(color: cs.onErrorContainer),
                 ),
               ),

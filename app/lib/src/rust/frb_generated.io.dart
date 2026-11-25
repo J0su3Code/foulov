@@ -144,9 +144,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  List<SasSymbol> dco_decode_list_sas_symbol(dynamic raw);
-
-  @protected
   List<SpacePicture> dco_decode_list_space_picture(dynamic raw);
 
   @protected
@@ -220,9 +217,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RestoreSummary dco_decode_restore_summary(dynamic raw);
-
-  @protected
-  SasSymbol dco_decode_sas_symbol(dynamic raw);
 
   @protected
   SavedAlbum dco_decode_saved_album(dynamic raw);
@@ -397,9 +391,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  List<SasSymbol> sse_decode_list_sas_symbol(SseDeserializer deserializer);
-
-  @protected
   List<SpacePicture> sse_decode_list_space_picture(
     SseDeserializer deserializer,
   );
@@ -485,9 +476,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RestoreSummary sse_decode_restore_summary(SseDeserializer deserializer);
-
-  @protected
-  SasSymbol sse_decode_sas_symbol(SseDeserializer deserializer);
 
   @protected
   SavedAlbum sse_decode_saved_album(SseDeserializer deserializer);
@@ -700,12 +688,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_sas_symbol(
-    List<SasSymbol> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_space_picture(
     List<SpacePicture> self,
     SseSerializer serializer,
@@ -815,9 +797,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     RestoreSummary self,
     SseSerializer serializer,
   );
-
-  @protected
-  void sse_encode_sas_symbol(SasSymbol self, SseSerializer serializer);
 
   @protected
   void sse_encode_saved_album(SavedAlbum self, SseSerializer serializer);

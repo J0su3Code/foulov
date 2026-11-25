@@ -9,15 +9,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 /// Version du cœur cryptographique (affichée dans « À propos » et utile aux rapports de bug).
 String coreVersion() => RustLib.instance.api.crateApiCryptoCoreVersion();
 
-/// Les 7 symboles à comparer à voix haute, calculés à partir des deux clés d'identité publiques.
-List<SasSymbol> sasSymbols({
-  required List<int> identityA,
-  required List<int> identityB,
-}) => RustLib.instance.api.crateApiCryptoSasSymbols(
-  identityA: identityA,
-  identityB: identityB,
-);
-
 /// Chiffre un fichier (exécuté hors du fil de l'interface).
 Future<EncryptedMedia> encryptMedia({required List<int> plaintext}) =>
     RustLib.instance.api.crateApiCryptoEncryptMedia(plaintext: plaintext);
@@ -57,23 +48,4 @@ class EncryptedMedia {
           key == other.key &&
           ciphertext == other.ciphertext &&
           sha256 == other.sha256;
-}
-
-/// Un des 7 symboles de vérification.
-class SasSymbol {
-  final String emoji;
-  final String name;
-
-  const SasSymbol({required this.emoji, required this.name});
-
-  @override
-  int get hashCode => emoji.hashCode ^ name.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SasSymbol &&
-          runtimeType == other.runtimeType &&
-          emoji == other.emoji &&
-          name == other.name;
 }

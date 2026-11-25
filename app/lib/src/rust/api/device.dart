@@ -4,7 +4,6 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-import 'crypto.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `with_device`
@@ -60,14 +59,15 @@ Future<Uint8List> deviceDecrypt({
   envelope: envelope,
 );
 
-/// Les 7 symboles à comparer avec le partenaire.
-Future<List<SasSymbol>> deviceSasWith({required List<int> partnerIdentity}) =>
-    RustLib.instance.api.crateApiDeviceDeviceSasWith(
-      partnerIdentity: partnerIdentity,
-    );
-
-Future<void> deviceMarkVerified({required String partner}) =>
-    RustLib.instance.api.crateApiDeviceDeviceMarkVerified(partner: partner);
+/// Marque vérifiée la clé `identity_key` du partenaire, celle qui vient d'être contrôlée (lien ou QR code).
+/// Échoue si ce n'est pas la clé enregistrée.
+Future<void> deviceMarkVerified({
+  required String partner,
+  required List<int> identityKey,
+}) => RustLib.instance.api.crateApiDeviceDeviceMarkVerified(
+  partner: partner,
+  identityKey: identityKey,
+);
 
 Future<bool> deviceIsVerified({required String partner}) =>
     RustLib.instance.api.crateApiDeviceDeviceIsVerified(partner: partner);

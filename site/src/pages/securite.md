@@ -4,7 +4,7 @@ title: Comment FouLove protège votre bulle
 eyebrow: Sécurité
 description: Le chiffrement de bout en bout de FouLove expliqué simplement, ce dont il vous protège, et ses limites, dites clairement.
 intro: Cette page explique simplement comment FouLove protège ce que vous partagez, ce dont elle vous protège, et ce qu’elle ne peut pas faire. Pour les détails techniques, notre document de conception est public.
-updated: 20 novembre 2026
+updated: 25 novembre 2026
 ---
 
 ## Le principe : chiffré de bout en bout
@@ -21,10 +21,10 @@ Tout est chiffré de la même façon : messages, vocaux, photos et vidéos, inst
 |---|---|
 | Une fuite ou un piratage de nos serveurs | Ils ne contiennent que des données chiffrées et des clés publiques |
 | Quelqu’un qui écoute le réseau (Wi-Fi public, opérateur) | Le chiffrement de bout en bout, en plus de la connexion sécurisée (TLS) |
-| Quelqu’un qui se glisserait entre vous au moment de l’invitation | Vos téléphones vérifient leurs clés, grâce au secret de l’invitation ou au QR code |
+| Quelqu’un qui se glisserait entre vous au moment de l’invitation | Vos téléphones vérifient leurs clés, grâce au secret de l’invitation, au QR code ou à vos liens échangés par une autre messagerie |
 | Quelqu’un qui devine un code d’invitation | Code à usage unique, expirant en 24 h, tentatives limitées ; une bulle ne peut jamais compter plus de deux personnes |
 | Un téléphone perdu ou volé, verrouillé | Les données de l’app sont rangées dans une base chiffrée, dont la clé est protégée par la puce de sécurité du téléphone |
-| Quelqu’un qui emprunte votre téléphone | Le code FouLove, et l’empreinte ou le visage |
+| Quelqu’un qui emprunte votre téléphone | Le code FouLove, et l’empreinte ou le visage ; un code oublié ne se contourne pas en se reconnectant |
 | Les ordinateurs quantiques de demain | Un échange de clés « post-quantique », conçu pour qu’on ne puisse pas déchiffrer plus tard ce qui est enregistré aujourd’hui |
 | Les services de notification (Google) | Les notifications ont un texte fixe, sans nom ni contenu |
 
@@ -55,7 +55,9 @@ Avant l’envoi, les photos et vidéos sont réencodées sur votre téléphone :
 - **La conception est publique.** Chaque promesse de l’app renvoie à notre [document de conception](https://github.com/J0su3Code/foulov/blob/main/docs/SECURITY.md), avec ses limites.
 - **Les règles d’accès sont testées.** Des tests automatiques vérifient qu’un compte ne peut rien lire d’un autre couple.
 
-> **Pas encore d’audit indépendant.** FouLove n’a pas encore été examinée par une société de sécurité extérieure. C’est prévu. D’ici là, nous ne prétendrons pas être « plus sûrs » qu’une autre messagerie.
+- **Une revue de sécurité complète est publiée.** Le 25 novembre 2026, tout le code et le serveur ont été relus à la recherche de failles ; les problèmes trouvés ont été corrigés et le [rapport](https://github.com/J0su3Code/foulov/blob/main/docs/revue/2026-11-revue-securite.md) est public.
+
+> **Pas encore d’audit indépendant.** Cette revue a été faite avec une intelligence artificielle, pas par une société de sécurité extérieure. Un audit indépendant est prévu. D’ici là, nous ne prétendrons pas être « plus sûrs » qu’une autre messagerie.
 
 ## Vous avez trouvé une faille ?
 

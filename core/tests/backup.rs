@@ -130,10 +130,12 @@ fn changement_de_telephone_refuse_puis_accepte_apres_verification() {
         Err(foulov_core::device::DeviceError::PartnerKeyChanged)
     ));
     assert_eq!(ines.trusted_identity(MALIK).unwrap().unwrap(), old, "l'ancienne clé reste la clé de confiance");
-    // Après comparaison des symboles : acceptée (non vérifiée), puis marquée vérifiée.
+    // Après contrôle par lien : acceptée (non vérifiée), puis marquée vérifiée.
     ines.accept_partner_key(MALIK, &new_key).unwrap();
     assert!(!ines.is_verified(MALIK).unwrap());
-    ines.mark_verified(MALIK).unwrap();
+    assert!(ines.mark_verified(MALIK, &old).is_err(), "on ne vérifie jamais une autre clé que celle enregistrée");
+    assert!(!ines.is_verified(MALIK).unwrap());
+    ines.mark_verified(MALIK, &new_key).unwrap();
     let Received::Message(m) = ines.receive(MALIK, &o.envelope_id, &o.envelope).unwrap() else { panic!("message attendu") };
     assert_eq!(m.body, "nouveau téléphone");
     assert_eq!(ines.trusted_identity(MALIK).unwrap().unwrap(), new_key);

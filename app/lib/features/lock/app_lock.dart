@@ -17,7 +17,9 @@ import '../../ui/love.dart';
 /// Deux façons de l'ouvrir, au choix :
 /// - **le code FouLove** (6 chiffres), propre à l'app : marche même si le téléphone n'a aucun verrouillage.
 ///   Seule son empreinte Argon2id est gardée, dans le coffre du système. Après 5 erreurs, il faut attendre
-///   (30 s, puis 1 min, 2 min… jusqu'à 1 h), même si l'app est fermée et rouverte ;
+///   (30 s, puis 1 min, 2 min… jusqu'à 1 h), même si l'app est fermée et rouverte. Le délai se mesure avec une
+///   horloge que l'heure du téléphone ne change pas : avancer l'heure ne le raccourcit pas, et rouvrir l'app le
+///   fait recommencer ;
 /// - **l'empreinte, le visage ou le code du téléphone**, seuls ou en raccourci du code FouLove.
 ///
 /// C'est un verrou d'accès à l'interface, comme celui de Signal. La clé de la base locale reste protégée par le
@@ -30,7 +32,7 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   static const _pref = 'foulov.app_lock'; // empreinte / visage / code du téléphone : 'on' ou 'off'
   static const _pinKey = 'foulov.pin';
   static const _failKey = 'foulov.pin_failures';
-  static const _untilKey = 'foulov.pin_until';
+  static const _waitKey = 'foulov.pin_wait_ms'; // délai restant à purger, en millisecondes
   static const _grace = Duration(minutes: 1);
   static const _store = FlutterSecureStorage();
   static const _native = MethodChannel('foulove/notifications');
@@ -44,11 +46,14 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   String? _pin;
   bool locked = false;
   int failures = 0;
-  DateTime? waitUntil;
+  // Délai en cours : mesuré par un chronomètre (monotone), jamais par l'heure du téléphone.
+  Duration _waitFor = Duration.zero;
+  final Stopwatch _waitClock = Stopwatch();
   bool _authenticating = false;
   DateTime? _leftAt;
 
-  /// « Code oublié » : déconnexion (fournie par l'app), puis le code est retiré.
+  /// « Code oublié » sans le verrouillage du téléphone : remise à zéro de ce téléphone et déconnexion (fournies
+  /// par l'app). Jamais une simple reconnexion par e-mail : la boîte mail est souvent ouverte sur ce même téléphone.
   Future<void> Function()? onForgot;
 
   bool get hasPin => _pin != null;
@@ -65,7 +70,9 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     if (kDebugMode) debugPrint('[FOULOVE] verrouillage : appareil compatible = $supported');
     _pin = await _store.read(key: _pinKey);
     failures = int.tryParse(await _store.read(key: _failKey) ?? '') ?? 0;
-    waitUntil = DateTime.tryParse(await _store.read(key: _untilKey) ?? '');
+    // Un délai pas encore purgé recommence en entier à chaque ouverture de l'app.
+    _startWait(Duration(milliseconds: int.tryParse(await _store.read(key: _waitKey) ?? '') ?? 0));
+    await _store.delete(key: 'foulov.pin_until'); // ancien format (heure du téléphone), abandonné
     // Empreinte activée par défaut dès que le téléphone a un verrouillage d'écran.
     biometrics = supported && (await _store.read(key: _pref)) != 'off';
     locked = enabled;
@@ -121,32 +128,50 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
 
   // ------------------------------------------------------------------ code FouLove
 
-  /// Délai après la 5e erreur : 30 s, puis double à chaque erreur, jusqu'à 1 h.
-  static Duration _delay(int failures) =>
-      failures < 5 ? Duration.zero : Duration(seconds: min(3600, 30 * pow(2, failures - 5).toInt()));
+  /// Délai après la 5e erreur : 30 s, puis double à chaque erreur, jusqu'à 1 h. L'exposant est borné : sans cela,
+  /// `pow(2, n)` déborde vers la 64e erreur et le délai retomberait à zéro.
+  @visibleForTesting
+  static Duration delayFor(int failures) =>
+      failures < 5 ? Duration.zero : Duration(seconds: min(3600, 30 * pow(2, min(failures - 5, 7)).toInt()));
+
+  void _startWait(Duration d) {
+    _waitFor = d;
+    _waitClock
+      ..reset()
+      ..start();
+  }
 
   Duration get remaining {
-    final w = waitUntil;
-    if (w == null) return Duration.zero;
-    final d = w.difference(DateTime.now());
-    return d.isNegative ? Duration.zero : d;
+    final d = _waitFor - _waitClock.elapsed;
+    if (d > Duration.zero) return d;
+    if (_waitFor > Duration.zero) {
+      // Délai purgé, app ouverte : il n'a pas à recommencer à la prochaine ouverture.
+      _waitFor = Duration.zero;
+      unawaited(_store.delete(key: _waitKey));
+    }
+    return Duration.zero;
+  }
+
+  Future<void> _resetFailures() async {
+    failures = 0;
+    _startWait(Duration.zero);
+    await _store.delete(key: _failKey);
+    await _store.delete(key: _waitKey);
   }
 
   Future<bool> _check(String pin) async {
     final stored = _pin;
     if (stored == null || remaining > Duration.zero) return false;
+    // L'erreur est comptée **avant** la vérification : fermer l'app pendant le calcul ne l'efface pas.
+    failures++;
+    final d = delayFor(failures);
+    await _store.write(key: _failKey, value: '$failures');
+    await _store.write(key: _waitKey, value: '${d.inMilliseconds}');
     final ok = await lockPinVerify(pin: pin, stored: stored);
     if (ok) {
-      failures = 0;
-      waitUntil = null;
-      await _store.delete(key: _failKey);
-      await _store.delete(key: _untilKey);
+      await _resetFailures();
     } else {
-      failures++;
-      final d = _delay(failures);
-      waitUntil = d == Duration.zero ? null : DateTime.now().add(d);
-      await _store.write(key: _failKey, value: '$failures');
-      if (waitUntil != null) await _store.write(key: _untilKey, value: waitUntil!.toIso8601String());
+      _startWait(d);
     }
     notifyListeners();
     return ok;
@@ -191,14 +216,23 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     return true;
   }
 
-  /// Code oublié : on se reconnecte (e-mail), et le code est retiré.
-  Future<void> forgot() async {
+  /// Code oublié, avec le verrouillage du téléphone (empreinte, visage ou code du téléphone) : le code FouLove est
+  /// retiré, l'historique reste. Renvoie faux si le téléphone n'a pas de verrouillage ou si la confirmation échoue.
+  Future<bool> forgotWithDevice() async {
+    if (!supported) return false;
+    if (!await _authenticate('Confirme avec le verrouillage de ton téléphone pour retirer le code FouLove')) return false;
+    await removePin();
+    await _resetFailures();
+    _unlocked();
+    return true;
+  }
+
+  /// Code oublié, sans autre preuve : ce téléphone est remis à zéro (historique effacé ici, pas chez l'autre), puis
+  /// déconnecté. Les échanges reviennent avec la phrase de 24 mots, ou depuis le téléphone du partenaire.
+  Future<void> forgotAndWipe() async {
     await onForgot?.call();
     await removePin();
-    failures = 0;
-    waitUntil = null;
-    await _store.delete(key: _failKey);
-    await _store.delete(key: _untilKey);
+    await _resetFailures();
     _unlocked();
   }
 
@@ -249,22 +283,50 @@ class _LockScreenState extends State<_LockScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _lock.unlockWithBiometrics());
   }
 
+  // Code oublié : le verrouillage du téléphone le remplace ; sinon, seule une remise à zéro de ce téléphone est
+  // possible. Se reconnecter par e-mail ne suffit plus : la boîte mail est souvent ouverte sur ce même téléphone.
   Future<void> _forgot() async {
-    final ok = await showDialog<bool>(
+    final device = _lock.supported;
+    final choice = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Code oublié ?'),
-        content: const Text(
-          'Pour ta sécurité, il faut te reconnecter avec ton adresse e-mail. Le code sera retiré ; '
-          'tu pourras en choisir un nouveau dans les réglages.',
+        content: Text(
+          device
+              ? 'Confirme avec le verrouillage de ton téléphone (empreinte, visage ou code) : le code FouLove sera '
+                    'retiré, tes échanges restent là. Tu pourras en choisir un nouveau dans les réglages.'
+              : 'Sans ce code, FouLove ne peut pas ouvrir tes échanges sur ce téléphone. Tu peux le remettre à zéro : '
+                    'messages, photos et lettres seront effacés d\'ici (pas de chez ton amour). Tu les retrouveras '
+                    'avec ta phrase de 24 mots, ou en les demandant au téléphone de ton amour.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Me reconnecter')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          if (device) TextButton(onPressed: () => Navigator.pop(context, 'wipe'), child: const Text('Tout effacer ici')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, device ? 'device' : 'wipe'),
+            child: Text(device ? 'Confirmer' : 'Tout effacer ici'),
+          ),
         ],
       ),
     );
-    if (ok == true) await _lock.forgot();
+    if (choice == 'device') {
+      if (!await _lock.forgotWithDevice() && mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('Confirmation refusée.')));
+      }
+    } else if (choice == 'wipe' && mounted) {
+      final sure = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Tout effacer sur ce téléphone ?'),
+          content: const Text('As-tu bien ta phrase de 24 mots, ou ton amour à portée de main ? C\'est définitif ici.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Tout effacer')),
+          ],
+        ),
+      );
+      if (sure == true) await _lock.forgotAndWipe();
+    }
   }
 
   @override
@@ -352,7 +414,7 @@ class _PinPadState extends State<PinPad> with SingleTickerProviderStateMixin {
     super.initState();
     // Compte à rebours de l'attente imposée.
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && AppLock.instance.waitUntil != null) setState(() {});
+      if (mounted && AppLock.instance.failures >= 5) setState(() {});
     });
   }
 
