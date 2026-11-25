@@ -42,7 +42,7 @@ pub mod pb {
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Content {
-        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20")]
+        #[prost(oneof = "Body", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22")]
         pub body: Option<Body>,
     }
 
@@ -91,6 +91,13 @@ pub mod pb {
         /// Modification d'un de ses messages par son auteur, dans les minutes qui suivent l'envoi.
         #[prost(message, tag = "20")]
         Edit(Edit),
+        /// Photo ou vidéo en **vue unique** (sans miniature). Numéro à part : une version qui ne la connaît pas la
+        /// garde de côté au lieu de l'afficher comme une photo ordinaire.
+        #[prost(message, tag = "21")]
+        ViewOnce(Media),
+        /// La vue unique a été ouverte (puis détruite) chez le destinataire.
+        #[prost(message, tag = "22")]
+        ViewOnceOpened(Ref),
     }
 
     #[derive(Clone, PartialEq, prost::Message)]
@@ -357,8 +364,10 @@ pub struct MediaInfo {
     pub height: u32,
     pub duration_ms: u32,
     pub thumb: Vec<u8>,
-    /// 0 = à envoyer, 1 = sur ce téléphone, 2 = à télécharger, 3 = illisible (altéré).
+    /// 0 = à envoyer, 1 = sur ce téléphone, 2 = à télécharger, 3 = illisible (altéré), 4 = détruit (vue unique).
     pub state: u8,
+    /// Vue unique : 0 non, 1 pas encore ouverte, 2 ouverte, 3 en cours d'affichage, 4 expirée.
+    pub view_once: u8,
 }
 
 /// Un message de l'historique local.
@@ -530,6 +539,7 @@ pub(crate) fn row_to_message(r: &rusqlite::Row<'_>) -> rusqlite::Result<ChatMess
             duration_ms: r.get::<_, i64>(12)? as u32,
             thumb: r.get(13)?,
             state: r.get::<_, i64>(14)? as u8,
+            view_once: r.get::<_, Option<i64>>(19)?.unwrap_or(0) as u8,
         }),
         None => None,
     };
@@ -605,7 +615,7 @@ pub(crate) fn kv_set(c: &rusqlite::Connection, k: &str, v: Option<&str>, at: u64
 /// Message et, s'il y en a une, sa photo ou vidéo.
 pub(crate) const SELECT: &str = "SELECT m.id, m.from_me, m.body, m.reply_to, m.sent_at, m.status, m.my_reaction, \
     m.their_reaction, md.kind, md.mime, md.width, md.height, md.duration_ms, md.thumb, md.state, m.deleted, \
-    m.quote_text, m.quote_thumb, m.edited_at FROM messages m LEFT JOIN media md ON md.message_id = m.id";
+    m.quote_text, m.quote_thumb, m.edited_at, md.view_once FROM messages m LEFT JOIN media md ON md.message_id = m.id";
 
 impl Device {
     pub(crate) fn enqueue(&mut self, partner: &str, body: pb::Body, message_id: Option<&str>) -> R<Outgoing> {
@@ -616,6 +626,7 @@ impl Device {
             pb::Body::Text(_)
                 | pb::Body::Reaction(_)
                 | pb::Body::Media(_)
+                | pb::Body::ViewOnce(_)
                 | pb::Body::Sticker(_)
                 | pb::Body::Letter(_)
                 | pb::Body::Moment(_)
@@ -913,12 +924,14 @@ impl Device {
                     .map_err(db)?;
                 Ok(Received::Updated(if n > 0 { vec![id] } else { vec![] }))
             }
-            pb::Body::Media(m) => crate::chat_media::apply_media(&c, m),
+            pb::Body::Media(m) => crate::chat_media::apply_media(&c, m, false),
+            pb::Body::ViewOnce(m) => crate::chat_media::apply_media(&c, m, true),
+            pb::Body::ViewOnceOpened(x) => crate::chat_media::apply_view_once_opened(&c, x),
             pb::Body::Sticker(m) => {
                 if m.kind != crate::chat_media::KIND_STICKER as u32 {
                     return Err(DeviceError::BadMessage);
                 }
-                crate::chat_media::apply_media(&c, m)
+                crate::chat_media::apply_media(&c, m, false)
             }
             pb::Body::Edit(e) => {
                 let id = id_from_wire(&e.target).ok_or(DeviceError::BadMessage)?;

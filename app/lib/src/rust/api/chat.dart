@@ -129,6 +129,7 @@ Future<CreatedMedia> chatCreateMedia({
   required List<int> thumb,
   required String caption,
   String? replyTo,
+  required bool viewOnce,
 }) => RustLib.instance.api.crateApiChatChatCreateMedia(
   dir: dir,
   plain: plain,
@@ -140,6 +141,7 @@ Future<CreatedMedia> chatCreateMedia({
   thumb: thumb,
   caption: caption,
   replyTo: replyTo,
+  viewOnce: viewOnce,
 );
 
 /// Le chiffré est sur R2 : prépare le message chiffré pour le partenaire (à vider par la boîte d'envoi).
@@ -187,6 +189,7 @@ Future<CreatedMedia> chatCreateMediaFile({
   required List<int> thumb,
   required String caption,
   String? replyTo,
+  required bool viewOnce,
 }) => RustLib.instance.api.crateApiChatChatCreateMediaFile(
   dir: dir,
   src: src,
@@ -198,7 +201,31 @@ Future<CreatedMedia> chatCreateMediaFile({
   thumb: thumb,
   caption: caption,
   replyTo: replyTo,
+  viewOnce: viewOnce,
 );
+
+/// Le destinataire ouvre une vue unique : lisible le temps de l'affichage. Échoue si elle n'est plus ouvrable.
+Future<void> chatViewOnceBegin({required String messageId}) =>
+    RustLib.instance.api.crateApiChatChatViewOnceBegin(messageId: messageId);
+
+/// Fin de l'affichage d'une vue unique : contenu détruit ici et sur R2, accusé « ouverte » pour l'expéditeur.
+Future<Outgoing?> chatViewOnceDone({
+  required String partner,
+  required String messageId,
+}) => RustLib.instance.api.crateApiChatChatViewOnceDone(
+  partner: partner,
+  messageId: messageId,
+);
+
+/// Au démarrage : les vues uniques restées ouvertes (app arrêtée pendant l'affichage) sont détruites.
+Future<List<Outgoing>> chatViewOnceFinishPending({required String partner}) =>
+    RustLib.instance.api.crateApiChatChatViewOnceFinishPending(
+      partner: partner,
+    );
+
+/// Vues uniques expirées (14 jours sans être ouvertes) : détruites.
+Future<int> chatPurgeViewOnce() =>
+    RustLib.instance.api.crateApiChatChatPurgeViewOnce();
 
 /// Taille réelle (déchiffrée) d'une photo ou vidéo.
 Future<BigInt> chatMediaLen({required String messageId}) =>
@@ -488,6 +515,9 @@ class MediaInfo {
   final Uint8List thumb;
   final int state;
 
+  /// Vue unique : 0 non, 1 pas encore ouverte, 2 ouverte, 3 en cours d'affichage, 4 expirée.
+  final int viewOnce;
+
   const MediaInfo({
     required this.kind,
     required this.mime,
@@ -496,6 +526,7 @@ class MediaInfo {
     required this.durationMs,
     required this.thumb,
     required this.state,
+    required this.viewOnce,
   });
 
   @override
@@ -506,7 +537,8 @@ class MediaInfo {
       height.hashCode ^
       durationMs.hashCode ^
       thumb.hashCode ^
-      state.hashCode;
+      state.hashCode ^
+      viewOnce.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -519,7 +551,8 @@ class MediaInfo {
           height == other.height &&
           durationMs == other.durationMs &&
           thumb == other.thumb &&
-          state == other.state;
+          state == other.state &&
+          viewOnce == other.viewOnce;
 }
 
 /// Enveloppe à déposer dans la table `envelopes` (l'identifiant sert de clé primaire : renvoi sans doublon).

@@ -28,32 +28,30 @@ Installez FouLove depuis Google Play sur vos deux téléphones. Au premier lance
 
 ## Inviter votre amour
 
-Vous arrivez sur l’écran **« Deux cœurs, une seule bulle »**. **L’un de vous deux seulement** crée la bulle ; l’autre la rejoint.
+Vous arrivez sur l’écran **« Deux cœurs, une seule bulle »**. **Un seul de vous deux invite l’autre.**
 
-Celui ou celle qui crée :
+Celui ou celle qui invite :
 
-1. Touchez <span class="ui">Créer notre bulle</span>.
-2. L’écran **« Invite ton amour »** apparaît, avec un QR code.
-3. **À distance** : touchez <span class="ui">Envoyer l’invitation</span> et choisissez votre messagerie habituelle (WhatsApp, SMS…). Ou <span class="ui">Copier l’invitation</span>, puis collez-la où vous voulez.
-4. **À côté l’un de l’autre** : montrez simplement le QR code.
-5. Patientez sur l’écran « En attente de ton amour… ».
+1. Touchez <span class="ui">J’invite mon amour</span>.
+2. Touchez <span class="ui">Envoyer le lien à mon amour</span> et choisissez votre messagerie habituelle (WhatsApp, SMS…).
+3. **À côté l’un de l’autre** : montrez simplement le QR code.
+4. Patientez sur l’écran « En attente de ton amour… ».
 
-L’invitation est valable **24 heures** et ne sert **qu’une fois**. Si elle a expiré, touchez <span class="ui">Générer un nouveau code</span>.
+L’invitation est valable **24 heures** et ne sert **qu’une fois**.
 
-> **Pourquoi c’est sûr, même à distance.** L’invitation contient un secret que nos serveurs ne voient jamais. Grâce à lui, vos deux téléphones vérifient tout seuls qu’ils parlent bien l’un à l’autre, sans que personne ne puisse se glisser entre vous. Il n’y a rien à comparer.
+> **Pourquoi c’est sûr, même à distance.** Le lien contient un secret que nos serveurs ne voient jamais (même pas le site : il est après le « # » de l’adresse). Grâce à lui, vos deux téléphones vérifient tout seuls qu’ils parlent bien l’un à l’autre. Il n’y a rien à comparer.
 
-Vous vous êtes trompé de bouton ? Le menu <span class="ui">…</span> en haut à droite propose <span class="ui">J’ai plutôt reçu une invitation</span>, <span class="ui">Annuler cette bulle</span> ou <span class="ui">Se déconnecter</span>.
+Vous avez touché <span class="ui">J’invite mon amour</span> tous les deux ? Pas de souci : celui qui touche le lien de l’autre rejoint sa bulle, et sa propre bulle (vide) est remplacée.
 
 ## Rejoindre la bulle
 
-Celui ou celle qui a reçu l’invitation :
+Celui ou celle qui a reçu le lien :
 
-1. Sur l’écran « Deux cœurs, une seule bulle », touchez <span class="ui">J’ai reçu une invitation</span>.
-2. **À côté** : l’appareil photo s’ouvre tout de suite. Visez le QR code de l’autre téléphone.
-3. **À distance** : dans votre messagerie, copiez **tout** le message reçu. Revenez dans FouLove, choisissez l’onglet <span class="ui">Coller ou saisir</span>, puis touchez <span class="ui">Coller l’invitation</span>.
-4. L’écran **« Votre bulle est née. »** s’affiche des deux côtés. Touchez <span class="ui">Entrer dans notre bulle</span>.
+1. **Touchez le lien** dans votre messagerie. FouLove s’ouvre et affiche **« Ton amour t’invite dans sa bulle »**. Touchez <span class="ui">Rejoindre sa bulle</span>. (Pas encore l’app ? Installez-la, connectez-vous, puis touchez de nouveau le lien.)
+2. **À côté** : touchez <span class="ui">Mon amour m’a invité(e)</span>, puis visez le QR code de l’autre téléphone. L’appareil photo du téléphone marche aussi.
+3. L’écran **« Votre bulle est née. »** s’affiche des deux côtés. Touchez <span class="ui">Entrer dans notre bulle</span>.
 
-> **Avec le code seul.** Vous pouvez aussi taper le code à 10 caractères (par exemple `K7Q4M-9XHPT`). Dans ce cas, il reste une petite étape : envoyez-vous vos liens par une autre messagerie (<span class="ui">Envoyer mon lien</span>), puis copiez celui de l’autre et touchez <span class="ui">Coller son lien</span>. C’est ce qui prouve que personne ne s’est glissé entre vous.
+> **Le lien ne s’ouvre pas ?** Copiez tout le message reçu, ouvrez FouLove et touchez <span class="ui">Mon amour m’a invité(e)</span> : l’invitation est reconnue toute seule. Vous pouvez aussi taper le code à 10 caractères (par exemple `K7Q4M-9XHPT`) ; il reste alors une petite étape : envoyez-vous vos liens (<span class="ui">Envoyer mon lien</span>), puis touchez celui de l’autre.
 
 ## Votre accueil : Nous
 
@@ -82,6 +80,8 @@ Dans l’onglet **Messages** :
 
 - **Écrire** : tapez dans le champ en bas, puis envoyez.
 - **Photo ou vidéo** : touchez l’icône photo à côté du champ. La position GPS et les autres informations cachées des photos sont retirées sur votre téléphone, avant l’envoi.
+- **Vue unique** : dans l’aperçu avant l’envoi d’une photo ou d’une vidéo, touchez le <span class="ui">1</span>. Votre amour pourra l’ouvrir **une seule fois**, sans capture d’écran possible ; elle disparaît ensuite des deux téléphones et du serveur, et vous voyez « Ouverte ». Vous ne pouvez pas la revoir vous-même. Jamais ouverte, elle disparaît après 14 jours.
+- **Émojis et stickers** : touchez le smiley à gauche du champ, puis choisissez <span class="ui">Émojis</span> ou <span class="ui">Stickers</span> en bas.
 - **Message vocal** : **maintenez** le bouton micro pendant que vous parlez, relâchez pour envoyer.
 - **Aimer un message** : touchez-le **deux fois**.
 - **Répondre** : faites glisser le message vers le côté, ou appuyez longuement dessus puis <span class="ui">Répondre</span>.

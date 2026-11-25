@@ -1,0 +1,72 @@
+---
+// Page de secours d'un lien FouLove (invitation ou lien de retrouvailles) ouvert dans le navigateur au lieu de
+// l'app. Ce qui suit le « # » reste dans le navigateur : il n'est jamais envoyé à ce site. Le script ne fait que
+// le recopier dans un lien foulove://… (ouvrir l'app) ou dans le presse-papiers ; il n'envoie rien nulle part.
+interface Props {
+  kind: 'rejoindre' | 'lien';
+  title: string;
+  lead: string;
+}
+const { kind, title, lead } = Astro.props;
+---
+
+<section class="wrap open" data-kind={kind}>
+  <span class="eyebrow">FouLove</span>
+  <h1>{title}</h1>
+  <p class="lead">{lead}</p>
+  <ol class="steps">
+    <li><strong>Installe FouLove</strong> si ce n’est pas déjà fait, et connecte-toi.</li>
+    <li><strong>Reviens toucher le lien</strong> dans ton message : FouLove s’ouvre toute seule.</li>
+  </ol>
+  <div class="links">
+    <a class="btn btn-primary" id="open" href="#">Ouvrir dans FouLove</a>
+    <a class="btn btn-ghost" href="https://play.google.com/store/apps/details?id=org.foulov.app">Installer FouLove</a>
+    <button class="btn btn-ghost" id="copy" type="button">Copier le lien</button>
+  </div>
+  <p class="note" id="note" hidden>Lien copié. Dans FouLove, touche « Mon amour m’a invité(e) » : il est reconnu tout seul.</p>
+  <p class="note" id="empty" hidden>Ce lien est incomplet. Demande à ton amour de te le renvoyer, et copie-le en entier.</p>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('.open');
+  const kind = root?.dataset.kind ?? 'rejoindre';
+  const data = location.hash.slice(1);
+  const open = document.getElementById('open') as HTMLAnchorElement | null;
+  const valid = /^[0-9A-Za-z._-]{20,400}$/.test(data);
+  if (!valid) {
+    document.getElementById('empty')?.removeAttribute('hidden');
+    open?.setAttribute('hidden', '');
+  } else if (open) {
+    open.href = `intent://${kind}?i=${encodeURIComponent(data)}#Intent;scheme=foulove;package=org.foulov.app;end`;
+  }
+  document.getElementById('copy')?.addEventListener('click', async () => {
+    if (!valid) return;
+    try {
+      await navigator.clipboard.writeText(`${location.origin}/${kind}/#${data}`);
+      document.getElementById('note')?.removeAttribute('hidden');
+    } catch {
+      /* presse-papiers refusé : le lien reste visible dans la barre d'adresse */
+    }
+  });
+</script>
+
+<style>
+  .open {
+    padding-top: clamp(48px, 10vw, 120px);
+    padding-bottom: clamp(48px, 10vw, 120px);
+  }
+  .steps {
+    margin: 22px 0 0;
+    padding-left: 1.2em;
+    line-height: 1.7;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+  }
+  .note {
+    margin-top: 16px;
+  }
+</style>

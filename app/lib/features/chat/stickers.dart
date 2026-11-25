@@ -332,7 +332,7 @@ class _StickerPanelState extends State<StickerPanel> with SingleTickerProviderSt
                       Tab(icon: Icon(Icons.history_rounded), height: 46),
                       Tab(icon: Icon(Icons.star_rounded), height: 46),
                       Tab(icon: Icon(Icons.favorite_rounded), height: 46),
-                      Tab(icon: Icon(Icons.emoji_emotions_outlined), height: 46),
+                      Tab(icon: Icon(Icons.collections_bookmark_outlined), height: 46),
                     ],
                   ),
                 ),

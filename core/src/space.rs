@@ -1072,6 +1072,7 @@ fn media_info(r: &rusqlite::Row<'_>, i: usize) -> rusqlite::Result<MediaInfo> {
         duration_ms: r.get::<_, i64>(i + 4)? as u32,
         thumb: r.get(i + 5)?,
         state: r.get::<_, i64>(i + 6)? as u8,
+        view_once: 0,
     })
 }
 

@@ -17,6 +17,7 @@ import '../backup/backup_service.dart';
 import '../chat/home_shell.dart';
 import '../chat/chat_service.dart';
 import 'couple_service.dart';
+import 'incoming_links.dart';
 
 String _pretty(String code) => code.length == 10 ? '${code.substring(0, 5)}-${code.substring(5)}' : code;
 
@@ -73,6 +74,12 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
     super.initState();
     _current = this;
     WidgetsBinding.instance.addObserver(this);
+    IncomingLinks.invitation.addListener(_onInvitation);
+  }
+
+  // Une invitation arrive (lien touché pendant que l'app est ouverte) : l'aiguillage la montre aussitôt.
+  void _onInvitation() {
+    if (mounted) setState(() {});
   }
 
   /// Ouverture instantanée : le dernier état connu s'affiche tout de suite (même hors ligne) ; le serveur est
@@ -108,6 +115,7 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    IncomingLinks.invitation.removeListener(_onInvitation);
     if (_current == this) _current = null;
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -162,6 +170,24 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
         if (s == null || _closing) return const Scaffold(body: Center(child: CircularProgressIndicator()));
         _last = s;
         if (s.ended) return _EndedScreen(couple: widget.couple, auth: widget.auth, onDone: _reload);
+        final invite = IncomingLinks.invitation.value;
+        if (invite != null) {
+          if (!s.complete) {
+            return InvitationReceivedScreen(
+              key: ValueKey(invite),
+              couple: widget.couple,
+              invitation: invite,
+              replacesOwnBubble: s.hasCouple,
+              onJoined: _joined,
+              onDismiss: () async {
+                await IncomingLinks.clearInvitation();
+                _reload();
+              },
+            );
+          }
+          // Déjà réunis (par exemple, chacun avait envoyé un lien à l'autre) : l'invitation ne sert plus.
+          WidgetsBinding.instance.addPostFrameCallback((_) => IncomingLinks.clearInvitation());
+        }
         if (!s.hasCouple) {
           return ChoiceScreen(couple: widget.couple, onDone: _reload, onJoined: _joined, auth: widget.auth);
         }
@@ -392,6 +418,27 @@ class ChoiceScreen extends StatefulWidget {
 class _ChoiceScreenState extends State<ChoiceScreen> {
   bool _busy = false;
 
+  /// « Mon amour m'a invité(e) » : si l'invitation est déjà copiée, on la prend ; sinon, scanner ou coller.
+  Future<void> _join() async {
+    final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+    if (CoupleService.isFullInvitation(t)) {
+      IncomingLinks.invitation.value = t;
+      return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => JoinScreen(
+          couple: widget.couple,
+          onJoined: () {
+            Navigator.of(context).pop();
+            widget.onJoined();
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _create() async {
     setState(() => _busy = true);
     try {
@@ -433,40 +480,179 @@ class _ChoiceScreenState extends State<ChoiceScreen> {
                   ),
                 ),
                 const Spacer(),
-                const Center(child: EntwinedHeart(size: 230)),
-                const SizedBox(height: 18),
+                const Center(child: EntwinedHeart(size: 170)),
+                const SizedBox(height: 14),
                 Text('Deux cœurs,\nune seule bulle.', style: _title(context), textAlign: TextAlign.center),
-                const SizedBox(height: 10),
-                Text(
-                  'Crée votre bulle et invite la personne que tu aimes, ou rejoins celle qu\'elle a déjà créée.',
-                  style: _soft(context),
-                  textAlign: TextAlign.center,
-                ),
+                const SizedBox(height: 8),
+                Text('Un seul de vous deux invite l\'autre.', style: _soft(context), textAlign: TextAlign.center),
                 const Spacer(),
+                if (_busy)
+                  const Center(child: CircularProgressIndicator())
+                else ...[
+                  _ChoiceCard(
+                    icon: Icons.send_rounded,
+                    title: 'J\'invite mon amour',
+                    subtitle: 'Je commence, et je lui envoie un lien',
+                    onTap: _create,
+                  ),
+                  const SizedBox(height: 12),
+                  _ChoiceCard(
+                    icon: Icons.mark_email_read_rounded,
+                    title: 'Mon amour m\'a invité(e)',
+                    subtitle: 'J\'ai reçu un lien ou un QR code',
+                    onTap: _join,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Une des deux portes d'entrée, de même poids : aucune n'est « le premier bouton » qu'on touche sans lire.
+class _ChoiceCard extends StatelessWidget {
+  const _ChoiceCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
+
+  final IconData icon;
+  final String title, subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainer,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(color: cs.primary.withValues(alpha: .14), shape: BoxShape.circle),
+                child: Icon(icon, color: cs.primary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: TextStyle(fontSize: 13.5, color: cs.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===================================================================== invitation reçue par un lien
+
+/// FouLove s'est ouverte avec une invitation (lien touché, QR code, ou invitation copiée). Un seul bouton.
+/// Si ce compte avait déjà créé une bulle vide (les deux ont touché « J'invite »), elle est remplacée.
+class InvitationReceivedScreen extends StatefulWidget {
+  const InvitationReceivedScreen({
+    super.key,
+    required this.couple,
+    required this.invitation,
+    required this.replacesOwnBubble,
+    required this.onJoined,
+    required this.onDismiss,
+  });
+
+  final CoupleService couple;
+  final String invitation;
+  final bool replacesOwnBubble;
+  final VoidCallback onJoined, onDismiss;
+
+  @override
+  State<InvitationReceivedScreen> createState() => _InvitationReceivedScreenState();
+}
+
+class _InvitationReceivedScreenState extends State<InvitationReceivedScreen> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _join() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      if (widget.replacesOwnBubble) await widget.couple.cancelPendingCouple();
+      final r = await widget.couple.join(widget.invitation);
+      switch (r) {
+        case JoinResult.joined:
+          await IncomingLinks.clearInvitation();
+          HapticFeedback.heavyImpact();
+          widget.onJoined();
+          return;
+        case JoinResult.invalidCode:
+          _error = 'Cette invitation a expiré ou a déjà servi. Demande à ton amour de t\'en renvoyer une.';
+        case JoinResult.keyMismatch:
+          _error =
+              'Les clés reçues ne correspondent pas à l\'invitation. Par sécurité, rien n\'est fait. '
+              'Demandez une nouvelle invitation.';
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FOULOVE] invitation reçue : $e');
+      final m = e.toString();
+      _error = m.contains('trop de tentatives')
+          ? 'Trop de tentatives. Patiente une heure avant de réessayer.'
+          : m.contains('déjà dans un couple')
+          ? 'Tu es déjà dans une bulle.'
+          : 'Impossible de rejoindre pour le moment. Vérifie ta connexion puis réessaie.';
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: LoveBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Spacer(),
+                const Center(child: EntwinedHeart(size: 190)),
+                const SizedBox(height: 18),
+                Text('Ton amour t\'invite\ndans sa bulle 💞', style: _title(context), textAlign: TextAlign.center),
+                if (widget.replacesOwnBubble) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Tu avais aussi créé une bulle. Elle est vide : elle sera remplacée par celle de ton amour.',
+                    style: _soft(context),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+                const Spacer(),
+                if (_error != null) ...[Text(_error!, style: TextStyle(color: cs.error)), const SizedBox(height: 12)],
                 if (_busy)
                   const Center(child: CircularProgressIndicator())
                 else ...[
                   FilledButton.icon(
                     icon: const Icon(Icons.favorite_rounded),
-                    label: const Text('Créer notre bulle'),
-                    onPressed: _create,
+                    label: const Text('Rejoindre sa bulle'),
+                    onPressed: _join,
                   ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    icon: const Icon(Icons.favorite_border),
-                    label: const Text('J\'ai reçu une invitation'),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => JoinScreen(
-                          couple: widget.couple,
-                          onJoined: () {
-                            Navigator.of(context).pop();
-                            widget.onJoined();
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
+                  TextButton(onPressed: widget.onDismiss, child: const Text('Pas maintenant')),
                 ],
               ],
             ),
@@ -615,35 +801,49 @@ class _InviteScreenState extends State<InviteScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'À distance : envoie-lui l\'invitation (WhatsApp, SMS…). À côté de toi : fais-lui scanner ce QR code. '
-                'Dans les deux cas, vos clés se vérifient toutes seules.',
-                style: _soft(context),
-              ),
               const SizedBox(height: 18),
+              const _Steps(
+                steps: [
+                  (Icons.send_rounded, 'Envoie le lien'),
+                  (Icons.touch_app_rounded, 'Ton amour le touche'),
+                  (Icons.favorite_rounded, 'Votre bulle est née'),
+                ],
+              ),
+              const SizedBox(height: 20),
               FilledButton.icon(
+                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
                 icon: const Icon(Icons.send_rounded),
-                label: const Text('Envoyer l\'invitation'),
+                label: const Text('Envoyer le lien à mon amour'),
                 onPressed: _code == null
                     ? null
                     : () async =>
                           SharePlus.instance.share(ShareParams(text: await widget.couple.invitationText(_code!))),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 26),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: cs.outline)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Text('À côté de toi ? Fais-lui scanner', style: _soft(context)?.copyWith(fontSize: 13)),
+                  ),
+                  Expanded(child: Divider(color: cs.outline)),
+                ],
+              ),
+              const SizedBox(height: 16),
               Center(
                 child: Container(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: cs.surfaceContainer,
-                    borderRadius: BorderRadius.circular(32),
+                    borderRadius: BorderRadius.circular(30),
                     boxShadow: [BoxShadow(color: cs.secondary.withValues(alpha: .28), blurRadius: 40, spreadRadius: 2)],
                   ),
                   child: _qr == null
-                      ? const SizedBox.square(dimension: 220, child: Center(child: CircularProgressIndicator()))
+                      ? const SizedBox.square(dimension: 200, child: Center(child: CircularProgressIndicator()))
                       : QrImageView(
                           data: _qr!,
-                          size: 220,
+                          size: 200,
                           backgroundColor: cs.surfaceContainer,
                           eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.circle, color: cs.primary),
                           dataModuleStyle: QrDataModuleStyle(
@@ -654,55 +854,68 @@ class _InviteScreenState extends State<InviteScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 22),
-              if (_code != null) ...[
-                Center(
-                  child: SelectableText(
-                    _pretty(_code!),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 3,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: Text(
-                    'Le code seul, à taper, marche aussi (il faudra alors échanger vos liens). Valable 24 h, une fois.',
-                    textAlign: TextAlign.center,
-                    style: _soft(context)?.copyWith(fontSize: 13),
-                  ),
-                ),
-                Center(
-                  child: TextButton(
-                    onPressed: () => _newCode(forceNew: true),
-                    child: const Text('Générer un nouveau code'),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: const Text('Copier l\'invitation'),
-                      onPressed: () async {
-                        final text = await widget.couple.invitationText(_code!);
-                        await Clipboard.setData(ClipboardData(text: text));
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(const SnackBar(content: Text('Invitation copiée')));
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
               const SizedBox(height: 18),
-              const Center(child: BeatingHeart(size: 46)),
+              const Center(child: BeatingHeart(size: 42)),
               Center(child: Text('En attente de ton amour…', style: _soft(context))),
+              const SizedBox(height: 10),
+              if (_code != null)
+                Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: Text('Le lien ne s\'ouvre pas chez ton amour ?', style: _soft(context)?.copyWith(fontSize: 14)),
+                    children: [
+                      Text(
+                        'Copie l\'invitation et envoie-la. Ton amour la copie, ouvre FouLove, touche '
+                        '« Mon amour m\'a invité(e) » : elle est reconnue toute seule. Ou il tape ce code :',
+                        style: _soft(context)?.copyWith(fontSize: 13.5),
+                      ),
+                      const SizedBox(height: 10),
+                      SelectableText(
+                        _pretty(_code!),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 3,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        'Valable 24 h, une fois. Avec le code seul, vous échangerez vos liens juste après.',
+                        textAlign: TextAlign.center,
+                        style: _soft(context)?.copyWith(fontSize: 12.5),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.copy_rounded, size: 18),
+                            label: const Text('Copier l\'invitation'),
+                            onPressed: () async {
+                              final text = await widget.couple.invitationText(_code!);
+                              await Clipboard.setData(ClipboardData(text: text));
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(const SnackBar(content: Text('Invitation copiée')));
+                              }
+                            },
+                          ),
+                          TextButton(
+                            onPressed: () => _newCode(forceNew: true),
+                            child: const Text('Nouveau code'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 6),
+              // Erreur fréquente : les deux ont touché « J'invite ». Une sortie visible, pas cachée dans un menu.
+              OutlinedButton.icon(
+                icon: const Icon(Icons.mark_email_read_rounded, size: 18),
+                label: const Text('C\'est mon amour qui m\'a invité(e)'),
+                onPressed: () => _menu('join'),
+              ),
             ],
           ),
         ),
@@ -743,7 +956,7 @@ class _JoinScreenState extends State<JoinScreen> {
 
   void _onDetect(BarcodeCapture cap) {
     final v = cap.barcodes.firstOrNull?.rawValue;
-    if (v == null || !v.startsWith('foulove:') || _scanned != null) return;
+    if (v == null || !CoupleService.isFullInvitation(v) || _scanned != null) return;
     _scanned = v;
     _camera.stop();
     _submit(v);
@@ -751,7 +964,7 @@ class _JoinScreenState extends State<JoinScreen> {
 
   Future<void> _paste() async {
     final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
-    if (CoupleService.parseInvitation(t) == null || !t.contains('foulove:')) {
+    if (!CoupleService.isFullInvitation(t)) {
       setState(() => _error = 'Aucune invitation dans le presse-papiers. Copie d\'abord tout le message reçu.');
       return;
     }
@@ -1006,8 +1219,9 @@ class VerifyScreen extends StatelessWidget {
 }
 
 /// À distance, sans appel : chacun envoie son « lien de retrouvailles » (l'empreinte de sa clé) par une autre
-/// messagerie, et colle celui de l'autre. S'il correspond à la clé reçue, elle est vérifiée.
-class LinkExchange extends StatelessWidget {
+/// messagerie, et **touche** celui de l'autre (FouLove s'ouvre et le vérifie tout seul) ou le colle.
+/// S'il correspond à la clé reçue, elle est vérifiée.
+class LinkExchange extends StatefulWidget {
   const LinkExchange({
     super.key,
     required this.couple,
@@ -1024,63 +1238,144 @@ class LinkExchange extends StatelessWidget {
   final Future<void> Function() onVerified;
 
   @override
+  State<LinkExchange> createState() => _LinkExchangeState();
+}
+
+class _LinkExchangeState extends State<LinkExchange> {
+  @override
+  void initState() {
+    super.initState();
+    IncomingLinks.idLink.addListener(_incoming);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _incoming());
+  }
+
+  @override
+  void dispose() {
+    IncomingLinks.idLink.removeListener(_incoming);
+    super.dispose();
+  }
+
+  // Lien touché dans WhatsApp : FouLove s'est ouverte avec lui.
+  void _incoming() {
+    final t = IncomingLinks.idLink.value;
+    if (t == null || !mounted) return;
+    IncomingLinks.idLink.value = null;
+    _try(t);
+  }
+
+  Future<void> _try(String t) async {
+    final ok = await widget.couple.acceptByLink(widget.partnerId, widget.identity, t, keyChange: widget.keyChange);
+    if (!mounted) return;
+    if (ok) {
+      HapticFeedback.heavyImpact();
+      await widget.onVerified();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            CoupleService.isIdLink(t)
+                ? 'Ce lien ne correspond pas à la clé reçue. N\'allez pas plus loin : parlez-en de vive voix.'
+                : 'Copie d\'abord tout le message de ton amour, puis touche « Coller son lien ».',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: Divider(color: cs.outline)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text('par une autre messagerie', style: _soft(context)?.copyWith(fontSize: 12.5)),
-              ),
-              Expanded(child: Divider(color: cs.outline)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text('Envoyer mon lien'),
-                  onPressed: () async => SharePlus.instance.share(ShareParams(text: await couple.fingerprintLink())),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.content_paste_rounded, size: 18),
-                  label: const Text('Coller son lien'),
-                  onPressed: () async {
-                    final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
-                    final ok = await couple.acceptByLink(partnerId, identity, t, keyChange: keyChange);
-                    if (!context.mounted) return;
-                    if (ok) {
-                      HapticFeedback.heavyImpact();
-                      await onVerified();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            t.contains(CoupleService.idPrefix)
-                                ? 'Ce lien ne correspond pas à la clé reçue. N\'allez pas plus loin : parlez-en de vive voix.'
-                                : 'Copie d\'abord tout le message de ton amour, puis touche « Coller son lien ».',
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Steps(
+          steps: const [
+            (Icons.send_rounded, 'Envoie ton lien'),
+            (Icons.touch_app_rounded, 'Touche le sien'),
+            (Icons.verified_rounded, 'C\'est vérifié'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          icon: const Icon(Icons.send_rounded, size: 18),
+          label: const Text('Envoyer mon lien'),
+          onPressed: () async => SharePlus.instance.share(ShareParams(text: await widget.couple.fingerprintLink())),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.content_paste_rounded, size: 18),
+          label: const Text('Coller son lien'),
+          onPressed: () async => _try((await Clipboard.getData(Clipboard.kTextPlain))?.text ?? ''),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Le lien de ton amour s\'ouvre tout seul dans FouLove quand tu le touches.',
+          textAlign: TextAlign.center,
+          style: _soft(context)?.copyWith(fontSize: 12.5, color: cs.onSurfaceVariant),
+        ),
+      ],
     );
+  }
+}
+
+/// Montrer plutôt qu'écrire : une petite frise d'étapes avec icônes (les gens ne lisent pas les paragraphes).
+class _Steps extends StatelessWidget {
+  const _Steps({required this.steps});
+
+  final List<(IconData, String)> steps;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final children = <Widget>[];
+    for (var i = 0; i < steps.length; i++) {
+      if (i > 0) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 22),
+            child: Icon(Icons.arrow_forward_rounded, size: 18, color: cs.outline),
+          ),
+        );
+      }
+      children.add(
+        Expanded(
+          child: Column(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(color: cs.primary.withValues(alpha: .13), shape: BoxShape.circle),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(steps[i].$1, color: cs.primary, size: 24),
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: CircleAvatar(
+                        radius: 9,
+                        backgroundColor: cs.primary,
+                        child: Text(
+                          '${i + 1}',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cs.onPrimary),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                steps[i].$2,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: cs.onSurface, height: 1.2),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: children);
   }
 }
 

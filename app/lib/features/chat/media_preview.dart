@@ -19,13 +19,14 @@ bool isVideoFile(XFile f) {
 }
 
 /// Aperçu avant l'envoi, comme WhatsApp : les photos en grand, la bande des miniatures (toucher pour voir, croix pour
-/// retirer, « + » pour en ajouter), une légende, puis Envoyer. Renvoie la sélection et la légende, ou `null`.
-Future<(List<PickedMedia>, String)?> previewMedia(
+/// retirer, « + » pour en ajouter), une légende, le bouton « 1 » (vue unique, pour un seul élément), puis Envoyer.
+/// Renvoie la sélection, la légende et le choix « vue unique », ou `null`.
+Future<(List<PickedMedia>, String, bool)?> previewMedia(
   BuildContext context,
   List<XFile> files, {
   String caption = '',
   required String to,
-}) => Navigator.of(context).push<(List<PickedMedia>, String)>(
+}) => Navigator.of(context).push<(List<PickedMedia>, String, bool)>(
   MaterialPageRoute(
     fullscreenDialog: true,
     builder: (_) =>
@@ -47,6 +48,9 @@ class _MediaPreview extends StatefulWidget {
 class _MediaPreviewState extends State<_MediaPreview> {
   late final List<PickedMedia> _items = [...widget.initial];
   late final _caption = TextEditingController(text: widget.caption);
+
+  /// Vue unique (bouton « 1 ») : seulement quand un seul élément part.
+  bool _once = false;
   final _pages = PageController();
   int _current = 0;
 
@@ -224,13 +228,40 @@ class _MediaPreviewState extends State<_MediaPreview> {
                       ),
                     ),
                   ),
+                  if (_items.length == 1) ...[
+                    const SizedBox(width: 6),
+                    _OnceButton(
+                      on: _once,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _once = !_once);
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                              content: Text(
+                                _once
+                                    ? 'Vue unique : ${widget.to} pourra l\'ouvrir une seule fois, sans capture d\'écran.'
+                                    : 'Vue unique désactivée.',
+                              ),
+                            ),
+                          );
+                      },
+                    ),
+                  ],
                   const SizedBox(width: 8),
                   Material(
                     color: cs.primary,
                     shape: const CircleBorder(),
                     child: InkWell(
                       customBorder: const CircleBorder(),
-                      onTap: () => Navigator.pop(context, (List<PickedMedia>.of(_items), _caption.text.trim())),
+                      onTap: () => Navigator.pop(
+                        context,
+                        (List<PickedMedia>.of(_items), _caption.text.trim(), _once && _items.length == 1),
+                      ),
                       child: SizedBox.square(
                         dimension: 50,
                         child: Icon(Icons.send_rounded, color: cs.onPrimary, semanticLabel: 'Envoyer'),
@@ -286,4 +317,42 @@ class _VideoFrameState extends State<_VideoFrame> {
       );
     },
   );
+}
+
+/// Le bouton « 1 » de la vue unique, comme sur WhatsApp : un chiffre dans un cercle, plein quand il est actif.
+class _OnceButton extends StatelessWidget {
+  const _OnceButton({required this.on, required this.onTap});
+
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      toggled: on,
+      label: 'Vue unique',
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 40,
+          height: 40,
+          margin: const EdgeInsets.only(bottom: 5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: on ? cs.primary : Colors.transparent,
+            border: Border.all(color: on ? cs.primary : Colors.white70, width: 2),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '1',
+            style: TextStyle(color: on ? cs.onPrimary : Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+        ),
+      ),
+    );
+  }
 }

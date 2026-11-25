@@ -1,13 +1,35 @@
 # Suivi FouLove
 
 ## État actuel (25 nov. 2026)
-- Test fermé Google Play. Dernier AAB : **1.0.0+4** (`~/Desktop/FouLove-1.0.0-build4.aab`), envoyé par l'utilisateur.
+- Test fermé Google Play. Dernier AAB : **1.0.0+5** (`~/Desktop/FouLove-1.0.0-build5.aab`) : audit de sécurité,
+  appairage par lien, vue unique, panneau émojis. Ordre de sortie : site (`vercel deploy --prod`, pour les liens
+  d'app) → AAB sur Play → `git push` (le rapport d'audit devient public) → plus tard couper « Allow public access »
+  de Realtime quand plus personne n'a la 1.0.0+4.
 - Fonctionne : messages chiffrés, photos/vidéos/vocaux, instants, lettres, souvenirs, sauvegarde, thème.
 - Ajouté dans 1.0.0+3 / +4 : stickers (pack de 2 037 sur R2 + import + favoris), modification 15 min,
   réponses façon WhatsApp avec saut au message, albums photo, aperçu avant envoi, galerie Android, nouveau thème.
 
 ## Retours testeurs
 ### Corrigés
+- (25 nov., 1.0.0+5) Appairage confus, les deux créaient une bulle → écran de choix à deux cartes de même poids
+  (« J'invite mon amour » / « Mon amour m'a invité(e) »), frises d'étapes en icônes, sortie visible
+  « C'est mon amour qui m'a invité(e) » (`couple_screens.dart`). Si les deux ont créé : toucher le lien de l'autre
+  remplace la bulle vide (`InvitationReceivedScreen`). Testé sur 2 émulateurs avec 2 comptes jetables (supprimés).
+- (25 nov.) Invitation « pas un lien » → vrai lien `https://foulove.josuecode.com/rejoindre/#2.code.empreinte.secret`
+  qui ouvre l'app (App Links, `site/public/.well-known/assetlinks.json` avec les 5 empreintes : Play ×3, envoi,
+  debug), pages de secours `site/src/pages/rejoindre.astro` et `lien.astro`, réception `incoming_links.dart`
+  (paquet `app_links`). Liens de retrouvailles aussi en `…/lien/#empreinte`. Anciens formats acceptés.
+  Test : `app/test/invitation_test.dart`.
+- (25 nov.) Vue unique demandée → bouton « 1 » dans l'aperçu (`media_preview.dart`), bulle `ViewOnceBubble` et
+  écran protégé `view_once.dart` (FLAG_SECURE : capture noire vérifiée), cœur `create_view_once`,
+  `view_once_begin/done`, `purge_view_once` (14 jours), protobuf 21/22, colonne `media.view_once`
+  (`chat_media.rs`, `store.rs`), exclue de la galerie, des albums et de la sauvegarde. Tests `core/tests/view_once.rs`.
+  Vérifié de bout en bout : « Ouverte » chez l'expéditeur, plus de fichier chez le destinataire, 0 objet sur R2.
+- (25 nov.) Bouton smiley = stickers → panneau Émojis | Stickers façon WhatsApp (`expression_panel.dart`, paquet
+  `emoji_picker_flutter`), ouvre sur les smileys ; l'onglet « Mes stickers » n'a plus l'icône smiley.
+- (25 nov.) Play Console, version 1 sautée : cause trouvée dans l'historique, c'était le **verrou d'orientation**
+  portrait de l'écran de recadrage (retiré en 1.0.0+2, commit d4ddcc4), pas la capture d'écran. Rien ne reste.
+  Play refuse toujours un numéro de version déjà envoyé, même jamais publié.
 - Toucher un vocal ouvrait la visionneuse photo → `chat_screen.dart` (`_tap`, seulement photos/vidéos/stickers).
 - Galerie = explorateur de fichiers, pas de sélection multiple → `main.dart` (`useAndroidPhotoPicker`), `media_preview.dart`.
 - Pas de stickers → pack R2 (`sticker_pack.dart`, fonction `media` action `stickers`) + import (`stickers.dart`).

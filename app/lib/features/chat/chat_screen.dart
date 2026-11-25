@@ -17,7 +17,9 @@ import '../space/widgets.dart';
 import 'bubble_look.dart';
 import 'media_preview.dart';
 import 'space_screen.dart';
+import 'expression_panel.dart';
 import 'stickers.dart';
+import 'view_once.dart';
 import 'voice.dart';
 import 'media_viewer.dart';
 
@@ -72,7 +74,11 @@ const _reactions = ['❤️', '🥰', '😂', '😮', '😢', '🔥'];
 /// Photos et vidéos envoyées d'affilée (moins de 2 minutes entre chacune) : regroupées en album, comme WhatsApp.
 const _albumGapMs = 120000;
 
-bool _isPhotoOrVideo(ChatMessage m) => !m.deleted && (m.media?.kind == 1 || m.media?.kind == 2) && m.quote == null;
+bool _isPhotoOrVideo(ChatMessage m) =>
+    !m.deleted && (m.media?.kind == 1 || m.media?.kind == 2) && m.quote == null && !_isViewOnce(m);
+
+/// Vue unique : jamais dans un album, jamais d'aperçu.
+bool _isViewOnce(ChatMessage m) => (m.media?.viewOnce ?? 0) != 0;
 
 /// Peut rejoindre un album : ni légende, ni réponse (seule la première photo du lot peut en avoir).
 bool _plainMedia(ChatMessage m) => _isPhotoOrVideo(m) && m.body.isEmpty && m.replyTo == null;
@@ -91,7 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String _draft = '';
   bool _showJump = false;
 
-  /// Panneau des stickers ouvert à la place du clavier.
+  /// Panneau émojis et stickers ouvert à la place du clavier.
   bool _panel = false;
 
   /// Hauteur du clavier, retenue pour que le panneau des stickers prenne exactement sa place.
@@ -399,7 +405,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final picked = await previewMedia(context, files, caption: _input.text.trim(), to: _s.partnerLabel);
     if (mounted) FocusScope.of(context).unfocus();
     if (picked == null || !mounted) return;
-    final (items, caption) = picked;
+    final (items, caption, viewOnce) = picked;
     final reply = _replyTo?.id;
     _input.clear();
     setState(() => _replyTo = null);
@@ -430,9 +436,15 @@ class _ChatScreenState extends State<ChatScreen> {
             caption: i == 0 ? caption : '',
             replyTo: i == 0 ? reply : null,
             onProgress: (p) => progress.value = p,
+            viewOnce: viewOnce,
           );
         } else {
-          await _s.sendPhoto(f.file.path, caption: i == 0 ? caption : '', replyTo: i == 0 ? reply : null);
+          await _s.sendPhoto(
+            f.file.path,
+            caption: i == 0 ? caption : '',
+            replyTo: i == 0 ? reply : null,
+            viewOnce: viewOnce,
+          );
         }
         _toBottom();
       } catch (e) {
@@ -561,13 +573,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 title: const Text('Répondre'),
                 onTap: () => Navigator.pop(context, 'reply'),
               ),
-              if (ChatService.canEdit(m))
+              if (ChatService.canEdit(m) && !_isViewOnce(m))
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),
                   title: Text(m.media == null ? 'Modifier' : 'Modifier la légende'),
                   onTap: () => Navigator.pop(context, 'edit'),
                 ),
-              if (m.body.isNotEmpty)
+              if (m.body.isNotEmpty && !_isViewOnce(m))
                 ListTile(
                   leading: const Icon(Icons.copy_rounded),
                   title: const Text('Copier'),
@@ -786,10 +798,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutCubic,
                   child: _panel
-                      ? StickerPanel(
+                      ? ExpressionPanel(
                           height: panelHeight,
                           bottomInset: _keyboard > 0 ? 0 : widget.bottomInset,
-                          onSend: _sendSticker,
+                          input: _input,
+                          onSticker: _sendSticker,
                         )
                       : const SizedBox(width: double.infinity),
                 ),
@@ -1177,6 +1190,10 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
   VoidCallback? _tap(ChatMessage m) {
     final md = m.media;
     if (md == null || widget.group.length > 1) return null;
+    // Vue unique : seul le destinataire l'ouvre, une fois, quand elle est téléchargée.
+    if (md.viewOnce != 0) {
+      return !m.fromMe && md.viewOnce == 1 && md.state == 1 ? () => openViewOnce(context, widget.service, m) : null;
+    }
     if (md.kind == 4) return () => showStickerSheet(context, widget.service, m);
     if (md.kind == 1 || md.kind == 2) {
       final ready = md.state == 1 || (m.fromMe && md.state != 3);
@@ -1214,6 +1231,15 @@ class _BubbleState extends State<_Bubble> with TickerProviderStateMixin {
 
     Widget bubble = group.length > 1
         ? _AlbumBubble(group: group, service: widget.service, radius: radius, fg: fg, mine: mine, quote: quote)
+        : _isViewOnce(m)
+        ? ViewOnceBubble(
+            m: m,
+            mine: mine,
+            fg: fg,
+            decoration: look.box(context, fromMe: mine, radius: radius),
+            meta: _Meta(m: m, color: fg),
+            quote: quote,
+          )
         : m.media?.kind == 3
         ? _VoiceBubble(m: m, radius: radius, fg: fg, mine: mine, night: night, quote: quote)
         : m.media?.kind == 4
@@ -1520,6 +1546,7 @@ class _MomentQuote extends StatelessWidget {
 (IconData?, String) _snippet(ChatMessage? q) {
   if (q == null) return (null, 'Message introuvable');
   if (q.deleted) return (Icons.block_rounded, 'Message supprimé');
+  if (_isViewOnce(q)) return (Icons.looks_one_outlined, q.media?.kind == 2 ? 'Vidéo · vue unique' : 'Photo · vue unique');
   return switch (q.media?.kind) {
     1 => (Icons.photo_camera_rounded, q.body.isNotEmpty ? q.body : 'Photo'),
     2 => (Icons.videocam_rounded, q.body.isNotEmpty ? q.body : 'Vidéo'),
@@ -1675,7 +1702,7 @@ class _ReplyQuote extends StatelessWidget {
 
 // ===================================================================== saisie
 
-/// Barre de saisie façon WhatsApp : stickers à gauche, trombone et appareil photo à droite, micro ou envoi.
+/// Barre de saisie façon WhatsApp : émojis et stickers à gauche, trombone et appareil photo à droite, micro ou envoi.
 /// Au-dessus du champ : la réponse en cours, ou le message en cours de modification.
 class _Composer extends StatelessWidget {
   const _Composer({
@@ -1779,7 +1806,7 @@ class _Composer extends StatelessWidget {
                             key: ValueKey(panel),
                           ),
                         ),
-                        tooltip: panel ? 'Clavier' : 'Stickers',
+                        tooltip: panel ? 'Clavier' : 'Émojis et stickers',
                         color: cs.onSurfaceVariant,
                         onPressed: editing != null ? null : onStickers,
                       ),

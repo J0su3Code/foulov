@@ -182,6 +182,12 @@ fn migrate(conn: &Connection) -> Result<(), StoreError> {
     if !has_edited {
         conn.execute_batch("ALTER TABLE messages ADD COLUMN edited_at INTEGER")?;
     }
+    // Vue unique : 0 normal, 1 pas encore ouverte, 2 ouverte (chez l'expéditeur : ouverte par l'autre),
+    // 3 en cours d'affichage (chez le destinataire), 4 expirée.
+    let has_view_once: bool = conn.prepare("SELECT 1 FROM pragma_table_info('media') WHERE name = 'view_once'")?.exists([])?;
+    if !has_view_once {
+        conn.execute_batch("ALTER TABLE media ADD COLUMN view_once INTEGER NOT NULL DEFAULT 0")?;
+    }
     Ok(())
 }
 

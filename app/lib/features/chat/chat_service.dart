@@ -78,6 +78,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     dates = await chatDates();
     await _loadPage();
     _mediaDir = '${(await getApplicationSupportDirectory()).path}/media';
+    unawaited(purgeViewOnce());
     await space.load();
     rescheduleReminders(); // après le chargement des anniversaires de chacun
     _channel = _db
@@ -447,6 +448,37 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(flush());
   }
 
+  // ------------------------------------------------------------------ vue unique
+
+  /// Ouvre une vue unique reçue : lisible le temps de l'affichage. Lève une erreur si elle n'est plus ouvrable.
+  Future<void> openViewOnce(String id) => chatViewOnceBegin(messageId: id);
+
+  /// Fin de l'affichage : contenu détruit ici et sur R2, et l'expéditeur voit « Ouverte ».
+  Future<void> closeViewOnce(String id) async {
+    await chatViewOnceDone(partner: partnerId, messageId: id);
+    _cache.remove(id);
+    await _refresh([id]);
+    _notify();
+    unawaited(flush());
+    unawaited(transfer()); // l'objet R2 de la vue unique part à la corbeille
+  }
+
+  /// Vues uniques restées ouvertes (app arrêtée pendant l'affichage) ou expirées : détruites.
+  Future<void> purgeViewOnce() async {
+    try {
+      final pending = await chatViewOnceFinishPending(partner: partnerId);
+      final expired = await chatPurgeViewOnce();
+      if (pending.isNotEmpty || expired > 0) {
+        await _loadPage();
+        _notify();
+        unawaited(flush());
+        unawaited(transfer());
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FOULOVE] vue unique : $e');
+    }
+  }
+
   Future<void> deleteForMe(String id) async {
     await chatDeleteForMe(id: id);
     _cache.remove(id);
@@ -536,7 +568,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   ///
   /// Avant tout chiffrement, la photo est réencodée en JPEG (2048 px au plus) : cela retire toutes ses
   /// métadonnées (position GPS, modèle du téléphone, date), qui ne quittent donc jamais le téléphone.
-  Future<void> sendPhoto(String path, {String caption = '', String? replyTo}) async {
+  /// `viewOnce` : vue unique (ni miniature, ni copie gardée ici après l'envoi).
+  Future<void> sendPhoto(String path, {String caption = '', String? replyTo, bool viewOnce = false}) async {
     final full = await FlutterImageCompress.compressWithFile(
       path,
       minWidth: 2048,
@@ -559,8 +592,9 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       thumb: thumb,
       caption: caption,
       replyTo: replyTo,
+      viewOnce: viewOnce,
     );
-    remember(created.message.id, full);
+    if (!viewOnce) remember(created.message.id, full);
     _upsert(created.message);
     _notify();
     unawaited(transfer());
@@ -587,6 +621,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
       thumb: thumb,
       caption: '',
       replyTo: replyTo,
+      viewOnce: false,
     );
     remember(created.message.id, data);
     _upsert(created.message);
@@ -598,7 +633,13 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
   /// Prépare et envoie une vidéo : réencodée en MP4 720p (bien plus légère, et sans ses métadonnées,
   /// position GPS comprise), puis chiffrée par blocs depuis le fichier, sans jamais tout charger en mémoire.
   /// `onProgress` reçoit l'avancement du réencodage (0 → 1).
-  Future<void> sendVideo(String path, {String caption = '', String? replyTo, void Function(double)? onProgress}) =>
+  Future<void> sendVideo(
+    String path, {
+    String caption = '',
+    String? replyTo,
+    void Function(double)? onProgress,
+    bool viewOnce = false,
+  }) =>
       withCompressedVideo(path, onProgress, (out, thumb, w, h, ms) async {
         final created = await chatCreateMediaFile(
           dir: _mediaDir,
@@ -611,6 +652,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
           thumb: thumb,
           caption: caption,
           replyTo: replyTo,
+          viewOnce: viewOnce,
         );
         _upsert(created.message);
         _notify();
@@ -668,6 +710,7 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
         thumb: Uint8List.fromList(waveform),
         caption: '',
         replyTo: replyTo,
+        viewOnce: false,
       );
       _upsert(created.message);
       _notify();

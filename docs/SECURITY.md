@@ -117,7 +117,10 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
    - depuis l'invitation v2 (point 3), le QR code contient aussi le secret d'appairage : la clé de Malik est confirmée
      automatiquement chez Inès. (Avec un ancien QR code sans secret, Malik envoie son lien, point 4.)
 3. **À distance : l'invitation complète** (`core/src/invite.rs`, tests `core/tests/invite.rs`). Inès l'envoie par une
-   autre messagerie (WhatsApp, SMS…) ; Malik la copie et la colle. Elle contient `foulove:2:<code>:<empreinte>:<secret>` :
+   autre messagerie (WhatsApp, SMS…) ; Malik **touche le lien** et FouLove s'ouvre (lien d'application Android,
+   vérifié par `site/public/.well-known/assetlinks.json`). C'est `https://foulove.josuecode.com/rejoindre/#2.<code>.<empreinte>.<secret>` :
+   tout est **après le `#`**, partie d'une adresse que le navigateur n'envoie jamais au site ni aux aperçus de liens.
+   (L'ancien texte `foulove:2:<code>:<empreinte>:<secret>` reste accepté.) Il contient :
    - l'**empreinte** de la clé d'Inès : le téléphone de Malik la compare à la clé publiée par le serveur (comme le QR) ;
    - un **secret de 128 bits**, tiré sur le téléphone d'Inès et jamais envoyé à notre serveur. Le premier message
      chiffré de Malik contient `HMAC-SHA256(secret, « FouLove-join-v1 » ‖ clé de Malik ‖ clé d'Inès)` ; le téléphone
@@ -154,6 +157,15 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
 9. **Vidéos** : réencodées en MP4 720p sur le téléphone (ce qui retire aussi leurs métadonnées, position comprise), puis chiffrées par blocs depuis le fichier, sans jamais être chargées entières en mémoire. Les copies en clair créées par le réencodage et par le sélecteur sont effacées dès le chiffrement terminé. Chaque bloc STREAM s'authentifie seul (numéro de bloc et drapeau « dernier bloc » dans le nonce) : on peut lire n'importe quelle plage, et une altération ou une troncature est détectée.
 10. **Lecture des vidéos sans fichier en clair** : le lecteur du système lit une adresse locale (`video_proxy.dart`). Ce serveur interne n'écoute que sur 127.0.0.1, exige un jeton aléatoire de 128 bits propre à chaque lancement de l'app, et déchiffre à la volée les plages demandées. Android n'autorise le HTTP non chiffré que vers 127.0.0.1 (`network_security_config.xml`) ; tout le reste passe par TLS.
 11. **Sur le téléphone, les fichiers restent chiffrés** ; leur clé ne quitte jamais la base SQLCipher. Une photo n'est déchiffrée qu'**en mémoire**, pour l'affichage : rien n'est jamais écrit en clair, et les photos n'apparaissent pas dans la galerie du téléphone.
+12. **Vue unique** (`core/src/chat_media.rs`, tests `core/tests/view_once.rs`), comme WhatsApp : une photo ou une
+    vidéo part **sans miniature**, sous un numéro de contenu à part (une ancienne version de l'app la garde de côté
+    au lieu de l'afficher comme une photo ordinaire). L'expéditeur efface son fichier et sa clé dès l'envoi : il ne
+    peut pas la revoir. Chez le destinataire, elle n'est lisible que pendant l'affichage, plein écran, **capture
+    d'écran et aperçu des apps récentes bloqués** (`FLAG_SECURE`, Android) ; la refermer, ou quitter l'app, la
+    détruit (fichier, clé, objet R2) et l'expéditeur voit « Ouverte ». Une vue unique restée ouverte pendant un
+    arrêt de l'app est détruite au démarrage. Jamais ouverte : détruite après 14 jours. Jamais dans la galerie,
+    les albums, la sauvegarde ni le transfert d'historique ; ni copie ni modification de légende. Limite assumée :
+    rien n'empêche de la photographier avec un autre appareil.
 
 ## 7. Stockage local, verrouillage et récupération
 

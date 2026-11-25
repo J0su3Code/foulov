@@ -18,6 +18,7 @@ fn info(m: foulov_core::chat::MediaInfo) -> MediaInfo {
         duration_ms: m.duration_ms,
         thumb: m.thumb,
         state: m.state,
+        view_once: m.view_once,
     }
 }
 

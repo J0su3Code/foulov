@@ -12,6 +12,7 @@ import 'features/auth/auth_service.dart';
 import 'features/auth/login_screen.dart';
 import 'features/couple/couple_screens.dart';
 import 'features/couple/couple_service.dart';
+import 'features/couple/incoming_links.dart';
 import 'features/intro/intro_screen.dart';
 import 'features/lock/app_lock.dart';
 import 'src/rust/frb_generated.dart';
@@ -32,6 +33,8 @@ Future<void> main() async {
     authOptions: FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
   );
   await AppLock.instance.init();
+  // Invitations et liens de retrouvailles touchés dans WhatsApp, SMS, l'appareil photo…
+  await IncomingLinks.init();
   await ThemeModeSetting.instance.load();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);

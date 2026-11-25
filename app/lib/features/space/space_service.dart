@@ -81,6 +81,7 @@ class SpaceService extends ChangeNotifier {
   Future<void> _expire() async {
     final before = moments.length;
     final n = await spacePurgeMoments().catchError((_) => 0);
+    unawaited(chat.purgeViewOnce()); // vues uniques expirées (14 jours)
     await _moments();
     if (n > 0 || moments.length != before) {
       _notify();

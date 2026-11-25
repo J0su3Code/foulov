@@ -276,7 +276,8 @@ impl Device {
             let c = self.store.conn.lock();
             let mut b = bpb::Backup { version: 1, created_at: crate::chat::now_ms() as u64, ..Default::default() };
             let mut st = c
-                .prepare("SELECT id, from_me, body, reply_to, sent_at, received_at, status, my_reaction, their_reaction, deleted, quote_text, quote_thumb, edited_at FROM messages")
+                .prepare("SELECT id, from_me, body, reply_to, sent_at, received_at, status, my_reaction, their_reaction, deleted, quote_text, quote_thumb, edited_at FROM messages
+                          WHERE id NOT IN (SELECT message_id FROM media WHERE view_once != 0)")
                 .map_err(db)?;
             b.messages = st
                 .query_map([], |r| {
@@ -303,7 +304,7 @@ impl Device {
             let mut st = c
                 .prepare(
                     "SELECT message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, purpose
-                     FROM media WHERE object_key IS NOT NULL AND state != 3 AND purpose IN (0, 1)",
+                     FROM media WHERE object_key IS NOT NULL AND state != 3 AND purpose IN (0, 1) AND view_once = 0",
                 )
                 .map_err(db)?;
             b.media = st

@@ -186,10 +186,20 @@ pub(crate) fn io(e: std::io::Error) -> DeviceError {
     DeviceError::Protocol(format!("fichier : {e}"))
 }
 
+/// Une vue unique non ouverte expire au bout de 14 jours (comme WhatsApp) : clé et fichier détruits.
+pub const VIEW_ONCE_TTL_MS: i64 = 14 * 86_400_000;
+
 /// Applique un message « photo ou vidéo » reçu (appelé dans la transaction de `receive`).
-pub(crate) fn apply_media(c: &rusqlite::Connection, m: pb::Media) -> R<Received> {
+/// `view_once` : vue unique (photo ou vidéo seulement) ; sa miniature, s'il y en a une, n'est pas gardée.
+pub(crate) fn apply_media(c: &rusqlite::Connection, mut m: pb::Media, view_once: bool) -> R<Received> {
     let id = id_from_wire(&m.id).ok_or(DeviceError::BadMessage)?;
     let kind = u8::try_from(m.kind).map_err(|_| DeviceError::BadMessage)?;
+    if view_once {
+        if kind != KIND_PHOTO && kind != KIND_VIDEO {
+            return Err(DeviceError::BadMessage);
+        }
+        m.thumb.clear();
+    }
     let caption = m.caption.trim().to_owned();
     if !check_meta(kind, &m.mime, &m.thumb, &caption, m.width, m.height)
         || !valid_object_key(&m.object_key)
@@ -213,19 +223,75 @@ pub(crate) fn apply_media(c: &rusqlite::Connection, m: pb::Media) -> R<Received>
         return Ok(Received::Nothing);
     }
     c.execute(
-        "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, 2)",
-        params![id, kind, m.object_key, m.file_key, m.sha256, m.size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb],
+        "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state,
+           view_once) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, 2, ?12)",
+        params![id, kind, m.object_key, m.file_key, m.sha256, m.size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb, view_once as i64],
     )
     .map_err(db)?;
     let msg = c.query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message).map_err(db)?;
     Ok(Received::Message(msg))
 }
 
+/// Chez l'expéditeur : sa vue unique a été ouverte par l'autre. L'objet R2 part à la corbeille (l'autre l'a déjà
+/// retiré ; une seconde suppression est sans effet).
+pub(crate) fn apply_view_once_opened(c: &rusqlite::Connection, x: pb::Ref) -> R<Received> {
+    let id = id_from_wire(&x.id).ok_or(DeviceError::BadMessage)?;
+    let key: Option<Option<String>> = c
+        .query_row(
+            "SELECT md.object_key FROM media md JOIN messages m ON m.id = md.message_id
+             WHERE md.message_id = ?1 AND m.from_me = 1 AND md.view_once = 1",
+            params![id],
+            |r| r.get(0),
+        )
+        .optional()
+        .map_err(db)?;
+    let Some(key) = key else { return Ok(Received::Nothing) };
+    if let Some(k) = key {
+        c.execute("INSERT OR IGNORE INTO r2_trash (object_key) VALUES (?1)", params![k]).map_err(db)?;
+    }
+    c.execute("UPDATE media SET view_once = 2 WHERE message_id = ?1", params![id]).map_err(db)?;
+    Ok(Received::Updated(vec![id]))
+}
+
+/// Détruit le contenu d'une vue unique sur ce téléphone : fichier chiffré local, clé, et (s'il y a lieu) objet R2.
+/// Le message reste, comme trace (« Photo · ouverte » ou « expirée »).
+fn destroy_view_once(c: &rusqlite::Connection, id: &str, trash: bool, status: i64) -> R<()> {
+    let row: Option<(Option<String>, Option<String>)> = c
+        .query_row("SELECT path, object_key FROM media WHERE message_id = ?1", params![id], |r| Ok((r.get(0)?, r.get(1)?)))
+        .optional()
+        .map_err(db)?;
+    let Some((path, key)) = row else { return Ok(()) };
+    if let Some(p) = path {
+        let _ = fs::remove_file(p);
+    }
+    if let (true, Some(k)) = (trash, key) {
+        c.execute("INSERT OR IGNORE INTO r2_trash (object_key) VALUES (?1)", params![k]).map_err(db)?;
+    }
+    c.execute(
+        "UPDATE media SET path = NULL, file_key = X'', sha256 = X'', thumb = X'', state = 4, view_once = ?2 WHERE message_id = ?1",
+        params![id, status],
+    )
+    .map_err(db)?;
+    Ok(())
+}
+
 impl Device {
     /// Chiffre la photo ou vidéo, garde le chiffré dans `dir` et ajoute le message (« en attente »).
     /// Renvoie le message et le fichier à déposer.
     pub fn create_media(&mut self, dir: &Path, plain: &[u8], m: NewMedia<'_>) -> R<(ChatMessage, PendingUpload)> {
+        self.create_media_opt(dir, plain, m, false)
+    }
+
+    /// Photo en **vue unique** : comme [`create_media`], sans miniature ; après l'envoi, l'expéditeur ne garde ni
+    /// le fichier ni sa clé (il ne peut pas la revoir, comme sur WhatsApp).
+    pub fn create_view_once(&mut self, dir: &Path, plain: &[u8], m: NewMedia<'_>) -> R<(ChatMessage, PendingUpload)> {
+        if m.kind != KIND_PHOTO {
+            return Err(invalid("vue unique : photo ou vidéo seulement"));
+        }
+        self.create_media_opt(dir, plain, m, true)
+    }
+
+    fn create_media_opt(&mut self, dir: &Path, plain: &[u8], m: NewMedia<'_>, view_once: bool) -> R<(ChatMessage, PendingUpload)> {
         let caption = m.caption.trim();
         if plain.is_empty() || !check_meta(m.kind, m.mime, m.thumb, caption, m.width, m.height) {
             return Err(invalid("type, taille ou légende"));
@@ -242,11 +308,23 @@ impl Device {
         fs::create_dir_all(dir).map_err(io)?;
         let path: PathBuf = dir.join(format!("{id}.flm"));
         write_atomic(&path, &enc.ciphertext).map_err(io)?;
-        self.record_created(&id, &path, &enc.key, &enc.sha256, enc.ciphertext.len() as u64, &m, caption, reply)
+        self.record_created(&id, &path, &enc.key, &enc.sha256, enc.ciphertext.len() as u64, &m, caption, reply, view_once)
     }
 
     /// Comme [`create_media`], mais chiffre directement depuis un fichier (vidéos) : jamais tout en mémoire.
     pub fn create_media_file(&mut self, dir: &Path, src: &Path, m: NewMedia<'_>) -> R<(ChatMessage, PendingUpload)> {
+        self.create_media_file_opt(dir, src, m, false)
+    }
+
+    /// Vidéo en **vue unique** (chiffrée depuis le fichier, sans miniature).
+    pub fn create_view_once_file(&mut self, dir: &Path, src: &Path, m: NewMedia<'_>) -> R<(ChatMessage, PendingUpload)> {
+        if m.kind != KIND_PHOTO && m.kind != KIND_VIDEO {
+            return Err(invalid("vue unique : photo ou vidéo seulement"));
+        }
+        self.create_media_file_opt(dir, src, m, true)
+    }
+
+    fn create_media_file_opt(&mut self, dir: &Path, src: &Path, m: NewMedia<'_>, view_once: bool) -> R<(ChatMessage, PendingUpload)> {
         let caption = m.caption.trim();
         let len = fs::metadata(src).map_err(io)?.len();
         if len == 0 || !check_meta(m.kind, m.mime, m.thumb, caption, m.width, m.height) {
@@ -263,7 +341,7 @@ impl Device {
         fs::create_dir_all(dir).map_err(io)?;
         let path: PathBuf = dir.join(format!("{id}.flm"));
         let enc = media::encrypt_file(src, &path).map_err(|e| invalid(&e.to_string()))?;
-        self.record_created(&id, &path, &enc.key, &enc.sha256, enc.size, &m, caption, reply)
+        self.record_created(&id, &path, &enc.key, &enc.sha256, enc.size, &m, caption, reply, view_once)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -277,8 +355,11 @@ impl Device {
         m: &NewMedia<'_>,
         caption: &str,
         reply: Option<String>,
+        view_once: bool,
     ) -> R<(ChatMessage, PendingUpload)> {
         let path_s = path.to_string_lossy().into_owned();
+        // Vue unique : aucune miniature, ni ici ni dans le message envoyé.
+        let thumb: &[u8] = if view_once { &[] } else { m.thumb };
 
         let last: Option<i64> = self
             .store
@@ -296,9 +377,9 @@ impl Device {
             )
             .map_err(db)?;
             c.execute(
-                "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state)
-                 VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 0)",
-                params![id, m.kind, key.to_vec(), sha256.to_vec(), size as i64, m.mime, m.width, m.height, m.duration_ms, m.thumb, path_s],
+                "INSERT INTO media (message_id, kind, object_key, file_key, sha256, size, mime, width, height, duration_ms, thumb, path, state,
+                   view_once) VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 0, ?12)",
+                params![id, m.kind, key.to_vec(), sha256.to_vec(), size as i64, m.mime, m.width, m.height, m.duration_ms, thumb, path_s, view_once as i64],
             )
             .map_err(db)?;
             c.query_row(&format!("{SELECT} WHERE m.id = ?1"), params![id], row_to_message).map_err(db)
@@ -430,8 +511,36 @@ impl Device {
                 )
                 .map_err(db)?
             };
-            let body = if row.kind == KIND_STICKER as u32 { pb::Body::Sticker(row) } else { pb::Body::Media(row) };
-            self.enqueue(partner, body, Some(message_id)).map(Some)
+            let view_once: bool = self
+                .store
+                .conn
+                .lock()
+                .query_row("SELECT view_once = 1 FROM media WHERE message_id = ?1", params![message_id], |r| r.get(0))
+                .map_err(db)?;
+            let body = if view_once {
+                pb::Body::ViewOnce(pb::Media { thumb: vec![], ..row })
+            } else if row.kind == KIND_STICKER as u32 {
+                pb::Body::Sticker(row)
+            } else {
+                pb::Body::Media(row)
+            };
+            let out = self.enqueue(partner, body, Some(message_id))?;
+            if view_once {
+                // L'enveloppe chiffrée est dans la boîte d'envoi : l'expéditeur n'a plus besoin du fichier ni de sa
+                // clé, et ne peut pas revoir sa vue unique. L'objet R2 reste, pour le destinataire.
+                let c = self.store.conn.lock();
+                let path: Option<String> =
+                    c.query_row("SELECT path FROM media WHERE message_id = ?1", params![message_id], |r| r.get(0)).map_err(db)?;
+                if let Some(p) = path {
+                    let _ = fs::remove_file(p);
+                }
+                c.execute(
+                    "UPDATE media SET path = NULL, file_key = X'', state = 4 WHERE message_id = ?1",
+                    params![message_id],
+                )
+                .map_err(db)?;
+            }
+            Ok(Some(out))
         })
     }
 
@@ -507,7 +616,7 @@ impl Device {
         let (sa, id) = before.unwrap_or((i64::MAX, String::new()));
         let mut st = c
             .prepare(&format!(
-                "{SELECT} WHERE md.state != 3 AND m.deleted = 0 AND ((?4 IS NULL AND md.kind IN (1, 2)) OR md.kind = ?4)
+                "{SELECT} WHERE md.state != 3 AND md.view_once = 0 AND m.deleted = 0 AND ((?4 IS NULL AND md.kind IN (1, 2)) OR md.kind = ?4)
                  AND (m.sent_at, m.id) < (?1, ?2) ORDER BY m.sent_at DESC, m.id DESC LIMIT ?3"
             ))
             .map_err(db)?;
@@ -520,7 +629,7 @@ impl Device {
             .store
             .conn
             .lock()
-            .query_row("SELECT path, file_key FROM media WHERE message_id = ?1 AND state IN (0, 1)", params![message_id], |r| {
+            .query_row("SELECT path, file_key FROM media WHERE message_id = ?1 AND state IN (0, 1) AND view_once IN (0, 3)", params![message_id], |r| {
                 Ok((r.get(0)?, r.get(1)?))
             })
             .optional()
@@ -528,6 +637,89 @@ impl Device {
         let Some((Some(path), key)) = row else { return Err(invalid("pas encore disponible")) };
         let key: [u8; 32] = key.try_into().map_err(|_| DeviceError::BadMessage)?;
         media::MediaReader::open(&key, Path::new(&path)).map_err(|_| DeviceError::BadMessage)
+    }
+
+    /// Le destinataire ouvre une vue unique (téléchargée) : elle devient lisible le temps de l'affichage.
+    /// Échoue si elle n'est pas (ou plus) ouvrable : déjà vue, expirée, pas encore téléchargée, ou envoyée par moi.
+    pub fn view_once_begin(&self, message_id: &str) -> R<()> {
+        let n = self
+            .store
+            .conn
+            .lock()
+            .execute(
+                "UPDATE media SET view_once = 3 WHERE message_id = ?1 AND view_once IN (1, 3) AND state = 1
+                   AND message_id IN (SELECT id FROM messages WHERE from_me = 0)",
+                params![message_id],
+            )
+            .map_err(db)?;
+        if n == 0 {
+            return Err(invalid("vue unique déjà ouverte ou indisponible"));
+        }
+        Ok(())
+    }
+
+    /// L'affichage de la vue unique est terminé : son contenu est détruit ici et sur R2, et l'expéditeur est
+    /// prévenu (« Ouverte »). `None` : rien à faire (déjà fait).
+    pub fn view_once_done(&mut self, partner: &str, message_id: &str) -> R<Option<Outgoing>> {
+        let tx = self.store.conn.clone();
+        tx.atomically(|| {
+            {
+                let c = self.store.conn.lock();
+                let open: bool = c
+                    .query_row(
+                        "SELECT EXISTS (SELECT 1 FROM media WHERE message_id = ?1 AND view_once IN (1, 3)
+                           AND message_id IN (SELECT id FROM messages WHERE from_me = 0))",
+                        params![message_id],
+                        |r| r.get(0),
+                    )
+                    .map_err(db)?;
+                if !open {
+                    return Ok(None);
+                }
+                destroy_view_once(&c, message_id, true, 2)?;
+            }
+            let id = unhex(message_id).ok_or(DeviceError::BadMessage)?;
+            self.enqueue(partner, pb::Body::ViewOnceOpened(pb::Ref { id }), None).map(Some)
+        })
+    }
+
+    /// Au démarrage : une vue unique restée « en cours d'affichage » (app fermée ou plantée pendant l'affichage)
+    /// est considérée comme vue, et détruite.
+    pub fn view_once_finish_pending(&mut self, partner: &str) -> R<Vec<Outgoing>> {
+        let ids: Vec<String> = {
+            let c = self.store.conn.lock();
+            let mut st = c.prepare("SELECT message_id FROM media WHERE view_once = 3").map_err(db)?;
+            st.query_map([], |r| r.get(0)).map_err(db)?.collect::<Result<_, _>>().map_err(db)?
+        };
+        let mut out = Vec::new();
+        for id in ids {
+            if let Some(o) = self.view_once_done(partner, &id)? {
+                out.push(o);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Vues uniques expirées : reçues et jamais ouvertes depuis 14 jours (détruites, objet R2 retiré) ; envoyées et
+    /// jamais ouvertes depuis 15 jours (objet R2 retiré). Renvoie le nombre de vues uniques expirées.
+    pub fn purge_view_once(&self) -> R<u32> {
+        let c = self.store.conn.lock();
+        let old: Vec<(String, bool)> = {
+            let mut st = c
+                .prepare(
+                    "SELECT md.message_id, m.from_me FROM media md JOIN messages m ON m.id = md.message_id
+                     WHERE md.view_once = 1 AND m.sent_at <= ?1 - (CASE WHEN m.from_me = 1 THEN 86400000 ELSE 0 END)",
+                )
+                .map_err(db)?;
+            st.query_map(params![now_ms() - VIEW_ONCE_TTL_MS], |r| Ok((r.get(0)?, r.get(1)?)))
+                .map_err(db)?
+                .collect::<Result<_, _>>()
+                .map_err(db)?
+        };
+        for (id, _) in &old {
+            destroy_view_once(&c, id, true, 4)?;
+        }
+        Ok(old.len() as u32)
     }
 
     /// Taille réelle (déchiffrée) d'une photo ou vidéo.
@@ -547,7 +739,7 @@ impl Device {
             .store
             .conn
             .lock()
-            .query_row("SELECT path, file_key FROM media WHERE message_id = ?1 AND state IN (0, 1)", params![message_id], |r| {
+            .query_row("SELECT path, file_key FROM media WHERE message_id = ?1 AND state IN (0, 1) AND view_once IN (0, 3)", params![message_id], |r| {
                 Ok((r.get(0)?, r.get(1)?))
             })
             .optional()

@@ -69,6 +69,17 @@ class CoupleService {
   /// Invitation complète (QR code ou message) : code, empreinte de la clé de celui qui invite, secret (§5).
   static const invitePrefix = 'foulove:2:';
 
+  /// Adresse des invitations et des liens de retrouvailles (le site renvoie vers l'app ; rien n'y est lu).
+  static const inviteUrl = 'https://foulove.josuecode.com/rejoindre/';
+  static const idUrl = 'https://foulove.josuecode.com/lien/';
+
+  /// Le texte contient une invitation complète (lien ou ancien format), pas seulement un code tapé.
+  static bool isFullInvitation(String text) =>
+      RegExp(r'rejoindre/?(?:#|\?i=)2\.|foulove:[12]:').hasMatch(text) && parseInvitation(text) != null;
+
+  /// Le texte contient un lien de retrouvailles (empreinte d'une clé).
+  static bool isIdLink(String text) => RegExp(r'lien/?(?:#|\?i=)[A-Za-z0-9_-]{20,}|foulove:id:').hasMatch(text);
+
   /// Lien de retrouvailles : l'empreinte de la clé de ce téléphone, à envoyer par une autre messagerie.
   static const idPrefix = 'foulove:id:';
   bool _opened = false;
@@ -299,18 +310,19 @@ class CoupleService {
     return base64Url.decode(base64Url.normalize(parts[2]));
   }
 
-  /// Invitation complète : code, empreinte de ma clé, secret. Sert au QR code et au message envoyé à distance.
+  /// Invitation complète, sous forme de **vrai lien** : il ouvre FouLove d'un toucher (lien d'application Android),
+  /// sert de QR code (l'appareil photo du téléphone l'ouvre aussi), et se colle si besoin.
+  /// Code, empreinte de ma clé et secret sont **après le `#`** : cette partie d'une adresse n'est jamais envoyée au
+  /// serveur du site, ni aux messageries qui fabriquent un aperçu du lien.
   Future<String> invitation(String code) async {
     final fp = base64Url.encode(await deviceFingerprint()).replaceAll('=', '');
     final secret = base64Url.encode(await _inviteSecret() ?? Uint8List(0)).replaceAll('=', '');
-    return '$invitePrefix$code:$fp:$secret';
+    return '$inviteUrl#2.$code.$fp.$secret';
   }
 
-  /// Message à envoyer par WhatsApp, SMS… : il suffit de le copier puis de le coller dans FouLove.
+  /// Message à envoyer par WhatsApp, SMS… : il suffit de toucher le lien.
   Future<String> invitationText(String code) async =>
-      'Rejoins-moi sur FouLove 💞\n'
-      'Installe l\'app et connecte-toi. Touche « J\'ai reçu une invitation », puis « Coller ou saisir » et '
-      '« Coller l\'invitation ».\n\n'
+      'Rejoins-moi sur FouLove 💞 Touche ce lien (installe l\'app d\'abord si tu ne l\'as pas) :\n'
       '${await invitation(code)}';
 
   /// Chez celui qui a invité, après le premier message : la preuve reçue vient-elle de la personne qui a reçu
@@ -326,7 +338,10 @@ class CoupleService {
   /// Lit une invitation dans un texte collé ou scanné : (code, empreinte attendue, secret), ou `null`.
   static (String, Uint8List?, Uint8List?)? parseInvitation(String text) {
     Uint8List b64(String s) => base64Url.decode(base64Url.normalize(s));
-    final v2 = RegExp(r'foulove:2:([0-9A-Za-z-]{10,11}):([A-Za-z0-9_-]{20,}):([A-Za-z0-9_-]{20,})').firstMatch(text);
+    // Lien (https ou foulove://, avec « 2. » après # ou ?i=), puis ancien texte « foulove:2: ».
+    final v2 =
+        RegExp(r'rejoindre/?(?:#|\?i=)2\.([0-9A-Za-z]{10})\.([A-Za-z0-9_-]{20,})\.([A-Za-z0-9_-]{20,})').firstMatch(text) ??
+        RegExp(r'foulove:2:([0-9A-Za-z-]{10,11}):([A-Za-z0-9_-]{20,}):([A-Za-z0-9_-]{20,})').firstMatch(text);
     if (v2 != null) {
       try {
         return (v2.group(1)!.replaceAll('-', ''), b64(v2.group(2)!), b64(v2.group(3)!));
@@ -350,13 +365,13 @@ class CoupleService {
 
   /// Mon lien de retrouvailles : l'empreinte de ma clé, à envoyer par une autre messagerie.
   Future<String> fingerprintLink() async =>
-      'Voici mon lien FouLove 💞 Copie ce message, puis touche « Coller son lien » dans FouLove.\n\n'
-      '$idPrefix${base64Url.encode(await deviceFingerprint()).replaceAll('=', '')}';
+      'Voici mon lien FouLove 💞 Touche-le pour que nos téléphones se reconnaissent :\n'
+      '$idUrl#${base64Url.encode(await deviceFingerprint()).replaceAll('=', '')}';
 
   /// Son lien de retrouvailles, collé : s'il correspond à sa clé, elle est acceptée et vérifiée sans rien comparer.
   /// Renvoie faux si le lien ne correspond pas (ou n'en est pas un).
   Future<bool> acceptByLink(String partner, Uint8List identity, String text, {bool keyChange = false}) async {
-    final m = RegExp(r'foulove:id:([A-Za-z0-9_-]{20,})').firstMatch(text);
+    final m = RegExp(r'(?:lien/?(?:#|\?i=)|foulove:id:)([A-Za-z0-9_-]{20,})').firstMatch(text);
     if (m == null) return false;
     final Uint8List fp;
     try {

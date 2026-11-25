@@ -39,6 +39,8 @@ pub struct MediaInfo {
     pub duration_ms: u32,
     pub thumb: Vec<u8>,
     pub state: u8,
+    /// Vue unique : 0 non, 1 pas encore ouverte, 2 ouverte, 3 en cours d'affichage, 4 expirée.
+    pub view_once: u8,
 }
 
 impl From<core::ChatMessage> for ChatMessage {
@@ -60,6 +62,7 @@ impl From<core::ChatMessage> for ChatMessage {
                 duration_ms: x.duration_ms,
                 thumb: x.thumb,
                 state: x.state,
+                view_once: x.view_once,
             }),
             deleted: m.deleted,
             quote: m.quote.map(|q| Quote { text: q.text, thumb: q.thumb }),
@@ -267,9 +270,12 @@ pub fn chat_create_media(
     thumb: Vec<u8>,
     caption: String,
     reply_to: Option<String>,
+    view_once: bool,
 ) -> anyhow::Result<CreatedMedia> {
     with_device(|d| {
-        let (m, u) = d.create_media(
+        let create = if view_once { foulov_core::device::Device::create_view_once } else { foulov_core::device::Device::create_media };
+        let (m, u) = create(
+            d,
             std::path::Path::new(&dir),
             &plain,
             foulov_core::chat_media::NewMedia {
@@ -337,9 +343,13 @@ pub fn chat_create_media_file(
     thumb: Vec<u8>,
     caption: String,
     reply_to: Option<String>,
+    view_once: bool,
 ) -> anyhow::Result<CreatedMedia> {
     with_device(|d| {
-        let (m, u) = d.create_media_file(
+        let create =
+            if view_once { foulov_core::device::Device::create_view_once_file } else { foulov_core::device::Device::create_media_file };
+        let (m, u) = create(
+            d,
             std::path::Path::new(&dir),
             std::path::Path::new(&src),
             foulov_core::chat_media::NewMedia {
@@ -358,6 +368,26 @@ pub fn chat_create_media_file(
             upload: PendingUpload { message_id: u.message_id, path: u.path, size: u.size },
         })
     })
+}
+
+/// Le destinataire ouvre une vue unique : lisible le temps de l'affichage. Échoue si elle n'est plus ouvrable.
+pub fn chat_view_once_begin(message_id: String) -> anyhow::Result<()> {
+    with_device(|d| Ok(d.view_once_begin(&message_id)?))
+}
+
+/// Fin de l'affichage d'une vue unique : contenu détruit ici et sur R2, accusé « ouverte » pour l'expéditeur.
+pub fn chat_view_once_done(partner: String, message_id: String) -> anyhow::Result<Option<Outgoing>> {
+    with_device(|d| Ok(d.view_once_done(&partner, &message_id)?.map(Into::into)))
+}
+
+/// Au démarrage : les vues uniques restées ouvertes (app arrêtée pendant l'affichage) sont détruites.
+pub fn chat_view_once_finish_pending(partner: String) -> anyhow::Result<Vec<Outgoing>> {
+    with_device(|d| Ok(d.view_once_finish_pending(&partner)?.into_iter().map(Into::into).collect()))
+}
+
+/// Vues uniques expirées (14 jours sans être ouvertes) : détruites.
+pub fn chat_purge_view_once() -> anyhow::Result<u32> {
+    with_device(|d| Ok(d.purge_view_once()?))
 }
 
 /// Taille réelle (déchiffrée) d'une photo ou vidéo.

@@ -1,0 +1,18 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.foulov.app",
+      "sha256_cert_fingerprints": [
+        "89:ED:13:F8:E5:D5:75:56:BB:95:64:2C:34:F4:AA:57:F5:F9:C7:60:DB:F6:7B:31:AD:47:99:FB:A4:72:C4:A9",
+        "11:9B:18:CC:CF:FD:3E:65:99:44:16:1A:68:35:DE:ED:3F:4F:DF:A8:D4:49:62:43:07:6E:D8:20:B2:DF:26:14",
+        "DC:96:D0:19:E7:B3:EB:23:D2:93:D7:88:4D:B0:DF:27:BA:78:A3:81:5E:77:A6:E6:10:DE:6C:8E:8C:BB:9B:EB",
+        "3D:E6:2A:01:0B:02:27:CE:8D:CF:9E:A7:0C:0B:2C:E5:3B:C2:44:6A:AB:DF:5A:EE:6B:31:04:3A:E8:57:A8:96",
+        "3C:83:2F:A0:EB:7C:7F:39:BE:98:F7:1D:56:B6:62:5B:51:33:D4:90:DF:7D:ED:82:3D:99:CA:BF:2B:B7:D9:87"
+      ]
+    }
+  }
+]
