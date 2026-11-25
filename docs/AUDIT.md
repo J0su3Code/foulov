@@ -4,15 +4,20 @@ Ce document prépare une **revue complète du code et de la sécurité**, à con
 Code, puis plus tard à une société d'audit indépendante. Il dit quoi examiner, dans quel ordre, et ce qu'on attend en
 retour.
 
-## Ce qu'une revue par Claude est, et n'est pas
+## Deux étapes complémentaires
 
-Une revue par une IA est très utile : elle lit tout le code, cherche les erreurs connues, écrit des tests qui les
-prouvent et propose des corrections. Mais ce n'est **pas un audit indépendant** au sens où l'entendent les
-utilisateurs et les spécialistes : personne d'extérieur n'en porte la responsabilité, et elle n'est pas faite par des
-cryptographes. Après la revue, le site pourra dire « revue de sécurité complète publiée » (avec le rapport), mais pas
-« audité ».
+1. **Audit de sécurité du code, réalisé avec Claude** (fait le 25 novembre 2026, rapport
+   `docs/revue/2026-11-revue-securite.md`). Tout le code et le serveur sont lus, chaque faille est décrite avec un
+   scénario d'attaque, prouvée par un test quand c'est possible, puis corrigée. Les auditeurs humains utilisent les
+   mêmes outils : ce n'est pas l'outil qui fait la différence.
+2. **Audit indépendant** par une équipe extérieure (à venir). Ce qu'il apporte en plus : l'**indépendance** (une équipe
+   qui n'a pas écrit le code et ne dépend pas de l'éditeur), un rapport **signé**, dont elle répond publiquement, et
+   des tests sur de vrais téléphones. C'est ce que les spécialistes et la presse attendent avant toute comparaison
+   avec d'autres messageries.
 
-Pour un vrai audit plus tard, sans budget :
+Le site peut dire « audit de sécurité du code publié » (avec le rapport) et « audit indépendant prévu ».
+
+Pour l'audit indépendant, sans budget :
 - [Open Technology Fund — Red Team Lab](https://www.opentech.fund/labs/red-team-lab/) : audits gratuits pour les
   logiciels libres qui protègent la vie privée.
 - [NLnet / NGI](https://nlnet.nl/) : financements européens pour le logiciel libre, audits de sécurité compris

@@ -29,7 +29,11 @@ Messagerie privée chiffrée de bout en bout pour un couple. Android en test fer
 - Tests : `cd core && cargo test` ; `cd app && flutter analyze lib && flutter test`.
 - Pont Rust après changement d'API : `cd app && flutter_rust_bridge_codegen generate`.
 - Build : `cd app && flutter build appbundle --release --dart-define-from-file=dart_defines.local.json` (aussi `apk --profile`).
-- Fonction serveur : `supabase functions deploy media` (projet déjà lié).
+- Fonction serveur : `supabase functions deploy media` (projet déjà lié). Base : `supabase db push`.
+- Site : `cd site && vercel deploy --prod` (pas relié à GitHub, déploiement à la main).
+- Comptes : l'utilisateur change souvent de compte. Avant un déploiement, vérifier : `supabase projects list`
+  (organisation « FouLov », projet `uaxouzccldvjhktcavlk`) et `vercel teams ls` (équipe `fou-lov`, projet `foulove`).
+- Tests serveur : `supabase start -x studio,…` puis `supabase migration up --local` et `supabase test db`.
 - Recherche web : `~/bin/cherche "requête"` (SearXNG local, OrbStack) ; WebSearch indisponible.
 
 ## Pièges connus

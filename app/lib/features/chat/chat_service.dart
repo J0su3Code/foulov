@@ -81,7 +81,8 @@ class ChatService extends ChangeNotifier with WidgetsBindingObserver {
     await space.load();
     rescheduleReminders(); // après le chargement des anniversaires de chacun
     _channel = _db
-        .channel('enveloppes-$_me')
+        // Canal privé : seul ce compte peut le rejoindre (migration `…_canal_enveloppes_prive.sql`).
+        .channel('enveloppes-$_me', opts: const RealtimeChannelConfig(private: true))
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',

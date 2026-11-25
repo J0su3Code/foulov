@@ -21,7 +21,7 @@
 - Vérifier sur un vrai téléphone la réception d'un sticker et d'une modification (testé seulement côté envoi).
 - Une fois vu : en-tête « hors ligne » après démarrage à froid de l'émulateur, réglé par une relance de l'app. Cause non cherchée.
 
-## Revue de sécurité (25 nov. 2026) — corrigée, **pas encore en production**
+## Audit de sécurité (25 nov. 2026) — serveur **en production**, app dans la prochaine version
 Rapport : `docs/revue/2026-11-revue-securite.md` ; `docs/SECURITY.md` passé en v0.2 (§5, §7, §8, §11).
 - 7 symboles retirés (truquables par un serveur malveillant, 42 bits) : `core/src/sas.rs` supprimé ; vérification
   par invitation complète, QR ou liens `foulove:id:` → `couple_screens.dart` (`VerifyScreen`, `KeyChangeScreen`).
@@ -33,11 +33,16 @@ Rapport : `docs/revue/2026-11-revue-securite.md` ; `docs/SECURITY.md` passé en 
   (`transfer.rs`, `backup.rs`, test `une_archive_aux_noms_pieges_est_filtree`).
 - Plafond des contenus inconnus (2 000), `temp_store = MEMORY`, clé SQLCipher effacée (`zeroize`).
 - Serveur : migration `20261125120000_quotas.sql` (plafonds enveloppes + R2, verrou d'appairage), quota appelé par
-  la fonction `media` (`take_media_quota`), tests `quotas.test.sql`. **À déployer** : `supabase db push` puis
-  `supabase functions deploy media` (compatible avec l'app 1.0.0+4).
+  la fonction `media` (`take_media_quota`), tests `quotas.test.sql`. **Déployé le 25 nov.** (migrations + fonction
+  `media`), compatible avec l'app 1.0.0+4.
 - Android : `allowBackup=false` + `data_extraction_rules.xml` ; build release refusé sans `key.properties`.
 - Site : `guide.md`, `securite.md` mis à jour (à déployer après le push GitHub, la page renvoie vers le rapport).
-- Reste : vérifier Supabase Realtime « Allow public access » désactivé ; limites listées dans le rapport.
+- Canal des enveloppes passé en privé (`chat_service.dart`, migration `…_canal_enveloppes_prive.sql` déployée,
+  test `canaux.test.sql`). **Quand plus aucun testeur n'a la 1.0.0+4** : couper Supabase Realtime → Settings →
+  « Allow public access » (aujourd'hui actif ; le couper avant casserait la réception en direct des anciennes versions).
+- Formulation : « audité » (audit du code réalisé avec Claude) ; audit indépendant = prochaine étape (choix de
+  l'utilisateur, `docs/AUDIT.md`).
+- Site et GitHub : pas encore envoyés (le site renvoie au rapport sur GitHub) → à faire avec la 1.0.0+5.
 - Les nouveaux écrans ne sont pas encore testés sur téléphone : à faire avec la prochaine version.
 
 ## Décisions

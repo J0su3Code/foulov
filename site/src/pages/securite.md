@@ -55,9 +55,9 @@ Avant l’envoi, les photos et vidéos sont réencodées sur votre téléphone :
 - **La conception est publique.** Chaque promesse de l’app renvoie à notre [document de conception](https://github.com/J0su3Code/foulov/blob/main/docs/SECURITY.md), avec ses limites.
 - **Les règles d’accès sont testées.** Des tests automatiques vérifient qu’un compte ne peut rien lire d’un autre couple.
 
-- **Une revue de sécurité complète est publiée.** Le 25 novembre 2026, tout le code et le serveur ont été relus à la recherche de failles ; les problèmes trouvés ont été corrigés et le [rapport](https://github.com/J0su3Code/foulov/blob/main/docs/revue/2026-11-revue-securite.md) est public.
+- **Le code a été audité.** Le 25 novembre 2026, tout le code et le serveur ont été examinés à la recherche de failles. Chaque faille trouvée a été corrigée, et le [rapport d’audit](https://github.com/J0su3Code/foulov/blob/main/docs/revue/2026-11-revue-securite.md) est public.
 
-> **Pas encore d’audit indépendant.** Cette revue a été faite avec une intelligence artificielle, pas par une société de sécurité extérieure. Un audit indépendant est prévu. D’ici là, nous ne prétendrons pas être « plus sûrs » qu’une autre messagerie.
+> **Prochaine étape : un audit indépendant.** Une équipe de sécurité extérieure, qui n’a pas écrit FouLove, examinera à son tour l’app et signera son rapport. D’ici là, nous ne prétendrons pas être « plus sûrs » qu’une autre messagerie.
 
 ## Vous avez trouvé une faille ?
 

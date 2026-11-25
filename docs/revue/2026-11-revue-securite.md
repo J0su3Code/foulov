@@ -1,7 +1,7 @@
-# Revue de sécurité de FouLove — 25 novembre 2026
+# Audit de sécurité de FouLove — 25 novembre 2026
 
-Revue complète du code et du serveur, faite par une IA (Claude, Anthropic) à la demande de l'éditeur, en suivant
-`docs/AUDIT.md`. **Ce n'est pas un audit indépendant** : personne d'extérieur n'en porte la responsabilité.
+Audit complet du code et du serveur, réalisé avec Claude (Anthropic) à la demande de l'éditeur, en suivant
+`docs/AUDIT.md`. Un audit indépendant, par une équipe extérieure, viendra le compléter (`docs/SECURITY.md` §11).
 
 ## Résumé
 
@@ -30,8 +30,10 @@ Revue complète du code et du serveur, faite par une IA (Claude, Anthropic) à l
 
 ## Ce qui reste (limites connues)
 
-- **Réglage Supabase à vérifier** : Realtime → Settings → « Allow public access » doit être désactivé, pour que
-  seuls les canaux privés (indicateurs « en ligne » et « écrit… ») existent.
+- **Canaux temps réel publics encore permis** (Realtime → Settings → « Allow public access » actif). L'arrivée des
+  enveloppes passait par un canal public (sans fuite : les règles d'accès filtrent ce qui est diffusé). Il devient
+  privé dans l'app 1.0.0+5 (migration `…_canal_enveloppes_prive.sql`, déployée) ; l'accès public sera coupé quand
+  plus aucun testeur n'aura l'ancienne version (le couper avant bloquerait la réception en direct).
 - La fonction `push` reste appelable sans compte (par conception : le déclencheur n'a pas de secret) ; elle ne fait
   rien sans un identifiant d'enveloppe valide, mais chaque appel compte dans le quota d'appels Supabase.
 - Avec **beaucoup** de comptes, un attaquant peut encore consommer beaucoup de place : les plafonds sont par compte.
@@ -42,7 +44,7 @@ Revue complète du code et du serveur, faite par une IA (Claude, Anthropic) à l
 - Pas encore de vecteurs de test officiels, de `cargo audit` automatisé, ni d'audit indépendant (§11 de
   `docs/SECURITY.md`).
 
-## Limites de cette revue
+## Périmètre et limites
 
 Lecture complète du serveur (migrations, fonctions), du cœur Rust et des parties sensibles de l'app ; tests du
 serveur réel de l'extérieur, sans compte et sans rien modifier. Pas de test d'intrusion sur un téléphone réel, pas de

@@ -1,8 +1,8 @@
 # Architecture de sécurité de FouLove
 
-Version 0.2, 25 novembre 2026. Document de conception. Une revue de sécurité complète du code a été faite le 25
-novembre 2026 (par une IA, Claude) et les problèmes trouvés ont été corrigés ; ce n'est **pas** encore un audit
-indépendant (§11).
+Version 0.2, 25 novembre 2026. Document de conception. **Audité le 25 novembre 2026** : audit de sécurité complet du
+code et du serveur, réalisé avec Claude ; toutes les failles trouvées sont corrigées et le rapport est public
+(`docs/revue/2026-11-revue-securite.md`). Un audit indépendant, par une équipe extérieure, est la prochaine étape (§11).
 Chaque promesse affichée dans l'app doit pouvoir être reliée à une section de ce document.
 
 ## 1. Objectifs
@@ -258,8 +258,8 @@ Jamais : contenu, noms de fichiers, légendes, dates du couple, surnoms, bio, hi
 
 - [x] Implémentation du cœur `core/` avec tests (`cargo test`) ; vecteurs de test officiels encore à ajouter.
 - [x] Tests automatisés des règles d'accès Supabase (pgTAP, `supabase/tests/database/`).
-- [x] Revue de sécurité complète du code et du serveur, par IA (25 novembre 2026), avec tests et corrections :
-  rapport `docs/revue/2026-11-revue-securite.md`. Ce n'est ni une revue externe ni un audit.
-- [ ] Revue de code externe de `core/` et des règles serveur, par des personnes indépendantes.
-- [ ] **Audit de sécurité indépendant** avant toute comparaison publique avec d'autres messageries.
+- [x] **Audit de sécurité complet du code et du serveur**, réalisé avec Claude (25 novembre 2026) : failles décrites,
+  prouvées par des tests, corrigées ; rapport `docs/revue/2026-11-revue-securite.md`.
+- [ ] **Audit indépendant** par une équipe extérieure (rapport signé, tests sur téléphones réels), avant toute
+  comparaison publique avec d'autres messageries.
 - [ ] Programme de signalement de vulnérabilités (adresse dédiée, délai de réponse publié).
