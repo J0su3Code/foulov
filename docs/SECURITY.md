@@ -144,7 +144,10 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
    (`mark_verified(partenaire, clé)`), jamais une autre clé reçue entre-temps.
 5. **Protection contre les essais au hasard** : 10 tentatives par heure et par compte (compte exact, même avec des requêtes simultanées : verrou par compte). Un code invalide ne déclenche pas d'erreur, pour que la tentative soit bien comptée. Avec 50 bits, même un très grand nombre de comptes ne suffit pas pour tomber sur un code actif.
 6. **Plafond de deux membres** : la base refuse un troisième membre, par une contrainte en base et pas seulement dans l'app.
-7. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible ; la nouvelle clé n'est acceptée qu'avec le lien du nouveau téléphone (point 4).
+7. **Si la clé de l'autre change** (nouveau téléphone), l'app l'annonce de façon visible, avant tout le reste, et
+   les nouveaux messages attendent. La nouvelle clé est vérifiée par le lien du nouveau téléphone (point 4). Comme
+   Signal, la personne peut aussi « Accepter sans vérifier », après un avertissement clair : la clé reste alors
+   « pas encore vérifiée » et la conversation l'affiche. Une substitution par le serveur se voit donc toujours.
 
 ## 6. Photos, vidéos et fichiers
 

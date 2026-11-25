@@ -1493,6 +1493,29 @@ class KeyChangeScreen extends StatelessWidget {
                 keyChange: true,
                 onVerified: () async => onDone(),
               ),
+              TextButton(
+                onPressed: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Accepter sans vérifier ?'),
+                      content: const Text(
+                        'Fais-le seulement si ton amour vient vraiment de changer de téléphone ou de réinstaller '
+                        'FouLove. Vos messages restent chiffrés, mais tant que vous n\'aurez pas échangé vos liens, '
+                        'vous ne serez pas sûrs que personne ne s\'est glissé entre vous.',
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Accepter')),
+                      ],
+                    ),
+                  );
+                  if (ok != true) return;
+                  await couple.acceptPartnerKeyUnverified(partnerId, newIdentity);
+                  onDone();
+                },
+                child: const Text('Accepter sans vérifier'),
+              ),
             ],
           ),
         ),

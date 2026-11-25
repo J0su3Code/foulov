@@ -285,6 +285,13 @@ class CoupleService {
     await deviceMarkVerified(partner: partner, identityKey: identity);
   }
 
+  /// Nouvelle clé acceptée **sans** vérification (après un avertissement clair) : comme Signal, la personne décide.
+  /// Les messages en attente se lisent ; la clé reste « pas encore vérifiée », et la conversation le dit.
+  Future<void> acceptPartnerKeyUnverified(String partner, Uint8List identity) async {
+    await deviceAcceptPartnerKey(partner: partner, identityKey: identity);
+    await setVerifyLater(identity);
+  }
+
   // ------------------------------------------------------------------ créer / rejoindre
 
   /// Crée l'espace, publie les clés de ce téléphone et renvoie le code d'invitation (10 caractères).
