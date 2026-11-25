@@ -226,7 +226,7 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
         if (s.restoreFrom != null) {
           return RestoreScreen(couple: widget.couple, backupDate: s.restoreFrom!, onDone: _reload);
         }
-        if (!s.verified || _showSymbols) {
+        if ((!s.verified && !s.verifyLater) || _showSymbols) {
           return VerifyScreen(
             couple: widget.couple,
             partnerId: s.partnerId!,
@@ -236,6 +236,13 @@ class _CoupleGateState extends State<CoupleGate> with WidgetsBindingObserver {
               _showSymbols = false;
               _reload();
             },
+            onLater: s.verified
+                ? null
+                : () async {
+                    await widget.couple.setVerifyLater(s.partnerIdentity!);
+                    _showSymbols = false;
+                    _reload();
+                  },
           );
         }
         return _ChatHost(
@@ -342,6 +349,7 @@ class _ChatHostState extends State<_ChatHost> {
     partnerId: widget.state.partnerId!,
     coupleId: widget.state.coupleId!,
     coupleSince: widget.state.since,
+    verified: widget.state.verified,
   );
   late final Future<void> _ready = _service.start();
 
@@ -1133,12 +1141,16 @@ class VerifyScreen extends StatelessWidget {
     required this.partnerIdentity,
     required this.onVerified,
     this.alreadyVerified = false,
+    this.onLater,
   });
 
   final CoupleService couple;
   final String partnerId;
   final Uint8List partnerIdentity;
   final VoidCallback onVerified;
+
+  /// « Plus tard » : entrer dans la conversation sans avoir vérifié (absent si c'est déjà vérifié).
+  final VoidCallback? onLater;
 
   /// Vrai si ce téléphone a déjà vérifié la clé du partenaire (QR code) : il ne reste qu'à envoyer son lien.
   final bool alreadyVerified;
@@ -1202,13 +1214,19 @@ class VerifyScreen extends StatelessWidget {
                     label: const Text('Continuer'),
                     onPressed: () => _done(context),
                   ),
-                ] else
+                ] else ...[
                   LinkExchange(
                     couple: couple,
                     partnerId: partnerId,
                     identity: partnerIdentity,
                     onVerified: () => _done(context),
                   ),
+                  if (onLater != null)
+                    TextButton(
+                      onPressed: onLater,
+                      child: const Text('Plus tard'),
+                    ),
+                ],
               ],
             ),
           ),

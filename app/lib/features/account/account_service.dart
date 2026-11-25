@@ -24,6 +24,7 @@ abstract final class AccountService {
     'foulov.backup_secret',
     'foulov.backup_last',
     'foulov.local_owner',
+    'foulov.verify_later',
   ];
 
   /// « close » : fichiers du couple et sauvegarde retirés de R2, espace supprimé (chez les deux).

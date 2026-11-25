@@ -129,7 +129,10 @@ Code : `core/src/space.rs`, tests `core/tests/space.rs`.
      de l'invitation. Limite assumée : si la même personne contrôle notre serveur **et** la messagerie qui a transporté
      l'invitation, elle pourrait le faire.
    - Le QR code contient la même invitation : en personne aussi, les deux côtés sont vérifiés automatiquement.
-   - Le code seul (10 caractères tapés) marche toujours ; il faut alors échanger les liens du point 4 avant d'écrire.
+   - Le code seul (10 caractères tapés) marche toujours ; il faut alors échanger les liens du point 4. « Plus tard »
+     permet d'écrire avant (comme WhatsApp ou Signal, la confiance vient alors de la première clé vue) : la
+     conversation affiche « clés pas encore vérifiées » tant que ce n'est pas fait. Une clé qui **change** reste
+     bloquée jusqu'à l'échange des liens.
    - **Les 7 symboles ont été retirés** (revue du 25 novembre 2026). Ils ne valaient que 42 bits, calculés sur les
      seules clés à long terme : un serveur malveillant pouvait fabriquer en quelques secondes (recherche « des
      anniversaires », environ 2²¹ clés de chaque côté) deux fausses clés affichant les mêmes 7 symboles sur les deux

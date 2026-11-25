@@ -690,7 +690,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Stack(
                       children: [
                         if (items.isEmpty)
-                          const _Empty()
+                          _Empty(verified: _s.verified, onVerify: widget.onShowSymbols)
                         else
                           SuperListView.builder(
                             controller: _scroll,
@@ -711,7 +711,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                 if (i == 0) return const _TypingBubble();
                                 i -= 1;
                               }
-                              if (i == items.length) return _s.hasMore ? const _Loading() : const _E2EBadge();
+                              if (i == items.length) {
+                                return _s.hasMore
+                                    ? const _Loading()
+                                    : _E2EBadge(verified: _s.verified, onVerify: widget.onShowSymbols);
+                              }
                               final g = items[i];
                               final m = g.first;
                               final older = i + 1 < items.length ? items[i + 1].last : null;
@@ -1034,32 +1038,46 @@ class _KeyChanged extends StatelessWidget {
   }
 }
 
+/// « Chiffré de bout en bout » : avec « clés vérifiées ensemble » seulement si c'est vrai ; sinon, touchable pour
+/// vérifier maintenant (après « Plus tard »).
 class _E2EBadge extends StatelessWidget {
-  const _E2EBadge();
+  const _E2EBadge({required this.verified, required this.onVerify});
+
+  final bool verified;
+  final VoidCallback onVerify;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 14),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainer.withValues(alpha: .7),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.lock_outline_rounded, size: 14, color: cs.onSurfaceVariant),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                'Chiffré de bout en bout · clés vérifiées ensemble',
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+      child: GestureDetector(
+        onTap: verified ? null : onVerify,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainer.withValues(alpha: .7),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 14, color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  verified
+                      ? 'Chiffré de bout en bout · clés vérifiées ensemble'
+                      : 'Chiffré de bout en bout · clés pas encore vérifiées, touche pour vérifier',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: verified ? cs.onSurfaceVariant : cs.primary,
+                    fontWeight: verified ? FontWeight.w400 : FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1097,7 +1115,10 @@ class _DaySeparator extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty();
+  const _Empty({required this.verified, required this.onVerify});
+
+  final bool verified;
+  final VoidCallback onVerify;
 
   @override
   Widget build(BuildContext context) {
@@ -1125,7 +1146,7 @@ class _Empty extends StatelessWidget {
                       style: t.textTheme.bodyMedium?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.4),
                     ),
                     const SizedBox(height: 8),
-                    const _E2EBadge(),
+                    _E2EBadge(verified: verified, onVerify: onVerify),
                   ],
                 ),
               ),
@@ -1546,7 +1567,9 @@ class _MomentQuote extends StatelessWidget {
 (IconData?, String) _snippet(ChatMessage? q) {
   if (q == null) return (null, 'Message introuvable');
   if (q.deleted) return (Icons.block_rounded, 'Message supprimé');
-  if (_isViewOnce(q)) return (Icons.looks_one_outlined, q.media?.kind == 2 ? 'Vidéo · vue unique' : 'Photo · vue unique');
+  if (_isViewOnce(q)) {
+    return (Icons.looks_one_outlined, q.media?.kind == 2 ? 'Vidéo · vue unique' : 'Photo · vue unique');
+  }
   return switch (q.media?.kind) {
     1 => (Icons.photo_camera_rounded, q.body.isNotEmpty ? q.body : 'Photo'),
     2 => (Icons.videocam_rounded, q.body.isNotEmpty ? q.body : 'Vidéo'),

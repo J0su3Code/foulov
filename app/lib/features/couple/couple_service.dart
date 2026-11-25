@@ -18,6 +18,7 @@ class CoupleState {
     this.partnerId,
     this.partnerIdentity,
     this.verified = false,
+    this.verifyLater = false,
     this.since,
     this.keyChanged = false,
     this.restoreFrom,
@@ -43,6 +44,11 @@ class CoupleState {
   final String? partnerId;
   final Uint8List? partnerIdentity;
   final bool verified;
+
+  /// Clé pas encore vérifiée, et la personne a choisi « Plus tard » (comme WhatsApp ou Signal : les messages restent
+  /// chiffrés de bout en bout ; la conversation affiche « clés pas encore vérifiées »). Vaut pour cette clé-là
+  /// seulement : une nouvelle clé du partenaire redemande la vérification.
+  final bool verifyLater;
 
   bool get hasCouple => coupleId != null;
   bool get complete => partnerId != null;
@@ -128,6 +134,7 @@ class CoupleService {
         partnerId: j['partner'] as String,
         partnerIdentity: identity,
         verified: await deviceIsVerified(partner: j['partner'] as String),
+        verifyLater: await isVerifyLater(identity),
         since: DateTime.tryParse(j['since'] as String? ?? '')?.toLocal(),
       );
     } catch (_) {
@@ -220,10 +227,20 @@ class CoupleService {
       partnerId: partner,
       partnerIdentity: identity,
       verified: identity != null && !keyChanged && await deviceIsVerified(partner: partner),
+      verifyLater: identity != null && !keyChanged && await isVerifyLater(identity),
       keyChanged: keyChanged,
       restoreFrom: restoreFrom,
     );
   }
+
+  static const _verifyLaterKey = 'foulov.verify_later';
+
+  /// « Plus tard » a été choisi pour cette clé du partenaire.
+  Future<bool> isVerifyLater(Uint8List identity) async =>
+      await _keyStore.read(key: _verifyLaterKey) == base64Encode(identity);
+
+  Future<void> setVerifyLater(Uint8List identity) =>
+      _keyStore.write(key: _verifyLaterKey, value: base64Encode(identity));
 
   static const _restoreOfferedKey = 'foulov.restore_offered';
 

@@ -30,7 +30,10 @@ import '../dates/reminders.dart';
 /// - Réception : Supabase Realtime signale chaque nouvelle enveloppe ; on récupère alors toutes celles en
 ///   attente (aucune ne se perd si l'app était fermée), on les traite dans l'ordre, puis on les supprime du serveur.
 class ChatService extends ChangeNotifier with WidgetsBindingObserver {
-  ChatService(this._db, {required this.partnerId, required this.coupleId, this.coupleSince});
+  ChatService(this._db, {required this.partnerId, required this.coupleId, this.coupleSince, this.verified = true});
+
+  /// Clés du couple vérifiées (invitation, QR code ou liens). Faux après « Plus tard » : dit dans la conversation.
+  final bool verified;
 
   /// Notre espace (profil du couple, instants, lettres, albums) : même transport chiffré.
   late final SpaceService space = SpaceService(this);

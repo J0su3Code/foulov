@@ -27,6 +27,12 @@
   Vérifié de bout en bout : « Ouverte » chez l'expéditeur, plus de fichier chez le destinataire, 0 objet sur R2.
 - (25 nov.) Bouton smiley = stickers → panneau Émojis | Stickers façon WhatsApp (`expression_panel.dart`, paquet
   `emoji_picker_flutter`), ouvre sur les smileys ; l'onglet « Mes stickers » n'a plus l'icône smiley.
+- (25 nov.) Risque trouvé avant l'envoi : sans les 7 symboles, un examinateur Google (compte démo, téléphone neuf)
+  serait resté bloqué sur l'écran de vérification → bouton « Plus tard » (`VerifyScreen.onLater`,
+  `CoupleState.verifyLater`, clé `foulov.verify_later` liée à la clé du partenaire), et la conversation dit
+  « clés pas encore vérifiées, touche pour vérifier » (`_E2EBadge`). Une clé **changée** reste bloquante.
+  Instructions Play mises à jour (« then "Plus tard" », 489 caractères avec la phrase) : `docs/play/guide/index.html`
+  → **à recopier dans Play Console** (Informations de connexion).
 - (25 nov.) Play Console, version 1 sautée : cause trouvée dans l'historique, c'était le **verrou d'orientation**
   portrait de l'écran de recadrage (retiré en 1.0.0+2, commit d4ddcc4), pas la capture d'écran. Rien ne reste.
   Play refuse toujours un numéro de version déjà envoyé, même jamais publié.
